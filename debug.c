@@ -1,0 +1,55 @@
+/*
+    gratiously copied:  from debug.h & debug.c
+                        from non-sequencer
+                        (C) 2008 Jonathan Moore Liles
+
+    modified by james w. morris 2010
+*/
+
+#include "debug.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+void
+warnf(  warning_t level,
+        const char *file,
+        const char *function, size_t line, const char *fmt, ... )
+{
+    va_list args;
+    static const char *level_tab[] = {
+        "message", "\033[1;32m",
+        "warning", "\033[1;33m",
+    };
+
+    FILE *fp = W_MESSAGE == level ? stdout : stderr;
+
+    #ifndef NDEBUG
+    if ( file )
+        fprintf( fp, "%s", file );
+
+    if ( line )
+        fprintf( fp, ":%zi", line );
+
+    if ( function )
+        fprintf( fp, " %s()", function );
+
+    fprintf( fp, ": " );
+    #endif
+
+    if ( ((unsigned)( level << 1 ) + 1 ) <
+        ( sizeof( level_tab ) / sizeof( level_tab[0] ) ) )
+    {
+        fprintf( fp, "%s", level_tab[( level << 1 ) + 1] );
+    }
+
+    if ( fmt )
+    {
+        va_start( args, fmt );
+        vfprintf( fp, fmt, args );
+        va_end( args );
+    }
+
+    fprintf( fp, "\033[0m" );
+}
