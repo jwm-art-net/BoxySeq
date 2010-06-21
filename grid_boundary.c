@@ -16,6 +16,8 @@ struct grid_boundary
     evport*     evinput;
     fsbound*    bound;
 
+    moport*     midiout;
+
     evpool*     pool;
 };
 
@@ -43,6 +45,7 @@ grbound* grbound_new(void)
                | GRBOUND_BLOCK_ON_NOTE_FAIL;
 
     grb->evinput = 0;
+    grb->midiout = 0;
 
     #ifdef GRBOUND_DEBUG
     MESSAGE("grbound created:%p\n",grb);
@@ -93,13 +96,25 @@ void grbound_flags_unset(grbound* grb, int flags)
 }
 
 
+moport* grbound_midi_out_port(grbound* grb)
+{
+    return grb->midiout;
+}
+
+
+void grbound_midi_out_port_set(grbound* grb, moport* mo)
+{
+    grb->midiout = mo;
+}
+
+
 int grbound_channel(grbound* grb)
 {
     return grb->channel;
 }
 
 
-int grbound_channel_set(grbound* grb, int ch)
+void grbound_channel_set(grbound* grb, int ch)
 {
     grb->channel = ch;
 }
@@ -109,7 +124,6 @@ fsbound* grbound_fsbound(grbound* grb)
 {
     return grb->bound;
 }
-
 
 
 void grbound_set_input_port(grbound* grb, evport* port)
@@ -137,6 +151,8 @@ struct grid
     evport_manager* portman;
     evport* port;  /* assigned from ports_global */
 
+    evport* unplace_port;
+
     freespace*  fs;
 
 };
@@ -153,9 +169,16 @@ grid* grid_new(void)
     if (!(gr->portman = evport_manager_new("grid")))
         goto fail1;
 
-    gr->port = evport_manager_evport_new(gr->portman);
+    gr->port =
+        evport_manager_evport_new(gr->portman,  RT_EVLIST_SORT_POS);
 
     if (!gr->port)
+        goto fail2;
+
+    gr->unplace_port =
+        evport_manager_evport_new(gr->portman,  RT_EVLIST_SORT_REL);
+
+    if (!gr->unplace_port)
         goto fail2;
 
     if (!(gr->fs = freespace_new()))
@@ -202,6 +225,12 @@ freespace*  grid_freespace(grid* gr)
 }
 
 
+evport* grid_unplace_port(grid* gr)
+{
+    return gr->unplace_port;
+}
+
+
 void grid_rt_place(grid* gr)
 {
     event ev;
@@ -225,61 +254,27 @@ void grid_rt_place(grid* gr)
                                 &ev.box_x,
                                 &ev.box_y ))
         {
-            _Bool place = 1;
-            int pitch, startpitch, endpitch, pitchdir;
+            int pitch;
 
             ev.note_velocity = (grb->flags & FSPLACE_TOP_TO_BOTTOM)
                                     ? ev.box_y
-                                    : ev.box_y + ev.box_width;
+                                    : ev.box_y + ev.box_height;
 
-            if (grb->flags & GRBOUND_PITCH_STRICT_POS)
+            ev.note_pitch =
+                    pitch = moport_output(grb->midiout, &ev, grb->flags);
+
+            if (pitch == -1 && (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
             {
-                if (gr->note_on[ev.box_x].flags & EV_NOTE_ON)
-                {
-                    if (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
-                        ev.flags &= ~EV_TYPE_NOTE;
-                    else
-                        place = 0;
-                }
+                //--pitch;
 
-                ev.note_pitch = ev.box_x;
-            }
-            else
-            {
-                if (grb->flags & FSPLACE_LEFT_TO_RIGHT)
-                {
-                    startpitch = pitch = ev.box_x;
-                    endpitch = pitch + ev.box_width;
-                    pitchdir = 1;
-                }
-                else
-                {
-                    startpitch = pitch = ev.box_x + ev.box_width;
-                    endpitch = ev.box_x;
-                    pitchdir = -1;
-                }
-
-                while(gr->note_on[pitch].flags & EV_NOTE_ON)
-                {
-                    pitch += pitchdir;
-                    if (pitch == endpitch)
-                        break;
-                }
-
-                if (pitch == endpitch)
-                {
-                    if (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
-                        ev.flags &= ~EV_TYPE_NOTE;
-                    else
-                        place = 0;
-                }
-                ev.note_pitch = pitch;
+                /*  add event to blockers list or whatever it will be...
+                    the event will be placed just like a note, however,
+                    it will not send any midi message.
+                */
             }
 
-            if (place)
+            if (pitch > -1)
             {
-                event_copy(&gr->note_on[ev.note_pitch], &ev);
-
                 freespace_remove(gr->fs,    ev.box_x,
                                             ev.box_y,
                                             ev.box_width,
@@ -292,110 +287,46 @@ void grid_rt_place(grid* gr)
                 #endif
             }
         }
-        else
+/*        else
             WARNING("failed to place event\n");
+*/
     }
 }
 
-/*
-void grbound_rt_place(evport* port, freespace* fs)
+
+void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
 {
-    evport_read_reset(port);
     event ev;
 
-    while(evport_read_event(port, &ev))
-    {
-        grbound* grb = ev.misc;
+/*
+    event_init(&ev);
 
-        event_dump(&ev);
+    MESSAGE("ph:%8d  |  nph:%8d\n", ph, nph);
 
-        if (freespace_find(     fs,
-                                grb->bound,
-                                grb->flags,
-                                ev.box_width,
-                                ev.box_height,
-                                &ev.box_x,
-                                &ev.box_y ))
-        {
-            _Bool place = 1;
-            int pitch, startpitch, endpitch, pitchdir;
-            event* event_on;
-
-            ev.note_velocity = (grb->flags & FSPLACE_TOP_TO_BOTTOM)
-                                    ? ev.box_y
-                                    : ev.box_y + ev.box_width;
-
-            if (!(event_on = evpool_event_alloc(grb->pool)))
-            {
-                #ifdef GRID_DEBUG
-                WARNING("event dropped: event pool out of memory\n");
-                #endif
-                continue;
-            }
-
-            if (grb->flags & GRBOUND_PITCH_STRICT_POS)
-            {
-                if (grb->event_on[ev.box_x])
-                {
-                    if (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
-                        ev.flags &= ~EV_TYPE_NOTE;
-                    else
-                        place = 0;
-                }
-
-                ev.note_pitch = ev.box_x;
-            }
-            else
-            {
-                if (grb->flags & FSPLACE_LEFT_TO_RIGHT)
-                {
-                    startpitch = pitch = ev.box_x;
-                    endpitch = pitch + ev.box_width;
-                    pitchdir = 1;
-                }
-                else
-                {
-                    startpitch = pitch = ev.box_x + ev.box_width;
-                    endpitch = ev.box_x;
-                    pitchdir = -1;
-                }
-
-                while(grb->event_on[pitch])
-                {
-                    pitch += pitchdir;
-                    if (pitch == endpitch)
-                        break;
-                }
-
-                if (pitch == endpitch)
-                {
-                    if (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
-                        ev.flags &= ~EV_TYPE_NOTE;
-                    else
-                        place = 0;
-                }
-                ev.note_pitch = pitch;
-            }
-
-            if (place)
-            {
-                event_copy(event_on, &ev);
-                grb->event_on[event_on->note_pitch] = event_on;
-                freespace_remove(fs, event_on->box_x,
-                                     event_on->box_y,
-                                     event_on->box_width,
-                                     event_on->box_height );
-            }
-            else
-            {
-                #ifdef GRID_DEBUG
-                WARNING("event not placed in boundary\n");
-                #endif
-                evpool_event_free(grb->pool, event_on);
-            }
-        }
-        else
-            WARNING("failed to place event\n");
-    }
-}
+    MESSAGE("unplace port has %d events\n", 
+            evport_count(gr->unplace_port));
 */
+    evport_read_reset(gr->unplace_port);
+
+    while(evport_read_event(gr->unplace_port, &ev))
+    {
+/*
+        printf("---{");
+        event_dump(&ev);
+        printf("}---\n");
+*/
+        if (ph >= ev.box_release)
+        {
+
+            freespace_add(gr->fs,   ev.box_x,       ev.box_y,
+                                    ev.box_width,   ev.box_height );
+
+           evport_and_remove_event(gr->unplace_port);
+        }
+    }
+/*
+    printf("###|");
+    event_dump(&ev);
+    printf("|###\n");
+*/
+}

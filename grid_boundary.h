@@ -5,7 +5,7 @@
 #include "event_port.h"
 #include "freespace_boundary.h"
 #include "freespace_state.h"
-
+#include "midi_out_port.h"
 
 enum GRID_BOUNDARY_FLAGS
 {
@@ -29,8 +29,11 @@ void        grbound_flags_clear(grbound*);
 void        grbound_flags_set(grbound*, int flags);
 void        grbound_flags_unset(grbound*, int flags);
 
+moport*     grbound_midi_out_port(grbound*);
+void        grbound_midi_out_port_set(grbound*, moport*);
+
 int         grbound_channel(grbound*);
-int         grbound_channel_set(grbound*, int);
+void        grbound_channel_set(grbound*, int);
 
 fsbound*    grbound_fsbound(grbound*);
 
@@ -58,13 +61,10 @@ void        grid_free(grid*);
 
 evport*     grid_input_port(grid*);
 freespace*  grid_freespace(grid*);
+evport*     grid_unplace_port(grid*);
 
 void        grid_rt_place(grid*);
-/*
-void        grbound_rt_place(evport* input, freespace* fs);
-*/
-/*
-void        grbound_rt_play(grbound*, freespace*, bbt_t ph, bbt_t nph);
-*/
+
+void        grid_rt_unplace(grid*, bbt_t ph, bbt_t nph);
 
 #endif

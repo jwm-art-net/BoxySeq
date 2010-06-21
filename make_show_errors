@@ -1,0 +1,3 @@
+make clean
+echo
+make 2>&1 | ./show_gcc_line

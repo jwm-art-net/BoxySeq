@@ -26,20 +26,6 @@ struct event_pool
 };
 
 
-struct rt_event_list
-{
-    rt_evlink* head;
-    rt_evlink* tail;
-
-    rt_evlink* cur;
-
-    _Bool ordered;
-
-    evpool* pool;
-    _Bool pool_managed;
-};
-
-
 evpool* evpool_new(int count)
 {
     if (count < 1)
@@ -144,7 +130,26 @@ void evpool_event_free(evpool* evp, event* ev)
 }
 
 
-rt_evlist*  rt_evlist_new(evpool* pool, _Bool ordered)
+
+
+struct rt_event_list
+{
+    rt_evlink* head;
+    rt_evlink* tail;
+
+    rt_evlink* cur;
+
+    int flags;
+
+    evpool* pool;
+    _Bool pool_managed;
+
+    int count;
+};
+
+
+
+rt_evlist*  rt_evlist_new(evpool* pool, int flags)
 {
     rt_evlist* rtevl = malloc(sizeof(*rtevl));
 
@@ -167,7 +172,8 @@ rt_evlist*  rt_evlist_new(evpool* pool, _Bool ordered)
     rtevl->head = 0;
     rtevl->tail = 0;
     rtevl->cur = 0;
-    rtevl->ordered = ordered;
+    rtevl->flags = flags;
+    rtevl->count = 0;
 
     return rtevl;
 
@@ -191,9 +197,17 @@ void rt_evlist_free(rt_evlist* rtevl)
 }
 
 
+int rt_evlist_count(rt_evlist* rtevl)
+{
+    return rtevl->count;
+}
+
+
 event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 {
+    bbt_t newval, curval;
     rt_evlink* newlnk = evpool_private_event_alloc(rtevl->pool);
+    rt_evlink* cur = rtevl->head;
 
     if (!newlnk)
     {
@@ -203,19 +217,42 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 
     event_copy(&newlnk->ev, ev);
 
-    rt_evlink* cur = rtevl->head;
-
     if (!cur)
     {
         rtevl->head = newlnk;
         rtevl->head->next = 0;
         rtevl->head->prev = 0;
+        ++rtevl->count;
         return (event*)rtevl->head;
+    }
+
+    switch (rtevl->flags)
+    {
+    case RT_EVLIST_SORT_POS:    newval = ev->note_pos;
+        break;
+    case RT_EVLIST_SORT_DUR:    newval = ev->note_dur;
+        break;
+    case RT_EVLIST_SORT_REL:    newval = ev->box_release;
+        break;
+    default:                    WARNING("ERROR: insane flags\n");
+        return 0;
     }
 
     while(cur)
     {
-        if (ev->note_pos < ((event*)cur)->note_pos)
+        switch (rtevl->flags)
+        {
+        case RT_EVLIST_SORT_POS:    curval = ((event*)cur)->note_pos;
+            break;
+        case RT_EVLIST_SORT_DUR:    curval = ((event*)cur)->note_dur;
+            break;
+        case RT_EVLIST_SORT_REL:    curval = ((event*)cur)->box_release;
+            break;
+        default:                    WARNING("ERROR: insane flags\n");
+            return 0;
+        }
+
+        if (newval < curval)
         {
             newlnk->prev = cur->prev;
             cur->prev = newlnk;
@@ -224,6 +261,7 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
             if (cur == rtevl->head)
                 rtevl->head = newlnk;
 
+            ++rtevl->count;
             return &newlnk->ev;
         }
 
@@ -237,6 +275,7 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
     newlnk->prev = cur;
     newlnk->next = 0;
 
+    ++rtevl->count;
     return &newlnk->ev;
 }
 
@@ -247,6 +286,7 @@ void rt_evlist_clear_events(rt_evlist* rtevl)
     rt_evlink* next = rtevl->head;
 
     rtevl->head = 0;
+    rtevl->count = 0;
 
     while(evlnk)
     {
@@ -308,6 +348,95 @@ event* rt_evlist_read_and_remove_event(rt_evlist* rtevl, event* dest)
     rtevl->head = rtevl->cur = rtevl->cur->next;
 
     evpool_private_event_free(rtevl->pool, evlnk);
+    --rtevl->count;
 
     return dest;
+}
+
+
+/*
+    remove the previous event in the list.
+
+    assumptions:
+      * 1) rt_evlist_read_event was called prior to this function
+
+      * 2) this function is only called if rt_evlist_read_event
+           was successful.
+
+    ***** FOR THIS FUNCTION TO WORK CORRECTLY BOTH THE ASSUMPTIONS
+          *MUST* HOLD TRUE.
+
+    rtevl->count is zero:
+        there's nothing to remove - this function called in error
+
+    rtevl->cur is zero:
+        given assumptions, the current item is zero because the
+        last item in the list was read before calling this, so,
+        the last item to remove is the tail.
+
+    rtevl->cur->prev is zero:
+        given assumptions, can only assume this function called
+        in error: cur would never point to the first item in list
+        if rt_evlist_read_event was called prior to this function.
+
+*/
+void rt_evlist_and_remove_event(rt_evlist* rtevl)
+{
+    rt_evlink* rem;
+/*
+    MESSAGE("rtevl:%p head:%p tail:%p cur:%p\n",
+            rtevl, rtevl->head, rtevl->tail, rtevl->cur);
+*/
+    if (!rtevl->count)
+    {
+        WARNING("ERROR: rt_evlist empty, nothing to remove\n");
+        return;
+    }
+
+    if (!rtevl->cur) /* remove tail */
+    {
+        rem = rtevl->tail;
+
+        if (rtevl->head == rtevl->tail)
+            rtevl->head = rtevl->tail = 0;
+        else
+            rtevl->tail->prev->next = 0;
+
+        --rtevl->count;
+        evpool_private_event_free(rtevl->pool, rem);
+        return;
+    }
+
+    if (rtevl->cur == rtevl->head)
+    {
+        WARNING("ERROR: cannot remove event previous to head\n");
+        return;
+    }
+
+    rem = rtevl->cur->prev;
+
+/*  we're being paranoid here and differentiating between the two
+    error conditions on either side of this comment!
+    NEITHER of which SHOULD occur.
+*/
+
+    if (!rem)
+    {
+        WARNING("ERROR: cannot remove non-existent previous event\n");
+        return;
+    }
+
+    if (rem == rtevl->head)
+    {
+        rtevl->head = rtevl->cur;
+        rtevl->cur->prev = 0;
+        --rtevl->count;
+        evpool_private_event_free(rtevl->pool, rem);
+        return;
+    }
+
+    rem->prev->next = rem->next;
+    rem->next->prev = rem->prev;
+    --rtevl->count;
+    evpool_private_event_free(rtevl->pool, rem);
 }

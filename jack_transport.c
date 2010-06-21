@@ -65,7 +65,7 @@ jtransp* jtransp_new(void)
 
     tr->bar = tr->beat = tr->tick = 0;
 
-    tr->master_beats_per_minute = 120.0f;
+    tr->master_beats_per_minute = 145.0f;
     tr->master_beats_per_bar =    4;
     tr->master_beat_type =        4;
     tr->beats_per_minute = 0;

@@ -7,11 +7,15 @@
 
 typedef enum EVENT_FLAGS
 {
-    EV_NOTE_ON =        0x0001,
-    EV_NOTE_OFF =       0x0002,
+    EV_TYPE_NOTE =      0x0001,
+    EV_TYPE_BLOCK =     0x0002,
+    EV_TYPEMASK =       0x000f,
 
-    EV_TYPE_NOTE =      0x0010,
-    EV_HAS_DURATION =   0x0040,
+    EV_STATUS_START =   0x0010, /* event in start state */
+    EV_STATUS_PLAY =    0x0020, /* event in play state  */
+    EV_STATUS_STOP =    0x0030, /* event in stop state  */
+    EV_STATUS_HOLD =    0x0040, /* event in hold state  */
+    EV_STATUSMASK =     0x00f0,
 
     EV_CHANNEL_MASK =   0xf000
 
@@ -28,18 +32,16 @@ typedef struct event_
     bbt_t   note_pos;       /* position in time (ticks) */
     bbt_t   note_dur;       /* duration (ticks)         */
 
-    int     box_x;      /* maybe converts to pitch       */
-    int     box_y;      /* maybe converts to velocity    */
+    int     box_x;          /* maybe converts to pitch       */
+    int     box_y;          /* maybe converts to velocity    */
 
     int     box_width;
     int     box_height;
 
     bbt_t   box_release;    /* duration of box after note off (ticks) */
 
-    void*   misc;   /*  FYI: misc is zero initialized when a new event
-                        is created, but after that, no other function
-                        declared in this file, touchs it.
-                    */
+    void*   misc;           /*  all fields copied by event_copy
+                                but not deep in this case...    */
 
 } event;
 
@@ -50,7 +52,7 @@ event*  event_dup(const event*);
 void    event_dump(const event*);
 void    event_copy(event* dest, const event* src);
 
-int     event_channel(event*);
+int     event_channel(const event*);
 void    event_set_channel(event*, int);
 
 /* list manipulation callbacks */

@@ -2,8 +2,8 @@
 
 #include "debug.h"
 #include "event_port.h"
-
 #include "jack_midi.h"
+#include "midi_out_port.h"
 #include "pattern.h"
 
 
@@ -17,6 +17,7 @@ struct boxy_sequencer
 
     pattern*    pattern_slot[MAX_PATTERN_SLOTS];
     grbound*    grbound_slot[MAX_GRBOUND_SLOTS];
+    moport*     moport_slot[MAX_MOPORT_SLOTS];
 
     evport_manager* ports_pattern;
     evport_manager* ports_bound;
@@ -227,9 +228,55 @@ grbound* boxyseq_grbound(boxyseq* bs, int slot)
 }
 
 
+int boxyseq_moport_new(boxyseq* bs)
+{
+    int slot = 0;
+
+    for (slot = 0; slot < MAX_MOPORT_SLOTS; ++slot)
+        if (!bs->moport_slot[slot])
+            break;
+
+    if (slot == MAX_MOPORT_SLOTS)
+    {
+        WARNING("out of midi out port slots\n");
+        return -1;
+    }
+
+    if (!(bs->moport_slot[slot] = moport_new()))
+        return -1;
+
+    moport_set_grid_unplace_port(   bs->moport_slot[slot],
+                                    grid_unplace_port(bs->gr)   );
+
+    return slot;
+
+}
+
+
+void boxyseq_moport_free(boxyseq* bs, int slot)
+{
+    if (slot < 0 || slot >= MAX_MOPORT_SLOTS)
+    {
+        WARNING("slot value %d is out of range\n", slot);
+        return;
+    }
+
+    moport_free(bs->moport_slot[slot]);
+    bs->moport_slot[slot] = 0;
+}
+
+
+moport* boxyseq_moport(boxyseq* bs, int slot)
+{
+    return bs->moport_slot[slot];
+}
+
+
+
+
+
 void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
 {
-    static int placements = 0;
     int i;
 
     evport* grid_port = grid_input_port(bs->gr);
@@ -249,13 +296,15 @@ void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
     }
 
     grid_rt_place(bs->gr);
-/*
-    for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
+
+    for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
-        if (bs->grbound_slot[i])
-            grbound_rt_place(bs->global_bound_port, bs->fs);
+        if (bs->moport_slot[i])
+            moport_rt_play(bs->moport_slot[i], ph, nph);
     }
-*/
+
+    grid_rt_unplace(bs->gr, ph, nph);
+
 }
 
 

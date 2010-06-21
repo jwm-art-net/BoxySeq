@@ -541,9 +541,10 @@ void prtdata_play(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
     prt->pd_in_use =    pd;
     prt->ev_arr_in_use =ev_arr;
 
+/*
     start_tick %=   pd->loop_length;
     end_tick %=     pd->loop_length;
-
+*/
     if (start_tick < prt->start_tick)
         start_tick = prt->start_tick;
 
@@ -554,7 +555,9 @@ void prtdata_play(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
     int     num_played = tick / pd->loop_length;
     bbt_t   offset =     prt->start_tick + (pd->loop_length * num_played);
 
+/*
     prt->index = tick % pd->loop_length;
+*/
 
     prt->playing = 1;
 

@@ -1,7 +1,9 @@
 PREFIX :=/usr/local
 BINDIR :=$(PREFIX)/bin
 
+
 PROG := boxyseq
+
 
 CC := gcc
 

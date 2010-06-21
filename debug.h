@@ -9,6 +9,7 @@
 #define _DEBUG_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 #ifndef __GNUC__
     #define __FUNCTION__ NULL

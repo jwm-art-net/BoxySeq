@@ -28,7 +28,7 @@ event* event_new(void)
 
 void event_init(event* ev)
 {
-    ev->flags = 0;
+    ev->flags =         0;
     ev->note_pitch =    -1;
     ev->note_velocity = -1;
     ev->note_pos =      -1;
@@ -38,7 +38,7 @@ void event_init(event* ev)
     ev->box_width =     -1;
     ev->box_height =    -1;
     ev->box_release =   -1;
-    ev->misc = 0;
+    ev->misc =          0;
 }
 
 
@@ -54,10 +54,11 @@ void event_copy(event* dest, const event* src)
     dest->box_width =       src->box_width;
     dest->box_height =      src->box_height;
     dest->box_release =     src->box_release;
+    dest->misc =            src->misc;
 }
 
 
-int event_channel(event* ev)
+int event_channel(const event* ev)
 {
     return (0xf000 & ev->flags) >> 12;
 }
@@ -71,16 +72,19 @@ void event_set_channel(event* ev, int ch)
 
 void event_dump(const event* ev)
 {
-    MESSAGE("event: %p flags %d "
-            "pos:%6d dur:%6d "
-            "x:%3d y:%3d "
-            "rel:%6d "
-            "w:%3d h:%3d\n",
-            ev, ev->flags,
-            ev->note_pos, ev->note_dur,
-            ev->box_x, ev->box_y,
-            ev->box_release,
-            ev->box_width, ev->box_height);
+    MESSAGE("event: %p  |  flags %d  |  "
+            "pos:%6d  |  dur:%6d  |  rel:%6d  |  "
+            "pitch:%3d  |  vel:%3d  |  "
+            "x:%3d  |  y:%3d  |  "
+            "w:%3d  |  h:%3d  |  "
+            "misc:%p \n",
+
+            ev,             ev->flags,
+            ev->note_pos,   ev->note_dur,   ev->box_release,
+            ev->note_pitch, ev->note_velocity,
+            ev->box_x,      ev->box_y,
+            ev->box_width,  ev->box_height,
+            ev->misc );
 }
 
 

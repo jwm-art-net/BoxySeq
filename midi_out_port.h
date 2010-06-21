@@ -4,11 +4,12 @@
 
 #include "event_port.h"
 
-
 typedef struct midi_out_port moport;
 
 moport*     moport_new(void);
-void        moport_free(moport* mo);
+void        moport_free(moport*);
+
+void        moport_set_grid_unplace_port(moport*, evport*);
 
 
 /*  moport_test_pitch
@@ -25,30 +26,17 @@ void        moport_free(moport* mo);
         which can be played.
 
         or, if no pitch is available in the channel, return -1 to
-        indicate the note will not play.
-*/
-
-/*
-int         moport_test_pitch(moport* midiport, int channel,
-                                                int pitch_start,
-                                                int pitch_end   );
+        indicate the note will not play, and consequently act
+        appropriately, place the box but as a blocker - not a note,
+        or, discard the event entirely.
 */
 
 
 /* channel is stored in event at this stage */
-int         moport_test_pitch(moport* midiport, event* ev,
-                                                int grbound_flags );
+int         moport_output(moport* midiport, const event* ev,
+                                            int grb_flags );
 
-
-/*
-event*      evport_write_event(evport*, const event*);
-
-void        evport_clear_data(evport*);
-void        evport_read_reset(evport* port);
-int         evport_read_event(evport*, event* dest);
-int         evport_read_and_remove_event(evport*, event* dest);
-*/
-
+void        moport_rt_play(moport*, bbt_t ph, bbt_t nph);
 
 
 #endif

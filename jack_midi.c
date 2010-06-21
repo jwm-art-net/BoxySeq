@@ -27,6 +27,8 @@ struct jack_midi_data
     jtransp*    tr;
     boxyseq*    bs;
 
+    bbt_t oph;       /* old play head tick       */
+    bbt_t onph;       /* old next play head tick  */
 };
 
 
@@ -52,6 +54,9 @@ jmidi* jmidi_new(void)
     MESSAGE("jm->tr = %p\n", jm->tr);
 
     jm->bs = 0;
+
+    jm->oph = -1;
+    jm->onph = 0;
 
     return jm;
 
@@ -162,12 +167,8 @@ void midi_RT_queue_note(int port, pnote*)
 */
 
 
-
 static int jmidi_process(jack_nframes_t nframes, void* arg)
 {
-    static bbt_t oph = -1;       /* old play head tick       */
-    static bbt_t onph = 0;      /* old next play head tick  */
-
     jmidi* jm = (jmidi*)arg;
     jtransp* tr = jm->tr;
 
@@ -183,24 +184,24 @@ static int jmidi_process(jack_nframes_t nframes, void* arg)
     const bbt_t nph = (bbt_t)
                         (0 + trunc(ph + jtransp_rt_ticks_per_period(tr)));
 
-    if (ph && ph == oph)
+    if (ph && ph == jm->oph)
         return 0;
 
-    if (ph != onph)
+    if (ph != jm->onph)
     {
-        if (onph > ph)
+        if (jm->onph > ph)
             WARNING("duplicated %lu ticks\n",
-                    (long unsigned int)(onph - ph));
+                    (long unsigned int)(jm->onph - ph));
         else
             WARNING("dropped %lu ticks\n",
-                    (long unsigned int)(ph - onph));
+                    (long unsigned int)(ph - jm->onph));
     }
 
-    onph = nph;
+    jm->onph = nph;
 
     boxyseq_rt_play(jm->bs, ph, nph);
 
-    oph = ph;
+    jm->oph = ph;
 
     return 0;
 }

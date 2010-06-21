@@ -82,7 +82,8 @@ struct event_port
 };
 
 
-static evport* evport_new(evpool* pool, const char* name, int id)
+static evport* evport_private_new(  evpool* pool,   const char* name,
+                                    int id, int rt_evlist_sort_flags  )
 {
     int ordered = 1;
 
@@ -96,7 +97,7 @@ static evport* evport_new(evpool* pool, const char* name, int id)
     if (!port->name)
         goto fail1;
 
-    port->data = rt_evlist_new(pool, ordered);
+    port->data = rt_evlist_new(pool, rt_evlist_sort_flags);
 
     if (!port->data)
         goto fail2;
@@ -159,8 +160,22 @@ int evport_read_event(evport* port, event* dest)
 
 int evport_read_and_remove_event(evport* port, event* dest)
 {
-    return !!rt_evlist_read_and_remove_event(port->data);
+    return !!rt_evlist_read_and_remove_event(port->data, dest);
 }
+
+
+void evport_and_remove_event(evport* port)
+{
+    rt_evlist_and_remove_event(port->data);
+}
+
+
+int evport_count(evport* port)
+{
+    return rt_evlist_count(port->data);
+}
+
+
 
 /*  event_port_manager
 
@@ -262,13 +277,15 @@ void evport_manager_free(evport_manager* portman)
 }
 
 
-evport* evport_manager_evport_new(evport_manager* portman)
+evport* evport_manager_evport_new(  evport_manager* portman,
+                                    int rt_evlist_sort_flags )
 {
-    evport* port = evport_new(  portman->event_pool,
-                                portman->groupname,
-                                portman->next_port_id );
+    evport* port = evport_private_new(  portman->event_pool,
+                                        portman->groupname,
+                                        portman->next_port_id,
+                                        rt_evlist_sort_flags   );
 
-    if (!evport_new)
+    if (!port)
         return 0;
 
     lnode* ln = llist_add_data(portman->portlist, port);

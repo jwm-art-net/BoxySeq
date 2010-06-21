@@ -9,10 +9,10 @@
 
 struct midi_out_port
 {
-    evport* evinput;
-
     event note_on[16][128];
     event note_off[16][128];
+
+    evport* unplace_port;
 };
 
 
@@ -22,8 +22,6 @@ moport* moport_new(void)
 
     if (!mo)
         goto fail0;
-
-    mo->evinput = 0;
 
     int c, p;
 
@@ -56,25 +54,28 @@ void moport_free(moport* mo)
 }
 
 
-int moport_test_pitch(moport* midiport, event* ev, int grb_flags)
+void moport_set_grid_unplace_port(moport* mo, evport* port)
+{
+    mo->unplace_port = port;
+}
+
+
+int moport_output(moport* midiport, const event* ev, int grb_flags)
 {
     event* note_on = midiport->note_on[event_channel(ev)];
 
+    int pitch = -1;
+
     if (grb_flags & GRBOUND_PITCH_STRICT_POS)
     {
-        if (note_on[ev->box_x].flags & EV_NOTE_ON)
-        {
-            if (grb_flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
-                return -2; /* ev->flags &= ~EV_TYPE_NOTE; */
-            else
-                return -1;
-        }
+        if (note_on[pitch].flags & EV_TYPE_NOTE)
+            return -1;
 
-        return ev->box_x;
+        pitch = ev->box_x;
     }
     else
     {
-        int pitch, startpitch, endpitch, pitchdir;
+        int startpitch, endpitch, pitchdir;
 
         if (grb_flags & FSPLACE_LEFT_TO_RIGHT)
         {
@@ -89,20 +90,61 @@ int moport_test_pitch(moport* midiport, event* ev, int grb_flags)
             pitchdir = -1;
         }
 
-        while(note_on[pitch].flags & EV_NOTE_ON)
+        while(note_on[pitch].flags & EV_TYPE_NOTE)
         {
             pitch += pitchdir;
             if (pitch == endpitch)
                 break;
         }
 
-        if (pitch < endpitch)
-            return pitch;
-
-        if (grb_flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
-            return -2; /* ev.flags &= ~EV_TYPE_NOTE; */
+        if (pitch == endpitch)
+            return -1;
     }
 
-    return -1;
+    event_copy(&note_on[pitch], ev);
+    note_on[pitch].note_pitch = pitch;
+    note_on[pitch].flags = EV_TYPE_NOTE | EV_STATUS_START;
+
+    return pitch;
+}
+
+void moport_rt_play(moport* midiport, bbt_t ph, bbt_t nph)
+{
+    int channel;
+
+    for (channel = 0; channel < 16; ++channel)
+    {
+        int pitch;
+        event* ev = midiport->note_on[channel];
+
+        for (pitch = 0; pitch < 128; ++pitch)
+        {
+            switch (ev[pitch].flags & EV_STATUSMASK)
+            {
+            case EV_STATUS_START:
+                /* output MIDI NOTE ON msg */
+                ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
+                ev[pitch].note_dur += ph;
+                /* no break */
+
+            case EV_STATUS_PLAY:
+                if (nph >= ev[pitch].note_dur)
+                {
+                    ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_STOP;
+                    /* output MIDI NOTE OFF msg */
+                }
+                break;
+
+            case EV_STATUS_STOP:
+                ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_HOLD;
+                ev[pitch].box_release += ph;
+                evport_write_event(midiport->unplace_port, &ev[pitch]);
+                ev[pitch].flags = 0;
+
+            default:
+                break;
+            }
+        }
+    }
 }
 

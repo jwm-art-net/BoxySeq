@@ -27,10 +27,10 @@ int             boxyseq_pattern_new(boxyseq*,
                                 bbt_t beats_per_bar,
                                 bbt_t beat_type    );
 
-void            boxyseq_pattern_free(boxyseq*, int slot);
+void            boxyseq_pattern_free(boxyseq*,  int slot);
 pattern*        boxyseq_pattern_dup(boxyseq*,   int dest_slot,
                                                 int src_slot);
-pattern*        boxyseq_pattern(boxyseq*, int slot);
+pattern*        boxyseq_pattern(boxyseq*,       int slot);
 evport_manager* boxyseq_pattern_ports(boxyseq*);
 
 /*
@@ -41,13 +41,22 @@ _Bool       boxyseq_pattern_set_grbound(boxyseq*,   int pattern_slot,
 /*  grbounds ---------------->
 */
 
-int             boxyseq_grbound_new(boxyseq*, int x, int y, int w, int h);
-void            boxyseq_grbound_free(boxyseq*, int slot);
-grbound*        boxyseq_grbound(boxyseq*, int slot);
+int             boxyseq_grbound_new(boxyseq*,   int x, int y,
+                                                int w, int h  );
+void            boxyseq_grbound_free(boxyseq*,  int slot);
+grbound*        boxyseq_grbound(boxyseq*,       int slot);
 evport_manager* boxyseq_bound_ports(boxyseq*);
 
 
-void        boxyseq_rt_play(boxyseq*, bbt_t ph, bbt_t nph);
+/*  midi out ports ---------->
+*/
+
+int             boxyseq_moport_new(boxyseq*);
+void            boxyseq_moport_free(boxyseq*,  int slot);
+moport*         boxyseq_moport(boxyseq*,       int slot);
+
+
+void            boxyseq_rt_play(boxyseq*, bbt_t ph, bbt_t nph);
 
 
 grid*   boxyseq_grid(boxyseq*);
