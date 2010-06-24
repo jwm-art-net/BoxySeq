@@ -13,8 +13,8 @@
 #define MAX_GRBOUND_SLOTS 16
 #define MAX_MOPORT_SLOTS 16
 
-#define DEFAULT_EVBUF_SIZE 128
-#define DEFAULT_EVPOOL_SIZE 128
+#define DEFAULT_EVBUF_SIZE 8
+#define DEFAULT_EVPOOL_SIZE 8
 
 /* 2520 gives int result for div by 2 ... 9 */
 extern const int ppqn;
@@ -45,6 +45,7 @@ void bbtpos_copy(bbtpos* dest, const bbtpos* src);
 
 char* name_and_number(const char* name, int number);
 
+char* jwm_strcat_alloc(const char* str1, const char* str2);
 
 #endif
 

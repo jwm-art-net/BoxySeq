@@ -10,7 +10,6 @@
 struct midi_out_port
 {
     event note_on[16][128];
-    event note_off[16][128];
 
     evport* unplace_port;
 };
@@ -28,13 +27,9 @@ moport* moport_new(void)
     for (c = 0; c < 16; ++c)
     {
         event* ev_on = mo->note_on[c];
-        event* ev_off = mo->note_off[c];
 
         for (p = 0; p < 128; ++p)
-        {
             event_init(ev_on++);
-            event_init(ev_off++);
-        }
     }
 
     return mo;
@@ -49,6 +44,30 @@ void moport_free(moport* mo)
 {
     if (!mo)
         return;
+
+    int p;
+    event* ev_on = mo->note_on[0];
+
+    for (p = 0; p < 128; ++p, ++ev_on)
+    {
+        if (ev_on->flags & EV_TYPEMASK)
+        {
+            MESSAGE("note %d: ", p);
+
+            switch(ev_on->flags & EV_STATUSMASK)
+            {
+            case EV_STATUS_START:   printf("start");    break;
+            case EV_STATUS_PLAY:    printf("play");     break;
+            case EV_STATUS_STOP:    printf("stop");     break;
+            case EV_STATUS_HOLD:    printf("hold");     break;
+            default:                printf("err");      break;
+            }
+            printf("\n");
+            if (ev_on->note_pitch != p)
+                WARNING("mismatched pitch: note_pitch %d note_on[%d]\n",
+                        p, ev_on->note_pitch);
+        }
+    }
 
     free(mo);
 }
@@ -125,6 +144,7 @@ void moport_rt_play(moport* midiport, bbt_t ph, bbt_t nph)
                 /* output MIDI NOTE ON msg */
                 ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
                 ev[pitch].note_dur += ph;
+                printf("0");
                 /* no break */
 
             case EV_STATUS_PLAY:
@@ -132,6 +152,7 @@ void moport_rt_play(moport* midiport, bbt_t ph, bbt_t nph)
                 {
                     ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_STOP;
                     /* output MIDI NOTE OFF msg */
+                    printf("1");
                 }
                 break;
 
@@ -140,7 +161,7 @@ void moport_rt_play(moport* midiport, bbt_t ph, bbt_t nph)
                 ev[pitch].box_release += ph;
                 evport_write_event(midiport->unplace_port, &ev[pitch]);
                 ev[pitch].flags = 0;
-
+                printf("2");
             default:
                 break;
             }

@@ -21,6 +21,7 @@ HDRS := `pkg-config --cflags gtk+-2.0` `pkg-config --cflags jack`
 DEBUGS:=-DFREESPACE_DEBUG 	\
 	-DEVPOOL_DEBUG		\
 	-DGRID_DEBUG		
+
 #	-DLLIST_DEBUG
 #	-DPATTERN_DEBUG		\
 

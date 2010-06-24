@@ -57,7 +57,7 @@ moport*         boxyseq_moport(boxyseq*,       int slot);
 
 
 void            boxyseq_rt_play(boxyseq*, bbt_t ph, bbt_t nph);
-
+void            boxyseq_rt_stop(boxyseq*);
 
 grid*   boxyseq_grid(boxyseq*);
 

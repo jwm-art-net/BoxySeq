@@ -13,6 +13,10 @@ typedef struct event_pool evpool;
 evpool*     evpool_new(int count);
 void        evpool_free(evpool*);
 
+#ifdef EVPOOL_DEBUG
+void        evpool_set_origin_string(evpool*, const char*);
+const char* evpool_get_origin_string(evpool*);
+#endif
 
 event*      evpool_event_alloc(evpool*);
 void        evpool_event_free(evpool*, event*);
@@ -36,6 +40,12 @@ typedef void (*rt_evlist_cb)(event* ev);
 rt_evlist*  rt_evlist_new(evpool*, int flags);
 void        rt_evlist_free(rt_evlist*);
 int         rt_evlist_count(rt_evlist*);
+
+#ifdef EVPOOL_DEBUG
+void        rt_evlist_set_origin_string(rt_evlist*, const char*);
+const char* rt_evlist_get_origin_string(rt_evlist*);
+#endif
+
 
 /* adding events copies them */
 event*      rt_evlist_event_add(rt_evlist*, const event*);

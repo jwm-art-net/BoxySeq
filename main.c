@@ -43,13 +43,13 @@ int main(int argc, char** argv)
     plist* pl = pat->pl;
 
     pat->pd->width_min = 2;
-    pat->pd->width_max = 24;
+    pat->pd->width_max = 32;
 
     pat->pd->height_min = 2;
-    pat->pd->height_max = 24;
+    pat->pd->height_max = 32;
 
-    int count = 64;
-    int steps = 32;
+    int count = 16;
+    int steps = 16;
     bbt_t st = pat->pd->loop_length / steps;
     bbt_t dur = st - pat->pd->loop_length / (steps * 2);
     bbt_t t = 0;
@@ -58,12 +58,15 @@ int main(int argc, char** argv)
     for (i = 0; i < count; ++i, t += st)
     {
         event* ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur * 18;
-        ev->box_release = dur * 14;
+        ev->note_dur = dur * 24;
+        ev->box_release = dur * 18;
+        ev = lnode_data(plist_add_event_new(pl, t+ st/4));
+        ev->note_dur = dur * 25;
+        ev->box_release = dur * 17;
     }
 
 
-    grboundslot = boxyseq_grbound_new(bs, 0, 0, 120, 60);
+    grboundslot = boxyseq_grbound_new(bs, 0, 0, 128, 128);
     grbound* grb1 = boxyseq_grbound(bs, grboundslot);
 
     evport_manager* pat_ports = boxyseq_pattern_ports(bs);

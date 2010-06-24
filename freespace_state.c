@@ -100,9 +100,7 @@ freespace* freespace_new(void)
     int y;
 
     for (y = 0; y < FSHEIGHT; ++y)
-    {
         memset(&fs->buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
-    }
 
     return fs;
 }
@@ -116,43 +114,14 @@ void freespace_free(freespace* fs)
     free(fs);
 }
 
-/*
-static void fs_set_buffer(  fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
-                            int x,
-                            int y1,
-                            int xoffset,
-                            int width,
-                            int height)
+
+void freespace_clear(freespace* fs)
 {
-    fsbuf_type v;
     int y;
 
-    for (; width > 0 && x < FSBUFWIDTH; ++x)
-    {
-        if (width < xoffset)
-            v = (((fsbuf_type)1 << width) - 1) << (xoffset - width);
-        else if (xoffset < FSBUFBITS)
-            v = ((fsbuf_type)1 << xoffset) - 1;
-        else
-            v = fsbuf_max;
-
-        for (y = y1; y < y1 + height; ++y)
-        {
-#ifdef FREESPACE_DEBUG0
-            if (buf[y][x] & v)
-                printf("**** over-writing area ****\n");
-#endif
-            buf[y][x] |= v;
-        }
-
-        if (width < xoffset)
-            return;
-
-        width -= xoffset;
-        xoffset = FSBUFBITS;
-    }
+    for (y = 0; y < FSHEIGHT; ++y)
+        memset(&fs->buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
 }
-*/
 
 
 static inline int fs_x_to_offset_index(int x, int* d)
@@ -254,10 +223,7 @@ retry:
             {
                 *resultx = x1 * FSBUFBITS + (FSBUFBITS - x1offset);
                 *resulty = t2b ? y : y + 1 - height;
-/*
-                fs_set_buffer(buf, x1, *resulty, x1offset,
-                                       width, height);
-*/
+
                 return true;
             }
 
@@ -365,10 +331,7 @@ retry:
             {
                 *resultx = x * FSBUFBITS + FSBUFBITS - xoffset;
                 *resulty = t2b ? y : y + 1 - height;
-/*
-                fs_set_buffer(buf, x, *resulty, xoffset,
-                                            width, height);
-*/
+
                 return true;
             }
 
@@ -484,10 +447,7 @@ static _Bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
             {
                 *resultx = x * FSBUFBITS + (FSBUFBITS - xoffset);
                 *resulty = t2b ? y1 : y1 + 1 - height;
-/*
-                fs_set_buffer(buf, x, *resulty, xoffset,
-                                          width, height);
-*/
+
                 return true;
             }
         }

@@ -1,6 +1,7 @@
 #!/bin/bash
 #  Read and echo each line. And, if it starts with "foobar:123:", print line 123
 #  of foobar, using find(1) to find it.
+# http://stackoverflow.com/questions/2976742/is-there-any-way-to-make-gcc-print-offending-lines-when-it-emits-an-error/
 
 while read input
 do

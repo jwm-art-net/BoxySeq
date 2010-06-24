@@ -25,6 +25,8 @@ typedef struct freespace_state freespace;
 freespace*  freespace_new(void);
 void        freespace_free(freespace*);
 
+void        freespace_clear(freespace*);
+
 
 /*  freespace_remove -  locates an area within the freespace state grid
                         where an area 'width' x 'height' of unused space

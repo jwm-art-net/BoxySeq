@@ -234,6 +234,17 @@ evport_manager* evport_manager_new(const char* groupname)
     if (!portman->event_pool)
         goto fail1;
 
+#ifdef EVPOOL_DEBUG
+    char* tmp = jwm_strcat_alloc(groupname, "-portman");
+    if (tmp)
+    {
+        evpool_set_origin_string(portman->event_pool, tmp);
+        free(tmp);
+    }
+    else
+        evpool_set_origin_string(portman->event_pool, groupname);
+#endif
+
     portman->portlist = llist_new(  sizeof(evport),
                                     evport_free_cb,
                                     0, /* no evport duplication */

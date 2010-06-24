@@ -36,3 +36,21 @@ char* name_and_number(const char* name, int number)
 
     return ret;
 }
+
+
+char* jwm_strcat_alloc(const char* str1, const char* str2)
+{
+    size_t l1 = strlen(str1);
+    size_t l2 = strlen(str2);
+
+    char* str = malloc(l1 + l2 + 1);
+
+    if (!str)
+        return 0;
+
+    strcpy(str, str1);
+    strcpy(str + l1, str2); 
+
+    return str;
+}
+

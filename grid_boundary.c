@@ -18,7 +18,6 @@ struct grid_boundary
 
     moport*     midiout;
 
-    evpool*     pool;
 };
 
 
@@ -30,11 +29,6 @@ grbound* grbound_new(void)
         goto fail;
 
     if (!(grb->bound = fsbound_new()))
-        goto fail;
-
-    grb->pool = evpool_new(DEFAULT_EVPOOL_SIZE);
-
-    if (!grb->pool)
         goto fail;
 
     fsbound_init(grb->bound);
@@ -66,7 +60,6 @@ void grbound_free(grbound* grb)
     if (!grb)
         return;
 
-    evpool_free(grb->pool);
     fsbound_free(grb->bound);
     free(grb);
 }
@@ -265,8 +258,11 @@ void grid_rt_place(grid* gr)
 
             if (pitch == -1 && (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
             {
-                //--pitch;
-
+                ++pitch;
+                #ifdef GRID_DEBUG
+                WARNING("event should have been added"
+                        "to blocklist but was not\n");
+                #endif
                 /*  add event to blockers list or whatever it will be...
                     the event will be placed just like a note, however,
                     it will not send any midi message.
@@ -283,13 +279,14 @@ void grid_rt_place(grid* gr)
             else
             {
                 #ifdef GRID_DEBUG
-                WARNING("event not placed in boundary\n");
+                WARNING("event not placed in boundary: "
+                        "output pitch conflict (is ok (-: )\n");
                 #endif
             }
         }
-/*        else
-            WARNING("failed to place event\n");
-*/
+        else
+            WARNING("event not placed in boundary: "
+                    "no space available (is ok (-: )\n");
     }
 }
 
@@ -323,6 +320,8 @@ void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
 
            evport_and_remove_event(gr->unplace_port);
         }
+        else
+            break;
     }
 /*
     printf("###|");

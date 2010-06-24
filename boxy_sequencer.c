@@ -46,6 +46,9 @@ boxyseq* boxyseq_new(int argc, char** argv)
     for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
         bs->grbound_slot[i] = 0;
 
+    for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
+        bs->moport_slot[i] = 0;
+
     if (!(bs->ports_pattern = evport_manager_new("pattern")))
         goto fail2;
 
@@ -88,6 +91,9 @@ void boxyseq_free(boxyseq* bs)
 
     for (i = 0; i < MAX_PATTERN_SLOTS; ++i)
         pattern_free(bs->pattern_slot[i]);
+
+    for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
+        moport_free(bs->moport_slot[i]);
 
     free(bs->basename);
     free(bs);
@@ -306,6 +312,13 @@ void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
     grid_rt_unplace(bs->gr, ph, nph);
 
 }
+
+
+void boxyseq_rt_stop(boxyseq* bs)
+{
+    
+}
+
 
 
 grid* boxyseq_grid(boxyseq* bs)
