@@ -1,4 +1,5 @@
 #include "boxy_sequencer.h"
+#include "debug.h"
 #include "gui_main.h"
 #include "jack_midi.h"
 
@@ -49,20 +50,31 @@ int main(int argc, char** argv)
     pat->pd->height_max = 32;
 
     int count = 16;
-    int steps = 16;
+    int steps = 8;
     bbt_t st = pat->pd->loop_length / steps;
-    bbt_t dur = st - pat->pd->loop_length / (steps * 2);
+    bbt_t dur = st / 2;// - pat->pd->loop_length / (steps * 128);
     bbt_t t = 0;
     int i;
+
+    WARNING("st: %d dur: %d\n", st, dur);
 
     for (i = 0; i < count; ++i, t += st)
     {
         event* ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur * 24;
-        ev->box_release = dur * 18;
+        ev->note_dur = dur;
+        ev->box_release = dur;
+
+        ev = lnode_data(plist_add_event_new(pl, t));
+        ev->note_dur = 0;
+        ev->box_release = dur;
+/*
+        event* ev = lnode_data(plist_add_event_new(pl, t));
+        ev->note_dur = dur * 34;
+        ev->box_release = dur * 28;
         ev = lnode_data(plist_add_event_new(pl, t+ st/4));
-        ev->note_dur = dur * 25;
-        ev->box_release = dur * 17;
+        ev->note_dur = dur * 35;
+        ev->box_release = dur * 27;
+*/
     }
 
 

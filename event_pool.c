@@ -312,7 +312,7 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 
     if (!cur)
     {
-        rtevl->head = newlnk;
+        rtevl->head = rtevl->tail = newlnk;
         rtevl->head->next = 0;
         rtevl->head->prev = 0;
         ++rtevl->count;
@@ -474,10 +474,10 @@ event* rt_evlist_read_and_remove_event(rt_evlist* rtevl, event* dest)
 void rt_evlist_and_remove_event(rt_evlist* rtevl)
 {
     rt_evlink* rem;
-/*
-    MESSAGE("rtevl:%p head:%p tail:%p cur:%p\n",
+
+    WARNING("rtevl:%p head:%p tail:%p cur:%p\n",
             rtevl, rtevl->head, rtevl->tail, rtevl->cur);
-*/
+
     if (!rtevl->count)
     {
         WARNING("ERROR: rt_evlist empty, nothing to remove\n");

@@ -1,11 +1,12 @@
 #ifndef GRID_BOUNDARY_H
 #define GRID_BOUNDARY_H
 
-
+#include "boxyseq.h"
 #include "event_port.h"
 #include "freespace_boundary.h"
 #include "freespace_state.h"
 #include "midi_out_port.h"
+
 
 enum GRID_BOUNDARY_FLAGS
 {
@@ -54,17 +55,16 @@ void        grbound_rt_sort(grbound*, evport* output);
 
 
 
-typedef struct grid grid;
-
 grid*       grid_new(void);
 void        grid_free(grid*);
 
 evport*     grid_input_port(grid*);
 freespace*  grid_freespace(grid*);
-evport*     grid_unplace_port(grid*);
 
-void        grid_rt_place(grid*);
-
+void        grid_rt_place(grid*, bbt_t ph, bbt_t nph);
+void        grid_rt_block(grid*, bbt_t ph, bbt_t nph);
 void        grid_rt_unplace(grid*, bbt_t ph, bbt_t nph);
+
+void        grid_rt_unplace_event(grid*, event*);
 
 #endif

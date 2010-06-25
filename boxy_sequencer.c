@@ -251,9 +251,6 @@ int boxyseq_moport_new(boxyseq* bs)
     if (!(bs->moport_slot[slot] = moport_new()))
         return -1;
 
-    moport_set_grid_unplace_port(   bs->moport_slot[slot],
-                                    grid_unplace_port(bs->gr)   );
-
     return slot;
 
 }
@@ -301,13 +298,15 @@ void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
             grbound_rt_sort(bs->grbound_slot[i], grid_port);
     }
 
-    grid_rt_place(bs->gr);
+    grid_rt_place(bs->gr, ph, nph);
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
         if (bs->moport_slot[i])
-            moport_rt_play(bs->moport_slot[i], ph, nph);
+            moport_rt_play(bs->moport_slot[i], ph, nph, bs->gr);
     }
+
+    grid_rt_block(bs->gr, ph, nph);
 
     grid_rt_unplace(bs->gr, ph, nph);
 

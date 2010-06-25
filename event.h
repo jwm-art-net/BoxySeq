@@ -55,6 +55,8 @@ void    event_copy(event* dest, const event* src);
 int     event_channel(const event*);
 void    event_set_channel(event*, int);
 
+void    event_flag_set(event*, int);
+
 /* list manipulation callbacks */
 
 

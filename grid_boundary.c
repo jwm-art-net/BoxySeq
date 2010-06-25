@@ -136,26 +136,22 @@ void grbound_rt_sort(grbound* grb, evport* port)
 }
 
 
-struct grid
+struct box_grid
 {
-    event   note_on[128];
-    event   note_off[128];
-
     evport_manager* portman;
     evport* port;  /* assigned from ports_global */
 
     evport* unplace_port;
+    evport* block_port;
 
     freespace*  fs;
-
 };
 
 
 grid* grid_new(void)
 {
-    int i;
-
     grid* gr = malloc(sizeof(*gr));
+
     if (!gr)
         goto fail0;
 
@@ -168,6 +164,12 @@ grid* grid_new(void)
     if (!gr->port)
         goto fail2;
 
+    gr->block_port =
+        evport_manager_evport_new(gr->portman,  RT_EVLIST_SORT_DUR);
+
+    if (!gr->block_port)
+        goto fail2;
+
     gr->unplace_port =
         evport_manager_evport_new(gr->portman,  RT_EVLIST_SORT_REL);
 
@@ -176,12 +178,6 @@ grid* grid_new(void)
 
     if (!(gr->fs = freespace_new()))
         goto fail2;
-
-    for (i = 0; i < 128; ++i)
-    {
-        event_init(&gr->note_on[i]);
-        event_init(&gr->note_off[i]);
-    }
 
     return gr;
 
@@ -218,13 +214,7 @@ freespace*  grid_freespace(grid* gr)
 }
 
 
-evport* grid_unplace_port(grid* gr)
-{
-    return gr->unplace_port;
-}
-
-
-void grid_rt_place(grid* gr)
+void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 {
     event ev;
 
@@ -259,14 +249,14 @@ void grid_rt_place(grid* gr)
             if (pitch == -1 && (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
             {
                 ++pitch;
+                ev.flags = EV_TYPE_BLOCK | EV_STATUS_PLAY;
+                ev.note_dur += ph;
+                evport_write_event(gr->block_port, &ev);
+
                 #ifdef GRID_DEBUG
-                WARNING("event should have been added"
-                        "to blocklist but was not\n");
+                WARNING("event became block: "
+                        "output pitch conflict (is ok (-: )\n");
                 #endif
-                /*  add event to blockers list or whatever it will be...
-                    the event will be placed just like a note, however,
-                    it will not send any midi message.
-                */
             }
 
             if (pitch > -1)
@@ -276,18 +266,67 @@ void grid_rt_place(grid* gr)
                                             ev.box_width,
                                             ev.box_height );
             }
+            #ifdef GRID_DEBUG
             else
             {
-                #ifdef GRID_DEBUG
                 WARNING("event not placed in boundary: "
                         "output pitch conflict (is ok (-: )\n");
-                #endif
             }
+            #endif
         }
+        #ifdef GRID_DEBUG
         else
             WARNING("event not placed in boundary: "
                     "no space available (is ok (-: )\n");
+        #endif
     }
+}
+
+
+void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
+{
+    event ev;
+
+    evport_read_reset(gr->block_port);
+
+    while(evport_read_event(gr->block_port, &ev))
+    {
+        if (nph < ev.note_dur)
+            break;
+
+        switch (ev.flags & EV_STATUSMASK)
+        {
+        case EV_STATUS_PLAY:
+            if (nph >= ev.note_dur)
+                ev.flags = EV_TYPE_BLOCK | EV_STATUS_STOP;
+            else
+                break;
+
+        case EV_STATUS_STOP:
+            ev.flags = EV_TYPE_BLOCK | EV_STATUS_HOLD;
+            ev.box_release += ph;
+            grid_rt_unplace_event(gr, &ev);
+            evport_and_remove_event(gr->block_port);
+            break;
+
+        default:
+            WARNING("unhandled EV_STATUS flag\n");
+            break;
+        }
+    }
+}
+
+
+void grid_rt_unplace_event(grid* gr, event* ev)
+{
+    if (ev->box_release == 0)
+    {
+        freespace_add(gr->fs,   ev->box_x,      ev->box_y,
+                                ev->box_width,  ev->box_height );
+        return;
+    }
+
+    evport_write_event(gr->unplace_port, ev);
 }
 
 
@@ -295,37 +334,21 @@ void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
 {
     event ev;
 
-/*
-    event_init(&ev);
-
-    MESSAGE("ph:%8d  |  nph:%8d\n", ph, nph);
-
-    MESSAGE("unplace port has %d events\n", 
-            evport_count(gr->unplace_port));
-*/
     evport_read_reset(gr->unplace_port);
 
     while(evport_read_event(gr->unplace_port, &ev))
     {
-/*
-        printf("---{");
-        event_dump(&ev);
-        printf("}---\n");
-*/
         if (ph >= ev.box_release)
         {
+            if ((ev.flags & EV_TYPEMASK) == EV_TYPE_BLOCK)
+                WARNING("block detected\n");
 
             freespace_add(gr->fs,   ev.box_x,       ev.box_y,
                                     ev.box_width,   ev.box_height );
 
-           evport_and_remove_event(gr->unplace_port);
+            evport_and_remove_event(gr->unplace_port);
         }
         else
             break;
     }
-/*
-    printf("###|");
-    event_dump(&ev);
-    printf("|###\n");
-*/
 }

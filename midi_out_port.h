@@ -2,15 +2,13 @@
 #define MIDI_OUT_PORT_H
 
 
+#include "boxyseq.h"
 #include "event_port.h"
 
-typedef struct midi_out_port moport;
+
 
 moport*     moport_new(void);
 void        moport_free(moport*);
-
-void        moport_set_grid_unplace_port(moport*, evport*);
-
 
 /*  moport_test_pitch
         an event is given a potential coordinate for where within a
@@ -36,7 +34,7 @@ void        moport_set_grid_unplace_port(moport*, evport*);
 int         moport_output(moport* midiport, const event* ev,
                                             int grb_flags );
 
-void        moport_rt_play(moport*, bbt_t ph, bbt_t nph);
+void        moport_rt_play(moport*, bbt_t ph, bbt_t nph, grid*);
 
 
 #endif

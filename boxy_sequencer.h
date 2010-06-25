@@ -1,15 +1,13 @@
 #ifndef BOXY_SEQUENCER_H
 #define BOXY_SEQUENCER_H
 
-
+#include "boxyseq.h"
 #include "common.h"
 #include "event_port.h"
 #include "freespace_state.h"
 #include "grid_boundary.h"
 #include "pattern.h"
 
-
-typedef struct boxy_sequencer boxyseq;
 
 boxyseq*    boxyseq_new(int argc, char** argv);
 

@@ -70,6 +70,22 @@ void event_set_channel(event* ev, int ch)
 }
 
 
+void event_flag_set(event* ev, int f)
+{
+    if (!f)
+    {
+        ev->flags = 0;
+        return;
+    }
+
+    if (f & EV_TYPEMASK)
+        ev->flags = (0xfff0 & ev->flags) + (0x000f & f);
+
+    if (f & EV_STATUSMASK)
+        ev->flags = (0xff0f & ev->flags) + (0x00f0 & f);
+}
+
+
 void event_dump(const event* ev)
 {
     MESSAGE("event: %p  |  flags %d  |  "

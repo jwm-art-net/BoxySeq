@@ -10,8 +10,6 @@
 struct midi_out_port
 {
     event note_on[16][128];
-
-    evport* unplace_port;
 };
 
 
@@ -73,14 +71,11 @@ void moport_free(moport* mo)
 }
 
 
-void moport_set_grid_unplace_port(moport* mo, evport* port)
-{
-    mo->unplace_port = port;
-}
-
-
 int moport_output(moport* midiport, const event* ev, int grb_flags)
 {
+    if (!ev->note_dur)
+        return -1;
+
     event* note_on = midiport->note_on[event_channel(ev)];
 
     int pitch = -1;
@@ -127,7 +122,7 @@ int moport_output(moport* midiport, const event* ev, int grb_flags)
     return pitch;
 }
 
-void moport_rt_play(moport* midiport, bbt_t ph, bbt_t nph)
+void moport_rt_play(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
 {
     int channel;
 
@@ -141,28 +136,29 @@ void moport_rt_play(moport* midiport, bbt_t ph, bbt_t nph)
             switch (ev[pitch].flags & EV_STATUSMASK)
             {
             case EV_STATUS_START:
-                /* output MIDI NOTE ON msg */
+                /* FIXME: output MIDI NOTE ON msg */
                 ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
                 ev[pitch].note_dur += ph;
-                printf("0");
-                /* no break */
+                /* do not break */
 
             case EV_STATUS_PLAY:
                 if (nph >= ev[pitch].note_dur)
                 {
                     ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_STOP;
-                    /* output MIDI NOTE OFF msg */
-                    printf("1");
+                    /* FIXME: output MIDI NOTE OFF msg */
                 }
-                break;
+                else
+                    break;
 
             case EV_STATUS_STOP:
                 ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_HOLD;
                 ev[pitch].box_release += ph;
-                evport_write_event(midiport->unplace_port, &ev[pitch]);
+                grid_rt_unplace_event(gr, &ev[pitch]);
                 ev[pitch].flags = 0;
-                printf("2");
+                /* to break or not to break? */
+
             default:
+                /* this is a bit of a non event really... */
                 break;
             }
         }

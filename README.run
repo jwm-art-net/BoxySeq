@@ -1,26 +1,30 @@
 Currently, boxyseq will:
 
+* open a GTK gui with play/stop/rewind buttons, and display time in bars 
+  beats and ticks.
 
-open a GTK gui with play/stop/rewind buttons, and display time
+* become jack timebase master if no other JACK app is already.
 
-become jack timebase master if no other app is already.
+* display the contents of the freespace grid.
 
-display contents of the freespace grid:
 
-to actually view this display:
+To view this display, run boxyseq within an xterm like this:
 
-run boxyseq within an xterm
 1) resize xterm to at least 128 x 128 chars
 2) set the xterm font to 'tiny' (hold ctrl + right-mouse-click)
 
-xterm is preferred for this because xterm is fast, and, you can switch fonts easily.
+Xterm is preferred for this because xterm updates its display 
+quickly, and, you can switch fonts easily so the entire free space grid 
+can be displayed on your screen.
 
-note: boxes are only placed in the freespace grid, none are removed from it *** YET ***
+This is not how BoxySeq will ultimately display things to the user.
 
-      this because lots more backend coding needs to be performed yet.
+BoxySeq displays 'warning' messages which are difficult to see amongst 
+all the freespace grid updates. Redirect the stderr output to a file, 
+and tail -f the file from another terminal.
 
+1) ./boxyseq 2> p
+2) tail -f p
 
-sorry!
-
-james.
+MIDI output will be coming soon, I promise!
 
