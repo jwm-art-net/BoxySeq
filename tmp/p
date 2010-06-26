@@ -1,3 +1,0 @@
-main.c:59 main(): [1;33mst: 1260 dur: 630
-[0mjack_midi.c:197 jmidi_process(): [1;33mdropped 3606120 ticks
-[0m
