@@ -121,17 +121,8 @@ void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
         {
             switch (play[pitch].flags & EV_STATUSMASK)
             {
-            case EV_STATUS_PLAY:
-
-                if (nph >= play[pitch].note_dur)
-                {
-                    play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_STOP;
-                    /* FIXME: output MIDI NOTE OFF msg */
-                }
-                else break;
 
             case EV_STATUS_STOP:
-
                 play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_HOLD;
                 play[pitch].box_release += ph;
                 grid_rt_unplace_event(gr, &play[pitch]);
@@ -159,7 +150,7 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
-            switch (start[pitch].flags & EV_STATUSMASK)
+            switch (play[pitch].flags & EV_STATUSMASK)
             {
             case EV_STATUS_START:
 
@@ -168,8 +159,8 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
                 play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
                 play[pitch].note_dur += ph;
                 start[pitch].flags = 0;
-
             }
+
         }
     }
 }

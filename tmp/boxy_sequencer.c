@@ -284,6 +284,14 @@ void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
 
     evport* grid_port = grid_input_port(bs->gr);
 
+    evport_manager_all_evport_clear_data(bs->ports_pattern);
+
+    for (i = 0; i < MAX_PATTERN_SLOTS; ++i)
+    {
+        if (bs->pattern_slot[i])
+            prtdata_play(bs->pattern_slot[i]->prt, ph, nph);
+    }
+
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
         if (bs->moport_slot[i])
@@ -292,13 +300,6 @@ void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
 
     grid_rt_unplace(bs->gr, ph, nph);
 
-    evport_manager_all_evport_clear_data(bs->ports_pattern);
-
-    for (i = 0; i < MAX_PATTERN_SLOTS; ++i)
-    {
-        if (bs->pattern_slot[i])
-            prtdata_play(bs->pattern_slot[i]->prt, ph, nph);
-    }
 
     for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
     {

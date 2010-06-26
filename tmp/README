@@ -1,0 +1,68 @@
+GOTO THE WIKI: http://wiki.github.com/jwm-art-net/BoxySeq/
+
+this is quickly written, please forgive repetitious.....
+
+BoxySeq will be a Real Time JACK MIDI sequencer/arpeggiator mutant. The 
+clue is in the name. It is based upon the idea of using a 
+window-manager-like placement algorithm to generate pitch and 
+velocity data of note events by placing boxes (representing notes) 
+within a grid.
+
+It may sound a little complex or foolish, but I'm convinced otherwise.
+
+===============================================================
+
+BoxySeq is currently only in a state where I am sketching out what the 
+backend needs to do. The backend is being sketched out where I am 
+discovering how the data will be passed around within the backend.
+
+I am writing/sketching in C. I could have made things more difficult for 
+myself and used C++ but I've forgotten how to use C++.
+
+The sketch is made in C, but once I've sketched out how things need to 
+work and have a good idea of what needs to be done, I might turn to C++.
+
+I have never written a Real Time application before. I've only code one 
+project which used multi-threading (mdz - mandelbrot deep zoom). I'm 
+pretty clueless.
+
+This is why I've designated the existing code as a sketch. i'm still 
+trying to figure out this mess, detangling between (g)ui and backend, 
+real time non blocking sync. Ohh..
+
+===============================================================
+
+
+Some general concepts:
+
+freespace grid: a 127 x 127 array, each element stores if that 
+location is used or unused (free or occuppied space).
+
+pattern: a rhythmic pattern, events position in time, duration, release
+
+events + notes: a MIDI note consists of a MIDI note-on msg, followed by 
+at some point later in time, a MIDI note-off msg. In BoxySeq, events 
+consist of the note-on, note-off, followed by a third stage (currently 
+called release). This third stage, while not generating a MIDI message, 
+causes the box to remain within the grid *after* the NOTE-OFF message, 
+for a certain duration.
+
+*** the pattern outputs events without pitch or velocity data set ***
+
+ports: currently, these are a linked list, (using a memory pool to avoid
+real time usage of malloc/free) so for example, the pattern adds events 
+to a port. several patterns *can* add events to the same port: the list 
+uses ordered insertion.
+
+boundary: the boundary is a box within the grid where events may appear 
+within but not outside of. the boundary reads a port. several boundaries 
+may read the same port (which is why a linked list is used and not a 
+ring buffer).
+
+*** the ports a possibly a temporary sollution ***
+
+
+more to be written.
+
+jwm 18th june 2010
+

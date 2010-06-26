@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     pat->pd->height_max = 32;
 
     int count = 16;
-    int steps = 8;
+    int steps = 2;
     bbt_t st = pat->pd->loop_length / steps;
     bbt_t dur = st / 2;// - pat->pd->loop_length / (steps * 128);
     bbt_t t = 0;
@@ -61,8 +61,8 @@ int main(int argc, char** argv)
     for (i = 0; i < count; ++i, t += st)
     {
         event* ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur-1;
-        ev->box_release = dur - 1;
+        ev->note_dur = dur;
+        ev->box_release = dur;
 
 /*
         event* ev = lnode_data(plist_add_event_new(pl, t));
