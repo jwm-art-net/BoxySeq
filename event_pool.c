@@ -61,6 +61,9 @@ evpool* evpool_new(int count)
     for (i = 0; i < count; ++i, ++evlnk)
     {
         event_init(&evlnk->ev);
+#ifdef EVPOOL_DEBUG
+        evlnk->ev.flags = EV_IS_FREE_ERROR;
+#endif
         evlnk->next = evlnk + 1;
     }
 
@@ -147,6 +150,7 @@ static inline rt_evlink* evpool_private_event_alloc(evpool* evp)
 #ifdef EVPOOL_DEBUG
     if (evp->free_count < evp->min_free)
         evp->min_free = evp->free_count;
+    evlnk->ev.flags = 0;
 #endif
 
     return evlnk;
@@ -156,6 +160,10 @@ static inline rt_evlink* evpool_private_event_alloc(evpool* evp)
 static inline void evpool_private_event_free(   evpool* evp,
                                                 rt_evlink* evlnk )
 {
+#ifdef EVPOOL_DEBUG
+    evlnk->ev.flags = EV_IS_FREE_ERROR;
+#endif
+
     evlnk->next = evp->memfree;
     evp->memfree = evlnk;
     ++evp->free_count;
@@ -195,6 +203,186 @@ struct rt_event_list
     int count;
 };
 
+
+#ifdef EVPOOL_DEBUG
+void rt_evlist_set_origin_string(   rt_evlist* rtevl,
+                                    const char* origin_string)
+{
+    if (rtevl->origin_string)
+    {
+        WARNING("rt_evlist: %p has origin already set as:'%s'\n",
+                rtevl, rtevl->origin_string);
+        WARNING("not changing\n");
+
+        return;
+    }
+
+    if (!(rtevl->origin_string = strdup(origin_string)))
+        WARNING("failed to set origin string '%s' for evpool:%p\n",
+                origin_string, rtevl);
+
+    if (rtevl->pool_managed)
+        evpool_set_origin_string(rtevl->pool, origin_string);
+
+}
+
+const char* rt_evlist_get_origin_string(rt_evlist* rtevl)
+{
+    return rtevl->origin_string;
+}
+
+void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
+{
+    rt_evlink* fwd_track[500];
+    rt_evlink* rev_track[500];
+
+    int i;
+    int fwd_count = 0;
+    int rev_count = 0;
+
+    rt_evlink* fwd = rtevl->head;
+    rt_evlink* rev = rtevl->tail;
+
+    if (!fwd && !rev && !rtevl->cur)
+        return;
+
+    if (!rtevl->head)
+    {
+        WARNING("head is null but tail set\n");
+        goto fail;
+    }
+
+    if (!rtevl->tail)
+    {
+        WARNING("tail is null but head set\n");
+        goto fail;
+    }
+
+    for (i = 0; i < 500; ++i)
+        fwd_track[i] = rev_track[i] = 0;
+
+    while (fwd && fwd != rtevl->tail)
+    {
+        if (fwd->ev.flags == EV_IS_FREE_ERROR)
+        {
+            WARNING("link %d: is free\n", fwd);
+            goto fail;
+        }
+
+        for (i = 0; i < fwd_count; ++i)
+            if (fwd_track[i] == fwd)
+            {
+                WARNING("duplicate of link %d: %p\n", i, fwd);
+                goto fail;
+            }
+
+        fwd_track[fwd_count++] = fwd;
+        fwd = fwd->next;
+    }
+
+    if (!fwd)
+    {
+        WARNING("forward check failed: tail not reached\n");
+        goto fail;
+    }
+
+    fwd_track[fwd_count] = fwd;
+
+    while (rev && rev != rtevl->head)
+    {
+        if (rev->ev.flags == EV_IS_FREE_ERROR)
+        {
+            WARNING("link %d: is free\n", rev);
+            goto fail;
+        }
+
+        for (i = 0; i < rev_count; ++i)
+            if (rev_track[i] == rev)
+            {
+                WARNING("duplicate of link %d: %p\n", i, fwd);
+                goto fail;
+            }
+
+        rev_track[rev_count++] = rev;
+        rev = rev->prev;
+    }
+
+    if (!rev)
+    {
+        WARNING("reverse check failed: head not reached\n");
+        goto fail;
+    }
+
+    rev_track[rev_count] = rev;
+
+    _Bool fail = 0;
+
+    if (fwd_count != rev_count)
+    {
+        WARNING("forward event count %d != reverse event count %d\n",
+                fwd_count, rev_count);
+        ++fail;
+    }
+
+    int last = (fwd_count > rev_count) ? fwd_count : rev_count;
+
+    int f, r;
+
+    for (f = 0, r = last; f < last && r > 0; ++f, --r)
+    {
+        if (fwd_track[f] != rev_track[r])
+        {
+            if (fwd_track[f + 1] == rev_track[r])
+            {
+                WARNING("extraneous link (no. %d) %p in fwd iteration ("
+                        "or link missing in rev iteration)\n",
+                        f, fwd_track[f]);
+                ++fail;
+                ++f;
+            }
+            else if (fwd_track[f] == rev_track[r - 1])
+            {
+                WARNING("extraneous link (no. %d) %p in rev iteration ("
+                        "or link missing in fwd iteration)\n",
+                        last - r, rev_track[r]);
+                ++fail;
+                --r;
+            }
+        }
+    }
+
+    if (fail)
+    {
+        WARNING("%d fails\n", fail);
+        goto fail;
+    }
+
+    return;
+
+fail:
+    WARNING("***** integrity checks failed *****\n");
+
+    fwd = rtevl->head;
+    fwd_count = 0;
+
+    while (fwd)
+    {
+        MESSAGE("fwd: %3d: %p prev: %p next: %p\n",
+                fwd_count++, fwd, fwd->prev, fwd->next);
+        fwd = fwd->next;
+    }
+
+    rev = rtevl->tail;
+
+    while (rev)
+    {
+        MESSAGE("rev: %3d: %p prev: %p next: %p\n",
+                rev_count--, rev, rev->prev, rev->next);
+        rev = rev->prev;
+    }
+    WARNING("CHECK ABORTED: called from %s\n", from);
+}
+#endif
 
 
 rt_evlist*  rt_evlist_new(evpool* pool, int flags)
@@ -240,6 +428,10 @@ fail0:
 
 void rt_evlist_free(rt_evlist* rtevl)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
     rt_evlist_clear_events(rtevl);
 
     if (rtevl->pool_managed)
@@ -259,37 +451,12 @@ int rt_evlist_count(rt_evlist* rtevl)
 }
 
 
-#ifdef EVPOOL_DEBUG
-void rt_evlist_set_origin_string(   rt_evlist* rtevl,
-                                    const char* origin_string)
-{
-    if (rtevl->origin_string)
-    {
-        WARNING("rt_evlist: %p has origin already set as:'%s'\n",
-                rtevl, rtevl->origin_string);
-        WARNING("not changing\n");
-
-        return;
-    }
-
-    if (!(rtevl->origin_string = strdup(origin_string)))
-        WARNING("failed to set origin string '%s' for evpool:%p\n",
-                origin_string, rtevl);
-
-    if (rtevl->pool_managed)
-        evpool_set_origin_string(rtevl->pool, origin_string);
-
-}
-
-const char* rt_evlist_get_origin_string(rt_evlist* rtevl)
-{
-    return rtevl->origin_string;
-}
-#endif
-
-
 event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
     bbt_t newval, curval;
     rt_evlink* newlnk = evpool_private_event_alloc(rtevl->pool);
     rt_evlink* cur = rtevl->head;
@@ -348,6 +515,10 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
         if (newval < curval)
         {
             newlnk->prev = cur->prev;
+
+            if (cur->prev)
+                cur->prev->next = newlnk;
+
             cur->prev = newlnk;
             newlnk->next = cur;
 
@@ -355,6 +526,7 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
                 rtevl->head = newlnk;
 
             ++rtevl->count;
+
             return &newlnk->ev;
         }
 
@@ -369,15 +541,20 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
     newlnk->next = 0;
 
     ++rtevl->count;
+
     return &newlnk->ev;
 }
 
 
 void rt_evlist_clear_events(rt_evlist* rtevl)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
     rt_evlink* evlnk = rtevl->head;
 
-    rtevl->head = 0;
+    rtevl->head = rtevl->tail = 0;
     rtevl->count = 0;
 
     while(evlnk)
@@ -391,6 +568,10 @@ void rt_evlist_clear_events(rt_evlist* rtevl)
 
 event* rt_evlist_goto_first(rt_evlist* rtevl)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
     if (!(rtevl->cur = rtevl->head))
         return 0;
 
@@ -400,6 +581,9 @@ event* rt_evlist_goto_first(rt_evlist* rtevl)
 
 event* rt_evlist_goto_next(rt_evlist* rtevl)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
     if (!rtevl->cur)
         return 0;
 
@@ -409,12 +593,20 @@ event* rt_evlist_goto_next(rt_evlist* rtevl)
 
 void rt_evlist_read_reset(rt_evlist* rtevl)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
     rtevl->cur = rtevl->head;
 }
 
 
 event* rt_evlist_read_event(rt_evlist* rtevl)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
     if (!rtevl->cur)
         return 0;
 
@@ -426,6 +618,10 @@ event* rt_evlist_read_event(rt_evlist* rtevl)
 
 event* rt_evlist_read_and_remove_event(rt_evlist* rtevl, event* dest)
 {
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
     if (!rtevl->cur)
         return 0;
 
@@ -437,6 +633,9 @@ event* rt_evlist_read_and_remove_event(rt_evlist* rtevl, event* dest)
     rt_evlink* evlnk = rtevl->cur;
     event_copy(dest, &rtevl->cur->ev);
     rtevl->head = rtevl->cur = rtevl->cur->next;
+
+    if (rtevl->tail == evlnk)
+        rtevl->tail = 0;
 
     evpool_private_event_free(rtevl->pool, evlnk);
     --rtevl->count;
@@ -473,7 +672,11 @@ event* rt_evlist_read_and_remove_event(rt_evlist* rtevl, event* dest)
 */
 void rt_evlist_and_remove_event(rt_evlist* rtevl)
 {
-    rt_evlink* rem;
+    #ifdef EVPOOL_DEBUG999
+    rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+    #endif
+
+    rt_evlink* rem = 0;
 /*
     WARNING("rtevl:%p head:%p tail:%p cur:%p\n",
             rtevl, rtevl->head, rtevl->tail, rtevl->cur);

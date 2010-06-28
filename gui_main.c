@@ -25,7 +25,7 @@ static int      gui_jack_rolling = 0;
 
 
 
-void gui_quit(void)
+static void gui_quit(void)
 {
     gtk_main_quit();
 }

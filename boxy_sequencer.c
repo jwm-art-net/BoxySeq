@@ -311,7 +311,7 @@ void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
         if (bs->moport_slot[i])
-            moport_rt_play_new(bs->moport_slot[i], ph, nph, bs->gr);
+            moport_rt_play_new(bs->moport_slot[i], ph, nph);
     }
 
     grid_rt_block(bs->gr, ph, nph);

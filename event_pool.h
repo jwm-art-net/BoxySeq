@@ -44,6 +44,7 @@ int         rt_evlist_count(rt_evlist*);
 #ifdef EVPOOL_DEBUG
 void        rt_evlist_set_origin_string(rt_evlist*, const char*);
 const char* rt_evlist_get_origin_string(rt_evlist*);
+void        rt_evlist_integrity_dump(rt_evlist*, const char* from);
 #endif
 
 

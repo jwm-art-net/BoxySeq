@@ -18,8 +18,6 @@ void            jmidi_shutdown(jmidi*);
 
 const char*     jmidi_client_name(jmidi*);
 
-/* jack_client_t*  jmidi_jack_client(jmidi*); */
-
 _Bool           jmidi_is_master(jmidi*);
 jtransp*        jmidi_jtransp(jmidi*);
 

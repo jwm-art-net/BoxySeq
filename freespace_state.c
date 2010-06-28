@@ -65,7 +65,7 @@ static const fsbuf_type fsbuf_max =   ~(fsbuf_type)0;
 static const fsbuf_type fsbuf_high =  (fsbuf_type)1 << (FSBUFBITS - 1);
 
 
-#ifdef FREESPACE_DEBUG
+#ifdef FREESPACE_DEBUG000
 static void binary_dump(const char* msg, fsbuf_type val)
 {
     fsbuf_type i = FSBUFBITS;

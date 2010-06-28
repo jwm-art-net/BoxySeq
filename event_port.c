@@ -85,8 +85,6 @@ struct event_port
 static evport* evport_private_new(  evpool* pool,   const char* name,
                                     int id, int rt_evlist_sort_flags  )
 {
-    int ordered = 1;
-
     evport* port = malloc(sizeof(*port));
 
     if (!port)
@@ -216,7 +214,7 @@ struct event_port_manager
 };
 
 
-void evport_free_cb(void* data)
+static void evport_free_cb(void* data)
 {
     evport_free(data);
 }

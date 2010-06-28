@@ -148,11 +148,6 @@ const char* jmidi_client_name(jmidi* jm)
     return jm->client_name;
 }
 
-jack_client_t*  jmidi_jack_client(jmidi* jm)
-{
-    return jm->client;
-}
-
 
 jtransp* jmidi_jtransp(jmidi* jm)
 {

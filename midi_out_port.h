@@ -36,7 +36,7 @@ int         moport_output(moport* midiport, const event* ev,
 
 void        moport_rt_play_old(moport*, bbt_t ph, bbt_t nph, grid*);
 
-void        moport_rt_play_new(moport*, bbt_t ph, bbt_t nph, grid*);
+void        moport_rt_play_new(moport*, bbt_t ph, bbt_t nph);
 
 
 #endif

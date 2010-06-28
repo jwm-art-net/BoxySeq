@@ -4,7 +4,10 @@
 #include "common.h"
 #include "datacb.h"
 
-
+/**
+ * Flags pertaining to event type.
+ */
+ 
 typedef enum EVENT_FLAGS
 {
     EV_TYPE_NOTE =      0x0001,
@@ -17,11 +20,17 @@ typedef enum EVENT_FLAGS
     EV_STATUS_HOLD =    0x0040, /* event in hold state  */
     EV_STATUSMASK =     0x00f0,
 
-    EV_CHANNEL_MASK =   0xf000
+    EV_CHANNEL_MASK =   0xf000,
+
+#ifdef EVPOOL_DEBUG
+    EV_IS_FREE_ERROR =  0xffff
+#endif
 
 } evflags;
 
-
+/**
+ * a single data structure for event
+ */
 typedef struct event_
 {
     int     flags;

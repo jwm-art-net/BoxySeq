@@ -110,7 +110,6 @@ int moport_output(moport* midiport, const event* ev, int grb_flags)
 void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
 {
     int channel, pitch;
-    event* start;
     event* play;
 
     for (channel = 0; channel < 16; ++channel)
@@ -146,7 +145,7 @@ void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
     }
 }
 
-void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
+void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
 {
     int channel, pitch;
     event* start;
@@ -169,48 +168,6 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
                 play[pitch].note_dur += ph;
                 start[pitch].flags = 0;
 
-            }
-        }
-    }
-}
-
-void flawedmoport_rt_play(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
-{
-    int channel;
-    for (channel = 0; channel < 16; ++channel)
-    {
-        int pitch;
-        event* ev = 0;//midiport->note_on[channel];
-
-        for (pitch = 0; pitch < 128; ++pitch)
-        {
-            switch (ev[pitch].flags & EV_STATUSMASK)
-            {
-            case EV_STATUS_START:
-                /* FIXME: output MIDI NOTE ON msg */
-                ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
-                ev[pitch].note_dur += ph;
-                /* do not break */
-
-            case EV_STATUS_PLAY:
-                if (nph >= ev[pitch].note_dur)
-                {
-                    ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_STOP;
-                    /* FIXME: output MIDI NOTE OFF msg */
-                }
-                else
-                    break;
-
-            case EV_STATUS_STOP:
-                ev[pitch].flags = EV_TYPE_NOTE | EV_STATUS_HOLD;
-                ev[pitch].box_release += ph;
-                grid_rt_unplace_event(gr, &ev[pitch]);
-                ev[pitch].flags = 0;
-                /* to break or not to break? */
-
-            default:
-                /* this is a bit of a non event really... */
-                break;
             }
         }
     }
