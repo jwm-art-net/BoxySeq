@@ -22,7 +22,6 @@ struct jack_midi_data
     jack_client_t*      client;
 
     jack_ringbuffer_t * out_jack_ring;
-    jack_port_t *       out_jack_port;
 
     jtransp*    tr;
     boxyseq*    bs;
@@ -46,7 +45,6 @@ jmidi* jmidi_new(void)
     jm->client_name = 0;
 
     jm->out_jack_ring = 0;
-    jm->out_jack_port = 0;
 
     if (!(jm->tr = jtransp_new()))
         goto fail;
@@ -96,6 +94,9 @@ _Bool jmidi_startup(jmidi* jm, boxyseq* bs)
         return 0;
     }
 
+    boxyseq_set_jack_client(bs, jm->client);
+    boxyseq_set_jtransp(bs, jm->tr);
+
     jm->bs = bs;
 
     jm->client_name = jack_get_client_name(jm->client);
@@ -116,17 +117,6 @@ _Bool jmidi_startup(jmidi* jm, boxyseq* bs)
 
     jack_on_shutdown(jm->client, jmidi_jack_shutdown, jm);
 
-    jm->out_jack_port = jack_port_register( jm->client,
-                                            "output",
-                                            JACK_DEFAULT_MIDI_TYPE,
-                                            JackPortIsOutput, 0   );
-
-    if (!jm->out_jack_port)
-    {
-        WARNING("no more jack ports available\n");
-        return 0;
-    }
-
     if (jack_activate(jm->client))
     {
         WARNING("failed to activate jack client\n");
@@ -142,6 +132,15 @@ void jmidi_shutdown(jmidi* jm)
     jtransp_shutdown(jm->tr);
     jack_client_close(jm->client);
 }
+
+jack_client_t* jmidi_client(jmidi* jm)
+{
+    if (!jm)
+        return 0;
+
+    return jm->client;
+}
+
 
 const char* jmidi_client_name(jmidi* jm)
 {
@@ -194,7 +193,7 @@ static int jmidi_process(jack_nframes_t nframes, void* arg)
 
     jm->onph = nph;
 
-    boxyseq_rt_play(jm->bs, ph, nph);
+    boxyseq_rt_play(jm->bs, nframes, ph, nph);
 
     jm->oph = ph;
 

@@ -16,6 +16,7 @@ void            jmidi_free(jmidi*);
 _Bool           jmidi_startup(jmidi*, boxyseq*);
 void            jmidi_shutdown(jmidi*);
 
+jack_client_t * jmidi_client(jmidi*);
 const char*     jmidi_client_name(jmidi*);
 
 _Bool           jmidi_is_master(jmidi*);

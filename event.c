@@ -29,10 +29,10 @@ event* event_new(void)
 void event_init(event* ev)
 {
     ev->flags =         0;
+    ev->pos =           -1;
+    ev->note_dur =      -1;
     ev->note_pitch =    -1;
     ev->note_velocity = -1;
-    ev->note_pos =      -1;
-    ev->note_dur =      -1;
     ev->box_x =         -1;
     ev->box_y =         -1;
     ev->box_width =     -1;
@@ -45,10 +45,10 @@ void event_init(event* ev)
 void event_copy(event* dest, const event* src)
 {
     dest->flags =           src->flags;
+    dest->pos =             src->pos;
+    dest->note_dur =        src->note_dur;
     dest->note_pitch =      src->note_pitch;
     dest->note_velocity =   src->note_velocity;
-    dest->note_pos =        src->note_pos;
-    dest->note_dur =        src->note_dur;
     dest->box_x =           src->box_x;
     dest->box_y =           src->box_y;
     dest->box_width =       src->box_width;
@@ -57,18 +57,18 @@ void event_copy(event* dest, const event* src)
     dest->misc =            src->misc;
 }
 
-
+/*
 int event_channel(const event* ev)
 {
     return (0xf000 & ev->flags) >> 12;
 }
 
-
-void event_set_channel(event* ev, int ch)
+void event_channel_set(event* ev, int ch)
 {
     ev->flags = (0xf000 & (ch << 12)) + (0x0fff & ev->flags);
 }
 
+*/
 
 void event_flag_set(event* ev, int f)
 {
@@ -96,7 +96,7 @@ void event_dump(const event* ev)
             "misc:%p \n",
 
             ev,             ev->flags,
-            ev->note_pos,   ev->note_dur,   ev->box_release,
+            ev->pos,   ev->note_dur,   ev->box_release,
             ev->note_pitch, ev->note_velocity,
             ev->box_x,      ev->box_y,
             ev->box_width,  ev->box_height,
@@ -115,10 +115,10 @@ static int event_pri_cmp_time_cb(const void* d1,
     const event* ev1 = d1;
     const event* ev2 = d2;
 
-    if (ev1->note_pos == ev2->note_pos)
+    if (ev1->pos == ev2->pos)
         return 0;
 
-    if (ev1->note_pos > ev2->note_pos)
+    if (ev1->pos > ev2->pos)
         return 1;
 
     return -1;
@@ -136,10 +136,10 @@ static int event_pri_cmp_coord_cb(const void* d1,
     const event* ev1 = d1;
     const event* ev2 = d2;
 
-    if (ev1->note_pos == ev2->note_pos)
+    if (ev1->pos == ev2->pos)
         return 0;
 
-    if (ev1->note_pos > ev2->note_pos)
+    if (ev1->pos > ev2->pos)
         return 1;
 
     return -1;
@@ -150,7 +150,7 @@ static _Bool event_pri_sel_time_cb(const void* data, const void* crit)
 {
     const event* ev = data;
     const ev_sel_time* sel = crit;
-    return (ev->note_pos >= sel->start && ev->note_pos < sel->end);
+    return (ev->pos >= sel->start && ev->pos < sel->end);
 }
 
 
@@ -169,9 +169,9 @@ static void event_pri_mod_time_cb(void* data, void* init)
     bbt_t* offset = init;
 
     if (*offset == -1)
-        *offset = ev->note_pos;
+        *offset = ev->pos;
 
-    ev->note_pos -= *offset;
+    ev->pos -= *offset;
 }
 
 
@@ -205,19 +205,19 @@ static char* event_pri_str_cb(const void* data, int level)
         case 1:
             count = snprintf(buf, DATACB_STR_SIZE,
                              "event:%p pos:%d",
-                             ev, ev->note_pos);
+                             ev, ev->pos);
             break;
 
         case 2:
             count = snprintf(buf, DATACB_STR_SIZE,
                              "event:%p pos:%d dur:%d",
-                             ev, ev->note_pos, ev->note_dur);
+                             ev, ev->pos, ev->note_dur);
             break;
 
         default:
             count = snprintf(buf, DATACB_STR_SIZE,
                              "event:%p pos:%d dur:%d rel:%d w:%d h:%d",
-                             ev, ev->note_pos, ev->note_dur,
+                             ev, ev->pos, ev->note_dur,
                              ev->box_release,
                              ev->box_width,
                              ev->box_height);
@@ -234,7 +234,7 @@ static void event_pri_pos_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = roundf(*(const float*)val);
-    ev->note_pos = (bbt_t)n;
+    ev->pos = (bbt_t)n;
 }
 
 static void event_pri_dur_set_cb(void* data, const void* val)
@@ -255,7 +255,7 @@ static void event_pri_pos_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = roundf(*(const float*)val);
-    ev->note_pos = (bbt_t)((float)ev->note_pos + n);
+    ev->pos = (bbt_t)((float)ev->pos + n);
 }
 
 static void event_pri_dur_add_cb(void* data, const void* val)
@@ -275,8 +275,8 @@ static void event_pri_rel_add_cb(void* data, const void* val)
 static void event_pri_pos_mul_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
-    float n = roundf((float)ev->note_pos * (*(const float*)val));
-    ev->note_pos = (bbt_t)n;
+    float n = roundf((float)ev->pos * (*(const float*)val));
+    ev->pos = (bbt_t)n;
 }
 
 static void event_pri_dur_mul_cb(void* data, const void* val)
@@ -297,8 +297,8 @@ static void event_pri_pos_quant_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    float nn = roundf((float)ev->note_pos + n / 2);
-    ev->note_pos = (bbt_t)(nn - fmod(nn, n));
+    float nn = roundf((float)ev->pos + n / 2);
+    ev->pos = (bbt_t)(nn - fmod(nn, n));
 }
 
 static void event_pri_dur_quant_cb(void* data, const void* val)

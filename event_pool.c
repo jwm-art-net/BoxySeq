@@ -233,6 +233,7 @@ const char* rt_evlist_get_origin_string(rt_evlist* rtevl)
 
 void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
 {
+    MESSAGE("integrity check...\n");
     rt_evlink* fwd_track[500];
     rt_evlink* rev_track[500];
 
@@ -488,7 +489,7 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 
     switch (rtevl->flags)
     {
-    case RT_EVLIST_SORT_POS:    newval = ev->note_pos;
+    case RT_EVLIST_SORT_POS:    newval = ev->pos;
         break;
     case RT_EVLIST_SORT_DUR:    newval = ev->note_dur;
         break;
@@ -502,7 +503,7 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
     {
         switch (rtevl->flags)
         {
-        case RT_EVLIST_SORT_POS:    curval = ((event*)cur)->note_pos;
+        case RT_EVLIST_SORT_POS:    curval = ((event*)cur)->pos;
             break;
         case RT_EVLIST_SORT_DUR:    curval = ((event*)cur)->note_dur;
             break;

@@ -21,8 +21,12 @@ struct boxy_sequencer
 
     evport_manager* ports_pattern;
     evport_manager* ports_bound;
+    evport_manager* ports_midi_out;
 
     grid*       gr;
+
+    jack_client_t*  client;
+    jtransp*        jacktransport;
 };
 
 
@@ -55,11 +59,18 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->ports_bound = evport_manager_new("boundary")))
         goto fail3;
 
-    if (!(bs->gr = grid_new()))
+    if (!(bs->ports_midi_out = evport_manager_new("midi_out")))
         goto fail4;
+
+    if (!(bs->gr = grid_new()))
+        goto fail5;
+
+    bs->jacktransport = 0;
 
     return bs;
 
+fail5:
+    evport_manager_free(bs->ports_midi_out);
 fail4:
     evport_manager_free(bs->ports_bound);
 fail3:
@@ -83,6 +94,7 @@ void boxyseq_free(boxyseq* bs)
 
     grid_free(bs->gr);
 
+    evport_manager_free(bs->ports_midi_out);
     evport_manager_free(bs->ports_bound);
     evport_manager_free(bs->ports_pattern);
 
@@ -103,6 +115,18 @@ void boxyseq_free(boxyseq* bs)
 const char* boxyseq_basename(const boxyseq* bs)
 {
     return bs->basename;
+}
+
+
+void boxyseq_set_jack_client(boxyseq* bs, jack_client_t* client)
+{
+    bs->client = client;
+}
+
+
+void boxyseq_set_jtransp(boxyseq* bs, jtransp* jacktransport)
+{
+    bs->jacktransport = jacktransport;
 }
 
 
@@ -248,7 +272,9 @@ int boxyseq_moport_new(boxyseq* bs)
         return -1;
     }
 
-    if (!(bs->moport_slot[slot] = moport_new()))
+    bs->moport_slot[slot] = moport_new(bs->client, bs->ports_midi_out);
+
+    if (!bs->moport_slot[slot])
         return -1;
 
     return slot;
@@ -278,7 +304,9 @@ moport* boxyseq_moport(boxyseq* bs, int slot)
 
 
 
-void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
+void boxyseq_rt_play(boxyseq* bs,
+                     jack_nframes_t nframes,
+                     bbt_t ph, bbt_t nph)
 {
     int i;
 
@@ -311,12 +339,19 @@ void boxyseq_rt_play(boxyseq* bs, bbt_t ph, bbt_t nph)
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
         if (bs->moport_slot[i])
+        {
             moport_rt_play_new(bs->moport_slot[i], ph, nph);
+
+            moport_rt_output_jack_midi
+                (
+                    bs->moport_slot[i],
+                    nframes,
+                    jtransp_rt_frames_per_tick(bs->jacktransport)
+                );
+        }
     }
 
     grid_rt_block(bs->gr, ph, nph);
-
-
 }
 
 

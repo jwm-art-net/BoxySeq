@@ -6,7 +6,11 @@
 #include "event_port.h"
 #include "freespace_state.h"
 #include "grid_boundary.h"
+#include "jack_transport.h"
 #include "pattern.h"
+
+
+#include <jack/jack.h>
 
 
 boxyseq*    boxyseq_new(int argc, char** argv);
@@ -17,6 +21,9 @@ _Bool       boxyseq_startup(boxyseq*);
 void        boxyseq_shutdown(boxyseq*);
 
 const char* boxyseq_basename(const boxyseq*);
+
+void        boxyseq_set_jack_client(boxyseq*, jack_client_t* client);
+void        boxyseq_set_jtransp(boxyseq*, jtransp* jacktransport);
 
 /*  patterns ---------------->
 */
@@ -54,7 +61,10 @@ void            boxyseq_moport_free(boxyseq*,  int slot);
 moport*         boxyseq_moport(boxyseq*,       int slot);
 
 
-void            boxyseq_rt_play(boxyseq*, bbt_t ph, bbt_t nph);
+void            boxyseq_rt_play(boxyseq*,
+                                jack_nframes_t,
+                                bbt_t ph, bbt_t nph);
+
 void            boxyseq_rt_stop(boxyseq*);
 
 grid*   boxyseq_grid(boxyseq*);

@@ -6,9 +6,13 @@
 #include "event_port.h"
 
 
+#include <jack/jack.h>
 
-moport*     moport_new(void);
+
+moport*     moport_new(jack_client_t* client, evport_manager* portman);
 void        moport_free(moport*);
+
+const char* moport_name(moport*);
 
 /*  moport_test_pitch
         an event is given a potential coordinate for where within a
@@ -30,13 +34,18 @@ void        moport_free(moport*);
 */
 
 
-/* channel is stored in event at this stage */
-int         moport_output(moport* midiport, const event* ev,
-                                            int grb_flags );
+/*  moport_start_event:
+
+    channel is stored in event at this stage,
+    returns pitch:
+*/
+
+int         moport_start_event(moport*, const event* ev, int grb_flags);
 
 void        moport_rt_play_old(moport*, bbt_t ph, bbt_t nph, grid*);
-
 void        moport_rt_play_new(moport*, bbt_t ph, bbt_t nph);
 
+void        moport_rt_output_jack_midi(moport*, jack_nframes_t nframes,
+                                                double frames_per_tick );
 
 #endif

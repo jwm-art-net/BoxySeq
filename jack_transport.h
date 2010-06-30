@@ -36,7 +36,7 @@ _Bool       jtransp_rt_is_valid(jtransp*);
 _Bool       jtransp_rt_is_rolling(jtransp*);
 double      jtransp_rt_ticks(jtransp*);
 double      jtransp_rt_ticks_per_period(jtransp*);
-
+double      jtransp_rt_frames_per_tick(jtransp*);
 
 
 #endif

@@ -116,6 +116,12 @@ fail0:
 }
 
 
+const char* evport_name(evport* ev)
+{
+    return ev->name;
+}
+
+
 static void evport_free(evport* port)
 {
     if (!port)

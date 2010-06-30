@@ -46,6 +46,7 @@ typedef struct event_port evport;
     positive id: ("port %d", id);
 */
 
+const char* evport_name(evport*);
 
 event*      evport_write_event(evport*, const event*);
 

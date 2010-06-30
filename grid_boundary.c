@@ -139,8 +139,8 @@ void grbound_rt_sort(grbound* grb, evport* port)
 struct box_grid
 {
     evport_manager* portman;
-    evport* port;  /* assigned from ports_global */
 
+    evport* inport;
     evport* unplace_port;
     evport* block_port;
 
@@ -158,10 +158,10 @@ grid* grid_new(void)
     if (!(gr->portman = evport_manager_new("grid")))
         goto fail1;
 
-    gr->port =
+    gr->inport =
         evport_manager_evport_new(gr->portman,  RT_EVLIST_SORT_POS);
 
-    if (!gr->port)
+    if (!gr->inport)
         goto fail2;
 
     gr->block_port =
@@ -204,7 +204,7 @@ void grid_free(grid* gr)
 
 evport* grid_input_port(grid* gr)
 {
-    return gr->port;
+    return gr->inport;
 }
 
 
@@ -218,9 +218,9 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 {
     event ev;
 
-    evport_read_reset(gr->port);
+    evport_read_reset(gr->inport);
 
-    while(evport_read_and_remove_event(gr->port, &ev))
+    while(evport_read_and_remove_event(gr->inport, &ev))
     {
         grbound* grb = (grbound*)ev.misc;
 
@@ -244,35 +244,23 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
                                     : ev.box_y + ev.box_height;
 
             ev.note_pitch =
-                    pitch = moport_output(grb->midiout, &ev, grb->flags);
+                    pitch = moport_start_event( grb->midiout, &ev,
+                                                grb->flags );
 
-            if (pitch == -1 && (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
+            if (pitch == -1)
             {
-                ++pitch;
+                if (!(grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
+                    continue;
+
                 ev.flags = EV_TYPE_BLOCK | EV_STATUS_PLAY;
-                ev.note_dur += ph;
+
                 evport_write_event(gr->block_port, &ev);
-
-                #ifdef GRID_DEBUG
-                WARNING("event became block: "
-                        "output pitch conflict (is ok (-: )\n");
-                #endif
             }
 
-            if (pitch > -1)
-            {
-                freespace_remove(gr->fs,    ev.box_x,
-                                            ev.box_y,
-                                            ev.box_width,
-                                            ev.box_height );
-            }
-            #ifdef GRID_DEBUG
-            else
-            {
-                WARNING("event not placed in boundary: "
-                        "output pitch conflict (is ok (-: )\n");
-            }
-            #endif
+            freespace_remove(gr->fs,    ev.box_x,
+                                        ev.box_y,
+                                        ev.box_width,
+                                        ev.box_height );
         }
         #ifdef GRID_DEBUG
         else
@@ -285,6 +273,21 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 
 void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
 {
+    /*  purpose: process events within block_port,
+        these are events which don't emit any
+        MIDI messages within their lifetime, but are still
+        placed and unplaced as blocks within the grid.
+
+        they might be events which failed to achieve status
+        as notes due to lack of free space or a pitch conflict.
+        (or, when implemented, they might be events coming into
+        the grid via its MIDI input port).
+
+        the usage of this port differs slightly in that
+        the events it contains stay in the port for the
+        duration of the note (hmmm yeah, ummm...)
+    */
+
     event ev;
 
     evport_read_reset(gr->block_port);
@@ -297,14 +300,14 @@ void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
         switch (ev.flags & EV_STATUSMASK)
         {
         case EV_STATUS_PLAY:
-            if (nph >= ev.note_dur)
-                ev.flags = EV_TYPE_BLOCK | EV_STATUS_STOP;
-            else
+            if (ph < ev.note_dur)
                 break;
+            /*
+            ev.flags = EV_TYPE_BLOCK | EV_STATUS_OFF;
+        case EV_STATUS_OFF:
+            ev.flags = EV_TYPE_BLOCK | EV_STATUS_RELEASE;
+            */
 
-        case EV_STATUS_STOP:
-            ev.flags = EV_TYPE_BLOCK | EV_STATUS_HOLD;
-            ev.box_release += ph;
             grid_rt_unplace_event(gr, &ev);
             evport_and_remove_event(gr->block_port);
             break;
@@ -317,16 +320,16 @@ void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
 }
 
 
-void grid_rt_unplace_event(grid* gr, event* ev)
+event* grid_rt_unplace_event(grid* gr, event* ev)
 {
     if (ev->box_release == 0)
     {
         freespace_add(gr->fs,   ev->box_x,      ev->box_y,
                                 ev->box_width,  ev->box_height );
-        return;
+        return 0;
     }
 
-    evport_write_event(gr->unplace_port, ev);
+    return evport_write_event(gr->unplace_port, ev);
 }
 
 
@@ -338,17 +341,12 @@ void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
 
     while(evport_read_event(gr->unplace_port, &ev))
     {
-        if (ph >= ev.box_release)
-        {
-            if ((ev.flags & EV_TYPEMASK) == EV_TYPE_BLOCK)
-                WARNING("block detected\n");
-
-            freespace_add(gr->fs,   ev.box_x,       ev.box_y,
-                                    ev.box_width,   ev.box_height );
-
-            evport_and_remove_event(gr->unplace_port);
-        }
-        else
+        if (ph < ev.box_release)
             break;
+
+        freespace_add(gr->fs,   ev.box_x,       ev.box_y,
+                                ev.box_width,   ev.box_height );
+
+        evport_and_remove_event(gr->unplace_port);
     }
 }

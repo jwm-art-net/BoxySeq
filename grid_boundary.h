@@ -65,6 +65,6 @@ void        grid_rt_place(grid*, bbt_t ph, bbt_t nph);
 void        grid_rt_block(grid*, bbt_t ph, bbt_t nph);
 void        grid_rt_unplace(grid*, bbt_t ph, bbt_t nph);
 
-void        grid_rt_unplace_event(grid*, event*);
+event*      grid_rt_unplace_event(grid*, event*);
 
 #endif

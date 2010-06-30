@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "grid_boundary.h"
 
+#include <jack/midiport.h>
 #include <stdlib.h>
 
 
@@ -11,15 +12,41 @@ struct midi_out_port
 {
     event start[16][128];
     event  play[16][128];
+
+    evport* intersort;
+
+    jack_port_t* jack_out_port;
+
 };
 
 
-moport* moport_new(void)
+moport* moport_new(jack_client_t* client, evport_manager* portman)
 {
     moport* mo = malloc(sizeof(*mo));
 
     if (!mo)
         goto fail0;
+
+    mo->intersort = evport_manager_evport_new(  portman,
+                                                RT_EVLIST_SORT_POS  );
+
+    if (!mo->intersort)
+        goto fail1;
+
+    #ifndef NO_REAL_TIME
+    mo->jack_out_port = jack_port_register( client,
+                                            evport_name(mo->intersort),
+                                            JACK_DEFAULT_MIDI_TYPE,
+                                            JackPortIsOutput,
+                                            0);
+    if (!mo->jack_out_port)
+    {
+        WARNING("failed to register jack port\n");
+        goto fail1;
+    }
+    #else
+    mo->jack_out_port = 0;
+    #endif
 
     int c, p;
 
@@ -34,6 +61,8 @@ moport* moport_new(void)
 
     return mo;
 
+fail1:
+    free(mo);
 fail0:
     WARNING("out of memory for new midi out port\n");
     return 0;
@@ -49,14 +78,16 @@ void moport_free(moport* mo)
 }
 
 
-int moport_output(moport* midiport, const event* ev, int grb_flags)
+const char* moport_name(moport* mo)
+{
+    return evport_name(mo->intersort);
+}
+
+
+int moport_start_event(moport* midiport, const event* ev, int grb_flags)
 {
     if (!ev->note_dur)
         return -1;
-
-/*
-    event* note_on = midiport->note_on[event_channel(ev)];
-*/
 
     event* start = midiport->start[event_channel(ev)];
     event*  play = midiport->play[event_channel(ev)];
@@ -102,15 +133,18 @@ int moport_output(moport* midiport, const event* ev, int grb_flags)
 
     event_copy(&start[pitch], ev);
     start[pitch].note_pitch = pitch;
+    /* FIXME: oops channel bits borked */
     start[pitch].flags = EV_TYPE_NOTE | EV_STATUS_START;
 
     return pitch;
 }
 
+
 void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
 {
     int channel, pitch;
     event* play;
+    event* out;
 
     for (channel = 0; channel < 16; ++channel)
     {
@@ -118,38 +152,36 @@ void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
-            switch (play[pitch].flags & EV_STATUSMASK)
+            if ((play[pitch].flags & EV_STATUSMASK) == EV_STATUS_PLAY)
             {
-            case EV_STATUS_PLAY:
-
-                if (nph >= play[pitch].note_dur)
+                if (play[pitch].note_dur >= ph
+                 && play[pitch].note_dur < nph)
                 {
-                    play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_STOP;
-                    /* FIXME: output MIDI NOTE OFF msg */
+                    out = evport_write_event(midiport->intersort,
+                                                    &play[pitch] );
+                    if (out)
+                    {
+                        out->pos = out->note_dur - ph;
+                        out->flags = EV_TYPE_NOTE | EV_STATUS_OFF;
+    /* FIXME: oops channel bits borked */
+                    }
+
+                    play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_OFF;
+                    out = grid_rt_unplace_event(gr, &play[pitch]);
+                    play[pitch].flags = 0;
                 }
-                else break;
-
-            case EV_STATUS_STOP:
-
-                play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_HOLD;
-                play[pitch].box_release += ph;
-                grid_rt_unplace_event(gr, &play[pitch]);
-                play[pitch].flags = 0;
-                /* to break or not to break? */
-
-            default:
-                /* this is a bit of a non event really... */
-                break;
             }
         }
     }
 }
+
 
 void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
 {
     int channel, pitch;
     event* start;
     event* play;
+    event* out;
 
     for (channel = 0; channel < 16; ++channel)
     {
@@ -158,18 +190,62 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
-            switch (start[pitch].flags & EV_STATUSMASK)
+            if ((start[pitch].flags & EV_STATUSMASK) == EV_STATUS_START)
             {
-            case EV_STATUS_START:
+                out = evport_write_event(midiport->intersort,
+                                                &start[pitch] );
+                if (out)
+                {
+                    out->pos -= ph;
+                    out->flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
+    /* FIXME: oops channel bits borked */
+                }
 
-                /* FIXME: output MIDI NOTE ON msg */
                 event_copy(&play[pitch], &start[pitch]);
                 play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
-                play[pitch].note_dur += ph;
                 start[pitch].flags = 0;
-
             }
         }
     }
 }
 
+
+void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
+                                                  double frames_per_tick )
+{
+    event ev;
+    unsigned char* buf;
+    void* jport_buf = jack_port_get_buffer( midiport->jack_out_port,
+                                            nframes );
+
+    evport_read_reset(midiport->intersort);
+    jack_midi_clear_buffer(jport_buf);
+
+    while(evport_read_and_remove_event(midiport->intersort, &ev))
+    {
+        if ((ev.flags & EV_STATUSMASK) == EV_STATUS_PLAY)
+        {
+            buf = jack_midi_event_reserve(  jport_buf,
+                    (jack_nframes_t)((double)ev.pos * frames_per_tick),
+                                            3 );
+            if (buf)
+            {
+                buf[0] = 0x90;
+                buf[1] = (unsigned char)ev.note_pitch;
+                buf[2] = (unsigned char)ev.note_velocity;
+            }
+        }
+        else if((ev.flags & EV_STATUSMASK) == EV_STATUS_OFF)
+        {
+            buf = jack_midi_event_reserve(jport_buf,
+                (jack_nframes_t)((double)ev.pos * frames_per_tick),
+                                            3 );
+            if (buf)
+            {
+                buf[0] = 0x80;
+                buf[1] = (unsigned char)ev.note_pitch;
+                buf[2] = (unsigned char)ev.note_velocity;
+            }
+        }
+    }
+}

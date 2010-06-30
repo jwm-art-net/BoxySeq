@@ -240,7 +240,10 @@ double jtransp_rt_ticks_per_period(jtransp* tr)
 }
 
 
-
+double jtransp_rt_frames_per_tick(jtransp* tr)
+{
+    return tr->frames_per_tick;
+}
 
 
 

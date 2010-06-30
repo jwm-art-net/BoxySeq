@@ -91,7 +91,7 @@ void pdata_get_event_bbt(const pdata* pd,
 
     if (pos)
     {
-        tick =      ev->note_pos;
+        tick =      ev->pos;
         pos->bar =  tick / ticks_per_bar;
         tick -=     pos->bar * ticks_per_bar;
         pos->bar++;
@@ -206,7 +206,7 @@ static event* plist_pri_to_array(const plist* pl)
     ev_sel_time sel = { .start = 0, .end = 1 };
 
     if (ln)
-        sel.end = ((event*)lnode_data(ln))->note_pos + 1;
+        sel.end = ((event*)lnode_data(ln))->pos + 1;
 
     event terminator;
     event_init(&terminator);
@@ -282,7 +282,7 @@ lnode* plist_add_event(plist* pl, event* ev)
 {
     #ifdef PATTERN_DEBUG
     MESSAGE("adding event to plist %p position %d\n",
-            (void*)pl, ev->note_pos);
+            (void*)pl, ev->pos);
     #endif
 
     return llist_add_data(pl->ll, ev);
@@ -296,7 +296,7 @@ lnode* plist_add_event_new(plist* pl, bbt_t start_tick)
     if (!ev)
         return 0;
 
-    ev->note_pos =  start_tick;
+    ev->pos =  start_tick;
     ev->note_dur =  plist_default_duration;
 
     ev->box_release =   0;
@@ -304,7 +304,7 @@ lnode* plist_add_event_new(plist* pl, bbt_t start_tick)
     ev->box_height =    plist_default_height;
 
     #ifdef PATTERN_DEBUG
-    MESSAGE("pos:%d dur:%d w:%d h:%d\n",ev->note_pos,
+    MESSAGE("pos:%d dur:%d w:%d h:%d\n",ev->pos,
                                         ev->note_dur,
                                         ev->box_width,
                                         ev->box_height  );
@@ -542,47 +542,69 @@ void prtdata_play(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
     prt->ev_arr_in_use =ev_arr;
 
 /*
-    start_tick %=   pd->loop_length;
-    end_tick %=     pd->loop_length;
-*/
     if (start_tick < prt->start_tick)
         start_tick = prt->start_tick;
 
     if (end_tick < prt->end_tick)
         end_tick = prt->end_tick;
+*/
 
     bbt_t   tick =       start_tick - prt->start_tick;
     int     num_played = tick / pd->loop_length;
-    bbt_t   offset =     prt->start_tick + (pd->loop_length * num_played);
 
-/*
+    bbt_t   offset = prt->start_tick + (pd->loop_length * num_played);
+    bbt_t   nextoffset = offset + pd->loop_length;
+
+    int count = 1;
+
     prt->index = tick % pd->loop_length;
-*/
 
     prt->playing = 1;
 
     event* ev = ev_arr;
+    event* ev_out;
 
     event tmp;
+
+    int n;
+    bbt_t evpos;
 
     if (evport_read_event(prt->evoutput, &tmp))
         WARNING("port contains data already!\n");
 
-    while (ev->note_pos > -1)
+    _Bool play_event;
+
+    while (ev->pos > -1)
     {
-        bbt_t ts = ev->note_pos + offset;
-        if (ts >= end_tick)
-            break;
+        play_event = 0;
+        evpos = ev->pos + offset;
 
-        if (ts >= start_tick)
+        if (evpos >= start_tick && evpos < end_tick)
+            play_event = 1;
+        else
         {
-            ev->box_width = g_rand_int_range(prt->rnd,  pd->width_min,
-                                                        pd->width_max );
+            evpos = ev->pos + nextoffset;
+            if (evpos >= start_tick && evpos < end_tick)
+                play_event = 1;
+        }
 
-            ev->box_height = g_rand_int_range(prt->rnd, pd->height_min,
-                                                        pd->height_max );
+        if (play_event)
+        {
+            ev->box_width = g_rand_int_range(   prt->rnd,
+                                                pd->width_min,
+                                                pd->width_max  );
 
-            if (!evport_write_event(prt->evoutput, ev))
+            ev->box_height = g_rand_int_range(  prt->rnd,
+                                                pd->height_min,
+                                                pd->height_max  );
+
+            if ((ev_out = evport_write_event(prt->evoutput, ev)))
+            {
+                ev_out->pos = evpos;
+                ev_out->note_dur += evpos;
+                ev_out->box_release += ev_out->note_dur;
+            }
+            else
                 WARNING("dropped event\n");
         }
         ++ev;
@@ -743,7 +765,7 @@ void pattern_prtdata_update(const pattern* pat)
     MESSAGE("RT pnote array:\n");
     {
         event* ev = ev_arr_copy;
-        while(ev->note_pos != -1)
+        while(ev->pos != -1)
         {
             event_dump(ev);
             ev++;

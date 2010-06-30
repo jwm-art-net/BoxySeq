@@ -14,10 +14,12 @@ typedef enum EVENT_FLAGS
     EV_TYPE_BLOCK =     0x0002,
     EV_TYPEMASK =       0x000f,
 
-    EV_STATUS_START =   0x0010, /* event in start state */
-    EV_STATUS_PLAY =    0x0020, /* event in play state  */
-    EV_STATUS_STOP =    0x0030, /* event in stop state  */
-    EV_STATUS_HOLD =    0x0040, /* event in hold state  */
+    EV_STATUS_START =   0x0010,
+    EV_STATUS_PLAY =    0x0020,
+    EV_STATUS_OFF =     0x0030,
+    EV_STATUS_RELEASE = 0x0040,
+    EV_STATUS_END =     0x0080,
+
     EV_STATUSMASK =     0x00f0,
 
     EV_CHANNEL_MASK =   0xf000,
@@ -34,19 +36,16 @@ typedef enum EVENT_FLAGS
 typedef struct event_
 {
     int     flags;
+    bbt_t   pos;
 
+    bbt_t   note_dur;
     int     note_pitch;
     int     note_velocity;
 
-    bbt_t   note_pos;       /* position in time (ticks) */
-    bbt_t   note_dur;       /* duration (ticks)         */
-
     int     box_x;          /* maybe converts to pitch       */
     int     box_y;          /* maybe converts to velocity    */
-
     int     box_width;
     int     box_height;
-
     bbt_t   box_release;    /* duration of box after note off (ticks) */
 
     void*   misc;           /*  all fields copied by event_copy
@@ -61,8 +60,18 @@ event*  event_dup(const event*);
 void    event_dump(const event*);
 void    event_copy(event* dest, const event* src);
 
+/*
 int     event_channel(const event*);
-void    event_set_channel(event*, int);
+void    event_channel_set(event*, int);
+*/
+
+
+#define event_channel( ev ) \
+    ((0xf000 & ( ev )->flags) >> 12)
+
+#define event_channel_set( ev, ch ) \
+    ( ev )->flags = (0xf000 & (( ch ) << 12)) + (0x0fff & ( ev )->flags);
+
 
 void    event_flag_set(event*, int);
 
