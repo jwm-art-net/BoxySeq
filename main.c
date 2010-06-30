@@ -37,7 +37,6 @@ int main(int argc, char** argv)
 #endif
 
     pattern* pat1;
-    pattern* pat2;
 
     plist* pl;
     event* ev;
@@ -54,34 +53,56 @@ int main(int argc, char** argv)
 
     pat1->pd->width_min = 4;
     pat1->pd->width_max = 16;
-    pat1->pd->height_min = 4;
-    pat1->pd->height_max = 16;
+    pat1->pd->height_min = 8;
+    pat1->pd->height_max = 26;
 
     pl = pat1->pl;
 
-    count = 16;
+    count = 8;
     steps = 8;
     st = pat1->pd->loop_length / steps;
-    dur = st / 1.2; // - pat1->pd->loop_length / (steps * 8);
+    dur = st / 3.2; // - pat1->pd->loop_length / (steps * 8);
     t = 0;
 
     for (i = 0; i < count; ++i, t += st)
     {
         ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur;
-        ev->box_release = dur*8;
+        ev->note_dur = dur * 3;
+        ev->box_release = dur * 13;
+
+        ev = lnode_data(plist_add_event_new(pl, t));
+        ev->note_dur = dur * 2;
+        ev->box_release = dur * 5;
+
+//        if (i % 3 == 0)
+        {
+            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
+            ev->note_dur = dur * 1;
+            ev->box_release = dur * 2;
+        }
+
+
+/*
         ev = lnode_data(plist_add_event_new(pl, t));
         ev->note_dur = dur;
         ev->box_release = dur * 5;
-        ev = lnode_data(plist_add_event_new(pl, t));
+        ev = lnode_data(plist_add_event_new(pl, t + st / 2));
         ev->note_dur = dur;
         ev->box_release = dur;
+*/
     }
 
     grbound* grb1;
+    grbound* grb2;
 
-    grboundslot = boxyseq_grbound_new(bs, 32, 32, 64, 64);
+    grboundslot = boxyseq_grbound_new(bs, 32, 42, 54, 64);
     grb1 = boxyseq_grbound(bs, grboundslot);
+
+    grboundslot = boxyseq_grbound_new(bs, 42, 42, 54, 64);
+    grb2 = boxyseq_grbound(bs, grboundslot);
+
+    grbound_flags_unset(grb2,   FSPLACE_LEFT_TO_RIGHT
+                              | FSPLACE_TOP_TO_BOTTOM );
 
     evport_manager* pat_ports = boxyseq_pattern_ports(bs);
 
@@ -92,11 +113,15 @@ int main(int argc, char** argv)
     pattern_set_output_port(pat1, port1);
 
     grbound_set_input_port(grb1, port1);
+    grbound_set_input_port(grb2, port1);
 
     int moslot = boxyseq_moport_new(bs);
     moport* mo = boxyseq_moport(bs, moslot);
 
     grbound_midi_out_port_set(grb1, mo);
+    grbound_midi_out_port_set(grb2, mo);
+
+    grbound_channel_set(grb2, 1);
 
     pattern_prtdata_update(pat1);
 

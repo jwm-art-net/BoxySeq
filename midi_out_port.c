@@ -133,8 +133,9 @@ int moport_start_event(moport* midiport, const event* ev, int grb_flags)
 
     event_copy(&start[pitch], ev);
     start[pitch].note_pitch = pitch;
-    /* FIXME: oops channel bits borked */
-    start[pitch].flags = EV_TYPE_NOTE | EV_STATUS_START;
+
+    start[pitch].flags &= ~EV_STATUSMASK;
+    start[pitch].flags |= EV_STATUS_START;
 
     return pitch;
 }
@@ -162,11 +163,12 @@ void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
                     if (out)
                     {
                         out->pos = out->note_dur - ph;
-                        out->flags = EV_TYPE_NOTE | EV_STATUS_OFF;
-    /* FIXME: oops channel bits borked */
+                        out->flags &= ~EV_STATUSMASK;
+                        out->flags |= EV_STATUS_OFF;
                     }
 
-                    play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_OFF;
+                    play[pitch].flags &= ~EV_STATUSMASK;
+                    play[pitch].flags |= EV_STATUS_OFF;
                     out = grid_rt_unplace_event(gr, &play[pitch]);
                     play[pitch].flags = 0;
                 }
@@ -197,12 +199,13 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
                 if (out)
                 {
                     out->pos -= ph;
-                    out->flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
-    /* FIXME: oops channel bits borked */
+                    out->flags &= ~EV_STATUSMASK;
+                    out->flags |= EV_STATUS_PLAY;
                 }
 
                 event_copy(&play[pitch], &start[pitch]);
-                play[pitch].flags = EV_TYPE_NOTE | EV_STATUS_PLAY;
+                play[pitch].flags &= ~EV_STATUSMASK;
+                play[pitch].flags |= EV_STATUS_PLAY;
                 start[pitch].flags = 0;
             }
         }
@@ -230,7 +233,7 @@ void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
                                             3 );
             if (buf)
             {
-                buf[0] = 0x90;
+                buf[0] = 0x90 | event_channel(&ev);
                 buf[1] = (unsigned char)ev.note_pitch;
                 buf[2] = (unsigned char)ev.note_velocity;
             }
@@ -242,7 +245,7 @@ void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
                                             3 );
             if (buf)
             {
-                buf[0] = 0x80;
+                buf[0] = 0x80 | event_channel(&ev);
                 buf[1] = (unsigned char)ev.note_pitch;
                 buf[2] = (unsigned char)ev.note_velocity;
             }

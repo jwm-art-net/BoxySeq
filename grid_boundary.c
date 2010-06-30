@@ -128,11 +128,16 @@ void grbound_set_input_port(grbound* grb, evport* port)
 void grbound_rt_sort(grbound* grb, evport* port)
 {
     event ev;
+    event* out;
 
     evport_read_reset(grb->evinput);
 
     while (evport_read_event(grb->evinput, &ev))
-        evport_write_event(port, &ev)->misc = grb;
+    {
+        out = evport_write_event(port, &ev);
+        out->misc = grb;
+        event_channel_set(out, grb->channel);
+    }
 }
 
 
@@ -296,7 +301,7 @@ void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
     {
         if (nph < ev.note_dur)
             break;
-
+/*FIXME: detection && logic */
         switch (ev.flags & EV_STATUSMASK)
         {
         case EV_STATUS_PLAY:

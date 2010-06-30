@@ -74,6 +74,7 @@ void    event_channel_set(event*, int);
 
 
 void    event_flag_set(event*, int);
+void    event_flag_unset(event*, int);
 
 /* list manipulation callbacks */
 

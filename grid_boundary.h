@@ -40,10 +40,6 @@ fsbound*    grbound_fsbound(grbound*);
 
 void        grbound_set_input_port(grbound*, evport*);
 
-void        grbound_set_midi_channel(grbound*, int);
-int         grbound_get_midi_channel(grbound*);
-
-
 /*  although the grbound has it's own input port, we need to place the
     data coming in from that port into another port which contains the
     events for all the ports for all the patterns for all the grbounds!
