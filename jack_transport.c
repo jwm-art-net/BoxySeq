@@ -37,7 +37,11 @@ struct jack_transport
     double  beats_per_minute;
     float   beats_per_bar;
     float   beat_type;
+
+/*
     double  ticks_per_beat;
+*/
+
     double  ticks_per_period;
     double  frames_per_tick;
 
@@ -70,7 +74,10 @@ jtransp* jtransp_new(void)
     tr->master_beat_type =        4;
     tr->beats_per_minute = 0;
     tr->beats_per_bar = tr->beat_type = 0;
-    tr->ticks_per_beat = tr->ticks_per_period = tr->frames_per_tick = 0;
+/*
+    tr->ticks_per_beat = 0;
+*/
+    tr->ticks_per_period = tr->frames_per_tick = 0;
     tr->frame_rate = tr->ticks = tr->frame = tr->nframes = 0;
     tr->client = 0;
     tr->recalc_timebase = 1;
@@ -80,6 +87,9 @@ jtransp* jtransp_new(void)
 
 void jtransp_free(jtransp* tr)
 {
+    if (!tr)
+        return;
+
     free(tr);
 }
 
@@ -187,7 +197,10 @@ void jtransp_rt_poll(jtransp* tr, jack_nframes_t nframes)
     if (pos.frame_rate != tr->frame_rate)
         recalc_ticks_per_period = 1;
 
+/*
     tr->ticks_per_beat =    pos.ticks_per_beat;
+*/
+
     tr->beats_per_bar =     pos.beats_per_bar;
     tr->beat_type =         pos.beat_type;
     tr->beats_per_minute =  pos.beats_per_minute;
@@ -196,14 +209,15 @@ void jtransp_rt_poll(jtransp* tr, jack_nframes_t nframes)
 
     if (recalc_ticks_per_period)
     {
-        const double frames_per_beat =
-            tr->frame_rate * 60 / tr->beats_per_minute;
+        const double frames_per_beat = 
+                        tr->frame_rate * 60 / tr->beats_per_minute;
+
         tr->frames_per_tick = frames_per_beat / (double)ppqn;
         tr->ticks_per_period = nframes / tr->frames_per_tick;
     }
 
-    double abs_tick = ((float)pos.bar * pos.beats_per_bar
-                                      + (float)pos.beat)
+    double abs_tick = ((double)pos.bar * pos.beats_per_bar
+                                      + (double)pos.beat)
                                * pos.ticks_per_beat + pos.tick;
 
     /* scale Jack's ticks to our ticks */
@@ -212,8 +226,82 @@ void jtransp_rt_poll(jtransp* tr, jack_nframes_t nframes)
     tr->ticks = abs_tick * pulses_per_tick;
     tr->tick = (bbt_t)(tr->tick * pulses_per_tick);
 
+/*
     tr->ticks_per_beat = ppqn;
+*/
+
 }
+
+
+/*
+void TempoMap::get_beat(unsigned long frame, double& bpm, double& beat) const {
+    TempoChange* tc = const_cast<CDTree<TempoChange*>*>(m_frame2tc)->get(frame);
+    bpm = double(tc->bpm);
+    beat = tc->beat + bpm * double(frame - tc->frame) / (60 * m_frame_rate);
+    //beat = int32_t(beat_d);
+    //tick = int32_t((beat_d - int(beat_d)) * ticks_per_beat);
+  }
+
+ void Song::get_timebase_info(unsigned long frame, unsigned long framerate,
+			       double ticks_per_beat, double& bpm, 
+			       int32_t& beat, int32_t& tick,
+			       double& frame_offset) const {
+    double beat_d;
+    m_tempo_map.get_beat(frame, bpm, beat_d);
+    beat = int32_t(beat_d);
+    double tick_d = (beat_d - beat) * ticks_per_beat;
+    tick = int32_t(tick_d);
+    double frames_per_tick = framerate * 60 / (bpm * ticks_per_beat);
+    frame_offset = (tick_d - tick) * frames_per_tick;
+  }
+
+ void Sequencer::jack_timebase_callback(jack_transport_state_t state, 
+					 jack_nframes_t nframes, 
+					 jack_position_t* pos, 
+					 int new_pos) {
+    pos->beats_per_bar = 4;
+    pos->ticks_per_beat = 10000;
+    
+    
+    // can't pass references to pos-> members directly since it's packed
+    int32_t beat, tick;
+    double bpm, frame_offset;
+    m_song.get_timebase_info(pos->frame, pos->frame_rate, pos->ticks_per_beat,
+			     bpm, beat, tick, frame_offset);
+    pos->beats_per_minute = bpm;
+    pos->bar_start_tick = frame_offset;
+
+    // if we are standing still or if we just relocated, calculate 
+    // the new position
+    if (new_pos || state != JackTransportRolling) {
+      pos->beat = beat;
+      pos->tick = tick;
+    }
+    // otherwise, just increase the BBT by a period
+    else {
+      double db = nframes * pos->beats_per_minute / (pos->frame_rate * 60.0);
+      pos->beat = m_last_beat + int32_t(db);
+      pos->tick = m_last_tick + int32_t((db - int(db)) * pos->ticks_per_beat);
+      if (pos->tick >= pos->ticks_per_beat) {
+	pos->tick -= int32_t(pos->ticks_per_beat);
+	++pos->beat;
+      }
+    }
+  
+    m_last_beat = pos->beat;
+    m_last_tick = pos->tick;
+
+    pos->bar = int32_t(pos->beat / pos->beats_per_bar);
+    pos->beat %= int(pos->beats_per_bar);
+    pos->valid = JackPositionBBT;
+    
+    // bars and beats start from 1 by convention (but ticks don't!)
+    ++pos->bar;
+    ++pos->beat;
+  }
+
+  
+*/
 
 
 _Bool jtransp_rt_is_valid(jtransp* tr)

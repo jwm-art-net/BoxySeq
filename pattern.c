@@ -569,9 +569,6 @@ void prtdata_play(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
     int n;
     bbt_t evpos;
 
-    if (evport_read_event(prt->evoutput, &tmp))
-        WARNING("port contains data already!\n");
-
     _Bool play_event;
 
     while (ev->pos > -1)

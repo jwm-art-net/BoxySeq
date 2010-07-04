@@ -38,7 +38,7 @@ void        grbound_channel_set(grbound*, int);
 
 fsbound*    grbound_fsbound(grbound*);
 
-void        grbound_set_input_port(grbound*, evport*);
+void        grbound_set_global_input_port(grbound*, evport*);
 
 /*  although the grbound has it's own input port, we need to place the
     data coming in from that port into another port which contains the
@@ -54,7 +54,7 @@ void        grbound_rt_sort(grbound*, evport* output);
 grid*       grid_new(void);
 void        grid_free(grid*);
 
-evport*     grid_input_port(grid*);
+evport*     grid_global_input_port(grid*);
 freespace*  grid_freespace(grid*);
 
 void        grid_rt_place(grid*, bbt_t ph, bbt_t nph);
@@ -62,5 +62,8 @@ void        grid_rt_block(grid*, bbt_t ph, bbt_t nph);
 void        grid_rt_unplace(grid*, bbt_t ph, bbt_t nph);
 
 event*      grid_rt_unplace_event(grid*, event*);
+
+void        grid_remove_event(grid*, event*);
+void        grid_remove_events(grid*);
 
 #endif

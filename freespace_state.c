@@ -1,5 +1,7 @@
 #include "freespace_state.h"
 
+#include "debug.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>     /* malloc */
@@ -154,7 +156,7 @@ static _Bool fs_find_row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
     int startxoffset = fs_x_to_offset_index(bx, &startx);
 
     int endx;
-    int endxoffset  = fs_x_to_offset_index(bx + bw - width, &endx);
+    int endxoffset  = fs_x_to_offset_index(bx + bw, &endx);
 
     int x, x1, y;
     int w, h;
@@ -490,13 +492,17 @@ _Bool freespace_find( freespace* fs,  fsbound* bound,
     if (flags & FSPLACE_ROW_SMART)
     {
         if (flags & FSPLACE_LEFT_TO_RIGHT)
+        {
             return fs_find_row_smart_l2r(   fs->buf, bound, flags,
                                             width,   height,
                                             resultx, resulty );
+        }
         else
+        {
             return fs_find_row_smart_r2l(   fs->buf, bound, flags,
                                             width,   height,
                                             resultx, resulty );
+        }
     }
     else
     {
@@ -588,10 +594,10 @@ void freespace_dump(freespace* fs)
 
             for(; i != 0; --i, b <<= 1)
                 putchar(b & fsbuf_high ? '#' : ' ');
-/*
+
             if (x + 1 < FSBUFWIDTH)
                 putchar('|');
-*/
+
         }
         putchar('\n');
     }

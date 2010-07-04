@@ -18,10 +18,10 @@ DEFS := -std=gnu99 -fsigned-char -Wall -Wextra 			\
 
 HDRS := `pkg-config --cflags gtk+-2.0` `pkg-config --cflags jack`
 
-DEBUGS:=-DFREESPACE_DEBUG 	\
-	-DEVPOOL_DEBUG		
+DEBUGS:=-DFREESPACE_DEBUG	\
+	-DEVPOOL_DEBUG		\
+	-DGRID_DEBUG		
 
-#	-DGRID_DEBUG		
 #	-DNO_REAL_TIME
 #	-DLLIST_DEBUG
 #	-DPATTERN_DEBUG		\

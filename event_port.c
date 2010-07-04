@@ -85,12 +85,20 @@ struct event_port
 static evport* evport_private_new(  evpool* pool,   const char* name,
                                     int id, int rt_evlist_sort_flags  )
 {
+    char* tmp;
     evport* port = malloc(sizeof(*port));
 
     if (!port)
         goto fail0;
 
-    port->name = name_and_number(name, id);
+    tmp = jwm_strcat_alloc(name, "-port");
+    if (tmp)
+    {
+        port->name = name_and_number(tmp, id);
+        free(tmp);
+    }
+    else
+        port->name = name_and_number(name, id);
 
     if (!port->name)
         goto fail1;
@@ -126,6 +134,22 @@ static void evport_free(evport* port)
 {
     if (!port)
         return;
+
+    #ifdef EVPOOL_DEBUG
+    MESSAGE("freeing port: '%s'\n", port->name);
+    MESSAGE("port contains: %d events\n",  rt_evlist_count(port->data));
+    rt_evlist_integrity_dump(port->data, __FUNCTION__);
+
+    if (rt_evlist_count(port->data))
+    {
+        event ev;
+
+        rt_evlist_read_reset(port->data);
+
+        while(rt_evlist_read_and_remove_event(port->data, &ev))
+            event_dump(&ev);
+    }
+    #endif
 
     rt_evlist_free(port->data);
     free(port->name);
@@ -297,7 +321,7 @@ evport* evport_manager_evport_new(  evport_manager* portman,
 {
     evport* port = evport_private_new(  portman->event_pool,
                                         portman->groupname,
-                                        portman->next_port_id,
+                                        portman->next_port_id++,
                                         rt_evlist_sort_flags   );
 
     if (!port)

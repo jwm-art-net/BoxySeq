@@ -65,6 +65,8 @@ void            boxyseq_rt_play(boxyseq*,
                                 jack_nframes_t,
                                 bbt_t ph, bbt_t nph);
 
+void boxyseq_empty(boxyseq*);
+
 void            boxyseq_rt_stop(boxyseq*);
 
 grid*   boxyseq_grid(boxyseq*);

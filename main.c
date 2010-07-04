@@ -28,15 +28,14 @@ int main(int argc, char** argv)
     if (!(bs = boxyseq_new(argc, argv)))
         exit(err);
 
-#ifndef NO_REAL_TIME
     if (!(jm = jmidi_new()))
         goto quit;
 
     if (!jmidi_startup(jm, bs))
         goto quit;
-#endif
 
     pattern* pat1;
+    pattern* pat2;
 
     plist* pl;
     event* ev;
@@ -51,77 +50,52 @@ int main(int argc, char** argv)
 
     pdata_set_loop_length(pat1->pd, ppqn * 4);
 
-    pat1->pd->width_min = 4;
-    pat1->pd->width_max = 16;
-    pat1->pd->height_min = 8;
-    pat1->pd->height_max = 26;
+    pat1->pd->width_min = 3;
+    pat1->pd->width_max = 54;
+    pat1->pd->height_min = 3;
+    pat1->pd->height_max = 54;
 
     pl = pat1->pl;
 
-    count = 8;
-    steps = 8;
+    count = 4;
+    steps = 4;
     st = pat1->pd->loop_length / steps;
-    dur = st / 3.2; // - pat1->pd->loop_length / (steps * 8);
+    dur = st / 1.25; // - pat1->pd->loop_length / (steps * 8);
     t = 0;
 
     for (i = 0; i < count; ++i, t += st)
     {
         ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur * 3;
-        ev->box_release = dur * 13;
-
-        ev = lnode_data(plist_add_event_new(pl, t));
         ev->note_dur = dur * 2;
-        ev->box_release = dur * 5;
-
-//        if (i % 3 == 0)
-        {
-            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
-            ev->note_dur = dur * 1;
-            ev->box_release = dur * 2;
-        }
-
-
-/*
-        ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur;
-        ev->box_release = dur * 5;
-        ev = lnode_data(plist_add_event_new(pl, t + st / 2));
-        ev->note_dur = dur;
-        ev->box_release = dur;
-*/
+        ev->box_release = dur * 4;
     }
 
     grbound* grb1;
-    grbound* grb2;
 
-    grboundslot = boxyseq_grbound_new(bs, 32, 42, 54, 64);
+
+    grboundslot = boxyseq_grbound_new(bs, 11, 60, 64, 64);
     grb1 = boxyseq_grbound(bs, grboundslot);
 
-    grboundslot = boxyseq_grbound_new(bs, 42, 42, 54, 64);
-    grb2 = boxyseq_grbound(bs, grboundslot);
-
-    grbound_flags_unset(grb2,   FSPLACE_LEFT_TO_RIGHT
-                              | FSPLACE_TOP_TO_BOTTOM );
 
     evport_manager* pat_ports = boxyseq_pattern_ports(bs);
 
     evport* port1;
 
+
     port1 = evport_manager_evport_new(pat_ports, RT_EVLIST_SORT_POS);
+
 
     pattern_set_output_port(pat1, port1);
 
+
     grbound_set_input_port(grb1, port1);
-    grbound_set_input_port(grb2, port1);
+
 
     int moslot = boxyseq_moport_new(bs);
     moport* mo = boxyseq_moport(bs, moslot);
 
     grbound_midi_out_port_set(grb1, mo);
-    grbound_midi_out_port_set(grb2, mo);
 
-    grbound_channel_set(grb2, 1);
 
     pattern_prtdata_update(pat1);
 
@@ -159,15 +133,15 @@ printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
 #ifndef NO_REAL_TIME
     if (!gui_init(&argc, &argv, bs, jm))
         goto quit;
+#endif
 
     jmidi_shutdown(jm);
-#endif
 
     printf("sizeof(event):%d\n",sizeof(event));
 
+    jmidi_free(jm);
 
-
-
+    boxyseq_empty(bs);
 
     err = 0;
 

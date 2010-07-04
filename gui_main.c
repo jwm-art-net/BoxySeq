@@ -59,8 +59,12 @@ static gboolean idle_update_position(jtransp* tr)
         gui_jack_rolling = 1;
     }
 
-    char buf[40];
-    snprintf(buf, 40, "BBT %4d:%2d.%04d", pos.bar, pos.beat, pos.tick);
+    char buf[40] = "BBT ----:--.----";
+
+    if (pos.valid & JackPositionBBT)
+        snprintf(buf, 40,   "BBT %4d:%2d.%04d",
+                            pos.bar, pos.beat, pos.tick);
+
     gtk_label_set_text(GTK_LABEL(timelabel), buf);
 
 

@@ -48,4 +48,11 @@ void        moport_rt_play_new(moport*, bbt_t ph, bbt_t nph);
 void        moport_rt_output_jack_midi(moport*, jack_nframes_t nframes,
                                                 double frames_per_tick );
 
+void        moport_empty(moport*, grid*);
+
+
+#ifdef GRID_DEBUG
+_Bool       moport_event_in_start(moport*, event*);
+#endif
+
 #endif

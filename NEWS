@@ -1,3 +1,46 @@
+* 15:16 Sunday 4th July 2010
+
+i've been attempting to investigate the source of a certain 
+problem involving events which are placed within the grid but 
+for what ever reason fail to be removed.
+
+i've been using the 'sprinkle the code with debug statements 
+showing the value of relevant variables' approach to as yet, 
+no result.
+
+i am still yet to find any identifiable pattern which the
+events which are not removed share. i am yet to find anything
+which provides a lead. i need to do a cold hard reboot to
+prove to myself that it's not a memory error which is using
+old bytes from second hand pre-used (ie free()d memory from
+previous program run or whatever).
+
+valgrind bring up uninitialized values in midi_out_port.c
+and i was shirly fure i noticed a potential cause of these
+but alas no the event boxes still stick in the grid refusing
+to be peeled off.
+
+...
+
+i have found though a bug instead elsewhere. this little 
+blighter was nibbling away at the free space code - causing 
+events with  width > (boundary_width / 2 - 2) to not be 
+placed. luckily, this was a incredibly simple minded bug and 
+took no persuasion in moving him in to the neighbours garden 
+where last seen looked very happy and at home.
+
+
+------------
+
+further news on this day of Sunday 4th July 2010:
+
+further news, from the past few days:
+
+* timebase is um, erroneous, BoxySeq's 145bpm seems slower
+than Ardour2's 145bpm. i began investigating this but
+somehow got distracted and went on a mission to investigate
+the non-removal of certain choice event boxes.
+
 
 *THE IS THE NEWS*
 01:54 Wednesday 30th June 2010

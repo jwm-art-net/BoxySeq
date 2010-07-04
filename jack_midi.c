@@ -17,7 +17,7 @@
 
 struct jack_midi_data
 {
-    char*               client_name;
+    const char*         client_name;
 
     jack_client_t*      client;
 
@@ -70,6 +70,9 @@ void jmidi_free(jmidi* jm)
     if (!jm)
         return;
 
+    MESSAGE("old playhead:      %d\n", jm->oph);
+    MESSAGE("old next playhead: %d\n", jm->onph);
+
     jtransp_free(jm->tr);
     free(jm);
 }
@@ -77,9 +80,12 @@ void jmidi_free(jmidi* jm)
 
 _Bool jmidi_startup(jmidi* jm, boxyseq* bs)
 {
+    #ifdef NO_REAL_TIME
+    jm->client = 0;
+    #else
     const char *server_name = NULL;
     jack_options_t options = JackNullOption;
-    jack_status_t status;
+    jack_status_t status = 0;
 
     jm->client = jack_client_open(  boxyseq_basename(bs),
                                     options,
@@ -93,12 +99,16 @@ _Bool jmidi_startup(jmidi* jm, boxyseq* bs)
             WARNING("Unable to connect to JACK server\n");
         return 0;
     }
+    #endif
 
     boxyseq_set_jack_client(bs, jm->client);
     boxyseq_set_jtransp(bs, jm->tr);
 
     jm->bs = bs;
 
+    #ifdef NO_REAL_TIME
+    jm->client_name = "BoxySeq";
+    #else
     jm->client_name = jack_get_client_name(jm->client);
 
     if (status & JackServerStarted)
@@ -106,9 +116,12 @@ _Bool jmidi_startup(jmidi* jm, boxyseq* bs)
 
     if (status & JackNameNotUnique)
         MESSAGE("unique name `%s' assigned\n", jm->client_name);
+    #endif
 
     jtransp_startup(jm->tr, jm->client);
 
+    #ifdef NO_REAL_TIME
+    #else
     if (jack_set_process_callback(jm->client, jmidi_process, jm) != 0)
     {
         WARNING("failed to init jack process callback\n");
@@ -122,6 +135,7 @@ _Bool jmidi_startup(jmidi* jm, boxyseq* bs)
         WARNING("failed to activate jack client\n");
         return 0;
     }
+    #endif
 
     return 1;
 }

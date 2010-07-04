@@ -35,13 +35,15 @@ grbound* grbound_new(void)
 
     grb->flags = FSPLACE_ROW_SMART
                | FSPLACE_LEFT_TO_RIGHT
-               | FSPLACE_TOP_TO_BOTTOM
+               | FSPLACE_TOP_TO_BOTTOM;
+/*
                | GRBOUND_BLOCK_ON_NOTE_FAIL;
+*/
 
     grb->evinput = 0;
     grb->midiout = 0;
 
-    #ifdef GRBOUND_DEBUG
+    #ifdef GRID_DEBUG
     MESSAGE("grbound created:%p\n",grb);
     #endif
 
@@ -145,7 +147,13 @@ struct box_grid
 {
     evport_manager* portman;
 
-    evport* inport;
+    evport* global_in_port; /*  all events passing through this
+                                grid are passed through this port
+                                for the purposes of sorting them
+                                into an appropriate order for
+                                eventual MIDI output.
+                            */
+
     evport* unplace_port;
     evport* block_port;
 
@@ -163,10 +171,10 @@ grid* grid_new(void)
     if (!(gr->portman = evport_manager_new("grid")))
         goto fail1;
 
-    gr->inport =
+    gr->global_in_port =
         evport_manager_evport_new(gr->portman,  RT_EVLIST_SORT_POS);
 
-    if (!gr->inport)
+    if (!gr->global_in_port)
         goto fail2;
 
     gr->block_port =
@@ -207,9 +215,9 @@ void grid_free(grid* gr)
 }
 
 
-evport* grid_input_port(grid* gr)
+evport* grid_global_input_port(grid* gr)
 {
-    return gr->inport;
+    return gr->global_in_port;
 }
 
 
@@ -223,16 +231,11 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 {
     event ev;
 
-    evport_read_reset(gr->inport);
+    evport_read_reset(gr->global_in_port);
 
-    while(evport_read_and_remove_event(gr->inport, &ev))
+    while(evport_read_and_remove_event(gr->global_in_port, &ev))
     {
         grbound* grb = (grbound*)ev.misc;
-
-        #ifdef GRBOUND_DEBUG
-        MESSAGE("evport event.misc = grbound:%p\n", grb);
-        event_dump(&ev);
-        #endif
 
         if (freespace_find(     gr->fs,
                                 grb->bound,
@@ -266,12 +269,23 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
                                         ev.box_y,
                                         ev.box_width,
                                         ev.box_height );
+        #ifndef GRID_DEBUG
         }
-        #ifdef GRID_DEBUG
+        #else /* GRID_DEBUG */
+            if (!moport_event_in_start(grb->midiout, &ev))
+                WARNING("event not in midiport start\n");
+        }
         else
-            WARNING("event not placed in boundary: "
-                    "no space available (is ok (-: )\n");
-        #endif
+        {
+            WARNING("event (%d x %d) NOT placed in boundary: "
+                    "no space available (is ok (-: )\n",
+                    ev.box_width, ev.box_height );
+            #ifdef NO_REAL_TIME
+            freespace_dump(gr->fs);
+            #endif
+        }
+        #endif /* GRID_DEBUG */
+
     }
 }
 
@@ -295,31 +309,26 @@ void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
 
     event ev;
 
+    event* out;
+
     evport_read_reset(gr->block_port);
 
     while(evport_read_event(gr->block_port, &ev))
     {
+        #ifdef GRID_DEBUG
+        int status = ev.flags & EV_STATUSMASK;
+        if (status != EV_STATUS_PLAY)
+            WARNING("event in block port %s has incorrect status\n",
+                    evport_name(gr->block_port));
+        #endif
+
         if (nph < ev.note_dur)
             break;
-/*FIXME: detection && logic */
-        switch (ev.flags & EV_STATUSMASK)
+
+        if (ev.note_dur >= ph)
         {
-        case EV_STATUS_PLAY:
-            if (ph < ev.note_dur)
-                break;
-            /*
-            ev.flags = EV_TYPE_BLOCK | EV_STATUS_OFF;
-        case EV_STATUS_OFF:
-            ev.flags = EV_TYPE_BLOCK | EV_STATUS_RELEASE;
-            */
-
-            grid_rt_unplace_event(gr, &ev);
+            out = grid_rt_unplace_event(gr, &ev);
             evport_and_remove_event(gr->block_port);
-            break;
-
-        default:
-            WARNING("unhandled EV_STATUS flag\n");
-            break;
         }
     }
 }
@@ -327,13 +336,15 @@ void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
 
 event* grid_rt_unplace_event(grid* gr, event* ev)
 {
+/*
     if (ev->box_release == 0)
+    {WARNING("!!!!!!!!!!!\n");}
     {
         freespace_add(gr->fs,   ev->box_x,      ev->box_y,
                                 ev->box_width,  ev->box_height );
         return 0;
     }
-
+*/
     return evport_write_event(gr->unplace_port, ev);
 }
 
@@ -344,14 +355,42 @@ void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
 
     evport_read_reset(gr->unplace_port);
 
+    _Bool done = 0;
+
     while(evport_read_event(gr->unplace_port, &ev))
     {
-        if (ph < ev.box_release)
-            break;
+        if (ev.box_release > nph)
+            done = 1;/*break;*/
 
+        if (ev.box_release < nph)
+        {
+            freespace_add(gr->fs,   ev.box_x,       ev.box_y,
+                                    ev.box_width,   ev.box_height );
+
+            evport_and_remove_event(gr->unplace_port);
+            if (done)
+                WARNING("unplace port not sorted!*****************\n");
+        }
+
+    }
+}
+
+
+void grid_remove_event(grid* gr, event* ev)
+{
+    evport_write_event(gr->unplace_port, ev);
+}
+
+
+void grid_remove_events(grid* gr)
+{
+    event ev;
+
+    evport_read_reset(gr->unplace_port);
+
+    while(evport_read_event(gr->unplace_port, &ev))
+    {
         freespace_add(gr->fs,   ev.box_x,       ev.box_y,
                                 ev.box_width,   ev.box_height );
-
-        evport_and_remove_event(gr->unplace_port);
     }
 }

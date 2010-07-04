@@ -53,10 +53,8 @@ moport* moport_new(jack_client_t* client, evport_manager* portman)
     for (c = 0; c < 16; ++c)
     {
         for (p = 0; p < 128; ++p)
-            mo->start[c][p].flags = 0;
-
-        for (p = 0; p < 128; ++p)
-            mo->play[c][p].flags = 0;
+            mo->start[c][p].flags =
+             mo->play[c][p].flags = 0;
     }
 
     return mo;
@@ -74,6 +72,40 @@ void moport_free(moport* mo)
     if (!mo)
         return;
 
+    int c, p;
+
+    MESSAGE("midi out port data:\n");
+
+    for (c = 0; c < 16; ++c)
+    {
+        int count = 0;
+        MESSAGE("channel: %d\n", c);
+        MESSAGE("start events...\n");
+
+        for (p = 0; p < 128; ++p)
+            if (mo->start[c][p].flags)
+            {
+                ++count;
+                event_dump(&mo->start[c][p]);
+            }
+
+        MESSAGE("total: %d\n", count);
+
+        count = 0;
+
+        MESSAGE("play events...\n");
+
+        for (p = 0; p < 128; ++p)
+            if (mo->play[c][p].flags)
+            {
+                ++count;
+                event_dump(&mo->play[c][p]);
+            }
+
+        MESSAGE("total: %d\n", count);
+    }
+
+
     free(mo);
 }
 
@@ -86,36 +118,32 @@ const char* moport_name(moport* mo)
 
 int moport_start_event(moport* midiport, const event* ev, int grb_flags)
 {
-    if (!ev->note_dur)
+    if (ev->note_dur == ev->pos)
         return -1;
 
     event* start = midiport->start[event_channel(ev)];
-    event*  play = midiport->play[event_channel(ev)];
+    event*  play =  midiport->play[event_channel(ev)];
 
-    int pitch = -1;
+    int pitch = ev->box_x;
 
     if (grb_flags & GRBOUND_PITCH_STRICT_POS)
     {
         if (start[pitch].flags & EV_TYPE_NOTE
          ||  play[pitch].flags & EV_TYPE_NOTE )
             return -1;
-
-        pitch = ev->box_x;
     }
     else
     {
-        int startpitch, endpitch, pitchdir;
+        int startpitch, endpitch;
+        int pitchdir = 1;
+
+        startpitch = endpitch = pitch;
 
         if (grb_flags & FSPLACE_LEFT_TO_RIGHT)
-        {
-            startpitch = pitch = ev->box_x;
-            endpitch = pitch + ev->box_width;
-            pitchdir = 1;
-        }
+            endpitch += ev->box_width;
         else
         {
-            startpitch = pitch = ev->box_x + ev->box_width;
-            endpitch = ev->box_x;
+            pitch = startpitch += ev->box_width;
             pitchdir = -1;
         }
 
@@ -155,8 +183,12 @@ void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
         {
             if ((play[pitch].flags & EV_STATUSMASK) == EV_STATUS_PLAY)
             {
-                if (play[pitch].note_dur >= ph
-                 && play[pitch].note_dur < nph)
+                #ifdef GRID_DEBUG
+                if (play[pitch].note_dur < ph)
+                    WARNING("play[pitch].note_dur < ph\n");
+                #endif
+
+                if (play[pitch].note_dur < nph)
                 {
                     out = evport_write_event(midiport->intersort,
                                                     &play[pitch] );
@@ -166,10 +198,25 @@ void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
                         out->flags &= ~EV_STATUSMASK;
                         out->flags |= EV_STATUS_OFF;
                     }
+                    #ifdef GRID_DEBUG
+                    else
+                        WARNING("failed to write event to intersort\n");
+                    #endif
 
-                    play[pitch].flags &= ~EV_STATUSMASK;
-                    play[pitch].flags |= EV_STATUS_OFF;
                     out = grid_rt_unplace_event(gr, &play[pitch]);
+
+                    if (out)
+                    {
+/*                        WARNING("out->box_release:%d ph:%d\n",
+                                out->box_release, ph);
+                        out->box_release -= ph;
+                        WARNING("%d\n", out->box_release);*/
+                    }
+                    #ifdef GRID_DEBUG
+                    else
+                        WARNING("failed to write event to unplace\n");
+                    #endif
+
                     play[pitch].flags = 0;
                 }
             }
@@ -192,7 +239,7 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
-            if ((start[pitch].flags & EV_STATUSMASK) == EV_STATUS_START)
+            if (start[pitch].flags)
             {
                 out = evport_write_event(midiport->intersort,
                                                 &start[pitch] );
@@ -206,6 +253,7 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
                 event_copy(&play[pitch], &start[pitch]);
                 play[pitch].flags &= ~EV_STATUSMASK;
                 play[pitch].flags |= EV_STATUS_PLAY;
+
                 start[pitch].flags = 0;
             }
         }
@@ -218,10 +266,20 @@ void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
 {
     event ev;
     unsigned char* buf;
-    void* jport_buf = jack_port_get_buffer( midiport->jack_out_port,
-                                            nframes );
+    void* jport_buf;
 
     evport_read_reset(midiport->intersort);
+
+    #ifdef NO_REAL_TIME
+    if (!evport_count(midiport->intersort))
+        return;
+    MESSAGE("midi out port:\n");
+    while(evport_read_and_remove_event(midiport->intersort, &ev))
+        event_dump(&ev);
+    return;
+    #endif
+
+    jport_buf = jack_port_get_buffer(midiport->jack_out_port, nframes);
     jack_midi_clear_buffer(jport_buf);
 
     while(evport_read_and_remove_event(midiport->intersort, &ev))
@@ -252,3 +310,62 @@ void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
         }
     }
 }
+
+
+void moport_empty(moport* midiport, grid* gr)
+{
+    int channel, pitch;
+    event* start;
+    event* play;
+
+    for (channel = 0; channel < 16; ++channel)
+    {
+        start = midiport->start[channel];
+        play = midiport->play[channel];
+
+        for (pitch = 0; pitch < 128; ++pitch)
+        {
+            if (start[pitch].flags)
+            {
+                grid_remove_event(gr, &start[pitch]);
+                start[pitch].flags = 0;
+            }
+
+            if (play[pitch].flags)
+            {
+                grid_remove_event(gr, &play[pitch]);
+                play[pitch].flags = 0;
+            }
+        }
+    }
+}
+
+
+#ifdef GRID_DEBUG
+_Bool moport_event_in_start(moport* mo, event* ev)
+{
+    int c, p;
+    event* start;
+    for (c = 0; c < 16; ++c)
+    {
+        start = mo->start[c];
+        for (p = 0; p < 128; ++p)
+        {
+            if (start[p].flags)
+            {
+                if (start[p].pos ==             ev->pos
+                 && start[p].note_dur ==        ev->note_dur
+                 && start[p].note_pitch ==      ev->note_pitch
+                 && start[p].note_velocity ==   ev->note_velocity
+                 && start[p].box_x ==           ev->box_x
+                 && start[p].box_y ==           ev->box_y
+                 && start[p].box_release ==     ev->box_release)
+                {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+#endif

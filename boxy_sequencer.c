@@ -235,7 +235,8 @@ int boxyseq_grbound_new(boxyseq* bs, int x, int y, int w, int h)
 
     if (!fsbound_set_coords(fsb, x, y, w, h))
     {
-        WARNING("boundary x:%d y:%d w:%d h:%d out of bounds\n", x,y,w,h);
+        WARNING("boundary x:%d y:%d w:%d h:%d out of bounds\n",
+                x, y, w, h);
         WARNING("default size will be used\n");
     }
 
@@ -310,7 +311,7 @@ void boxyseq_rt_play(boxyseq* bs,
 {
     int i;
 
-    evport* grid_port = grid_input_port(bs->gr);
+    evport* grid_port = grid_global_input_port(bs->gr);
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
@@ -346,7 +347,11 @@ void boxyseq_rt_play(boxyseq* bs,
                 (
                     bs->moport_slot[i],
                     nframes,
+                    #ifdef NO_REAL_TIME
+                    0
+                    #else
                     jtransp_rt_frames_per_tick(bs->jacktransport)
+                    #endif
                 );
         }
     }
@@ -354,11 +359,26 @@ void boxyseq_rt_play(boxyseq* bs,
     grid_rt_block(bs->gr, ph, nph);
 }
 
+void boxyseq_empty(boxyseq* bs)
+{
+    int i = 0;
+
+    for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
+        if (bs->moport_slot[i])
+            moport_empty(bs->moport_slot[i], bs->gr);
+
+    grid_remove_events(bs->gr);
+
+/*
+    freespace_dump(grid_freespace(bs->gr));
+*/
+}
 
 void boxyseq_rt_stop(boxyseq* bs)
 {
     
 }
+
 
 
 
