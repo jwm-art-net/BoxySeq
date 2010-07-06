@@ -1,13 +1,11 @@
 #include "boxy_sequencer.h"
 #include "debug.h"
+#include "event_buffer.h"
 #include "gui_main.h"
 #include "jack_midi.h"
+#include "musical_scale.h"
 
 #include <stdlib.h>
-
-
-#include "event_buffer.h"
-
 
 
 
@@ -50,15 +48,15 @@ int main(int argc, char** argv)
 
     pdata_set_loop_length(pat1->pd, ppqn * 4);
 
-    pat1->pd->width_min = 3;
-    pat1->pd->width_max = 54;
-    pat1->pd->height_min = 3;
-    pat1->pd->height_max = 54;
+    pat1->pd->width_min = 4;
+    pat1->pd->width_max = 8;
+    pat1->pd->height_min = 8;
+    pat1->pd->height_max = 24;
 
     pl = pat1->pl;
 
-    count = 4;
-    steps = 4;
+    count = 8;
+    steps = 8;
     st = pat1->pd->loop_length / steps;
     dur = st / 1.25; // - pat1->pd->loop_length / (steps * 8);
     t = 0;
@@ -66,14 +64,38 @@ int main(int argc, char** argv)
     for (i = 0; i < count; ++i, t += st)
     {
         ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur * 2;
-        ev->box_release = dur * 4;
+        ev->note_dur = dur * 4;
+        ev->box_release = dur * 6;
+
+        ev = lnode_data(plist_add_event_new(pl, t));
+        ev->note_dur = dur * 4;
+        ev->box_release = dur * 6;
+
+        ev = lnode_data(plist_add_event_new(pl, t));
+        ev->note_dur = dur * 4;
+        ev->box_release = dur * 6;
+
+        if (i == 7)
+        {
+            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
+            ev->note_dur = dur * 4;
+            ev->box_release = dur * 6;
+
+            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
+            ev->note_dur = dur * 4;
+            ev->box_release = dur * 6;
+
+            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
+            ev->note_dur = dur * 4;
+            ev->box_release = dur * 6;
+        }
+
     }
 
     grbound* grb1;
 
 
-    grboundslot = boxyseq_grbound_new(bs, 11, 60, 64, 64);
+    grboundslot = boxyseq_grbound_new(bs, 31, 60, 64, 64);
     grb1 = boxyseq_grbound(bs, grboundslot);
 
 
@@ -96,6 +118,15 @@ int main(int argc, char** argv)
 
     grbound_midi_out_port_set(grb1, mo);
 
+
+
+    sclist* scales = sclist_new();
+
+    sclist_add_default_scales(scales);
+
+    scale* sc = sclist_scale_by_name(scales, "Augmented");
+
+    grbound_scale_binary_set(grb1, scale_as_int(sc));
 
     pattern_prtdata_update(pat1);
 

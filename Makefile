@@ -31,7 +31,7 @@ DEFINES:= -DUSE_64BIT_ARRAY $(DEBUGS)
 
 CFLAGS := -ggdb -O0 $(DEFINES)
 
-#CFLAGS := $(DEFINES) -march=core2 -O3 -pipe -fomit-frame-pointer -Winline
+#CFLAGS := $(DEFINES) -march=core2 -O3 -pipe -fomit-frame-pointer -Winline -ffast-math
 
 LIBS   := `pkg-config --libs gtk+-2.0` `pkg-config --libs jack`
 

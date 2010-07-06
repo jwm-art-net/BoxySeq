@@ -3,6 +3,8 @@
 
 #include "debug.h"
 #include "grid_boundary.h"
+#include "musical_scale.h"
+
 
 #include <jack/midiport.h>
 #include <stdlib.h>
@@ -116,7 +118,8 @@ const char* moport_name(moport* mo)
 }
 
 
-int moport_start_event(moport* midiport, const event* ev, int grb_flags)
+int moport_start_event(moport* midiport, const event* ev,
+                                            int grb_flags, int scalebin)
 {
     if (ev->note_dur == ev->pos)
         return -1;
@@ -128,8 +131,10 @@ int moport_start_event(moport* midiport, const event* ev, int grb_flags)
 
     if (grb_flags & GRBOUND_PITCH_STRICT_POS)
     {
-        if (start[pitch].flags & EV_TYPE_NOTE
-         ||  play[pitch].flags & EV_TYPE_NOTE )
+        if (!scale_note_is_valid(scalebin, pitch))
+            return -1;
+
+        if (start[pitch].flags || play[pitch].flags)
             return -1;
     }
     else
@@ -147,16 +152,14 @@ int moport_start_event(moport* midiport, const event* ev, int grb_flags)
             pitchdir = -1;
         }
 
-        while(start[pitch].flags & EV_TYPE_NOTE
-            || play[pitch].flags & EV_TYPE_NOTE )
+        while( !scale_note_is_valid(scalebin, pitch)
+            || start[pitch].flags
+            || play[pitch].flags   )
         {
             pitch += pitchdir;
             if (pitch == endpitch)
-                break;
+                return -1;
         }
-
-        if (pitch == endpitch)
-            return -1;
     }
 
     event_copy(&start[pitch], ev);

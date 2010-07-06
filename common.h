@@ -40,12 +40,19 @@ typedef struct
 } coord;
 
 
-void bbtpos_copy(bbtpos* dest, const bbtpos* src);
+void    bbtpos_copy(bbtpos* dest, const bbtpos* src);
 
 
-char* name_and_number(const char* name, int number);
+const char* string_set(char** str_ptr, const char* new_str);
+char*       name_and_number(const char* name, int number);
 
-char* jwm_strcat_alloc(const char* str1, const char* str2);
+char*   jwm_strcat_alloc(const char* str1, const char* str2);
+
+
+int     binary_string_to_int(const char*);
+char*   int_to_binary_string(int, int sigbits);
+
+
 
 #endif
 

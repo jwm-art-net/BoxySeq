@@ -40,7 +40,8 @@ const char* moport_name(moport*);
     returns pitch:
 */
 
-int         moport_start_event(moport*, const event* ev, int grb_flags);
+int         moport_start_event(moport*, const event* ev,
+                                        int grb_flags, int scalebin );
 
 void        moport_rt_play_old(moport*, bbt_t ph, bbt_t nph, grid*);
 void        moport_rt_play_new(moport*, bbt_t ph, bbt_t nph);

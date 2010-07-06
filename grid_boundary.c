@@ -1,6 +1,6 @@
 #include "grid_boundary.h"
 
-
+#include "common.h"
 #include "debug.h"
 #include "event_pool.h"
 
@@ -12,6 +12,7 @@ struct grid_boundary
 {
     int         flags;
     int         channel;
+    int         scale;
 
     evport*     evinput;
     fsbound*    bound;
@@ -35,11 +36,10 @@ grbound* grbound_new(void)
 
     grb->flags = FSPLACE_ROW_SMART
                | FSPLACE_LEFT_TO_RIGHT
-               | FSPLACE_TOP_TO_BOTTOM;
-/*
+               | FSPLACE_TOP_TO_BOTTOM
                | GRBOUND_BLOCK_ON_NOTE_FAIL;
-*/
 
+    grb->scale = binary_string_to_int("111111111111");
     grb->evinput = 0;
     grb->midiout = 0;
 
@@ -88,6 +88,18 @@ void grbound_flags_set(grbound* grb, int flags)
 void grbound_flags_unset(grbound* grb, int flags)
 {
     grb->flags &= ~flags;
+}
+
+
+int grbound_scale_binary_set(grbound* grb, int scale_bin)
+{
+    return grb->scale = scale_bin;
+}
+
+
+int grbound_scale_binary(grbound* grb)
+{
+    return grb->scale;
 }
 
 
@@ -253,10 +265,30 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 
             ev.note_pitch =
                     pitch = moport_start_event( grb->midiout, &ev,
-                                                grb->flags );
+                                                grb->flags,
+                                                grb->scale );
+/*
+            if (pitch == -1)
+            {
+                if (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
+                {
+                    ev.flags = EV_TYPE_BLOCK | EV_STATUS_PLAY;
+                    evport_write_event(gr->block_port, &ev);
+                    ev.note_pitch = pitch = 0;
+                }
+            }
+
+            if (pitch >= 0)
+                freespace_remove(gr->fs,    ev.box_x,
+                                            ev.box_y,
+                                            ev.box_width,
+                                            ev.box_height );
+*/
 
             if (pitch == -1)
             {
+                continue;
+
                 if (!(grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
                     continue;
 
@@ -269,9 +301,9 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
                                         ev.box_y,
                                         ev.box_width,
                                         ev.box_height );
-        #ifndef GRID_DEBUG
         }
-        #else /* GRID_DEBUG */
+/*
+        #ifdef GRID_DEBUG
             if (!moport_event_in_start(grb->midiout, &ev))
                 WARNING("event not in midiport start\n");
         }
@@ -284,8 +316,8 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
             freespace_dump(gr->fs);
             #endif
         }
-        #endif /* GRID_DEBUG */
-
+        #endif
+*/
     }
 }
 

@@ -33,7 +33,7 @@ Grid Dimension
 
     * MIDI pitch range is (integer) 0 to 127
     * MIDI velocity range is (integer) 0 to 127
-    * Therefor the grid is 128 × 128 units.
+    * Therefor the grid is 128 x 128 units.
 
 Boundaries
 

@@ -30,6 +30,9 @@ void        grbound_flags_clear(grbound*);
 void        grbound_flags_set(grbound*, int flags);
 void        grbound_flags_unset(grbound*, int flags);
 
+int         grbound_scale_binary_set(grbound*, int scale_bin);
+int         grbound_scale_binary(grbound*);
+
 moport*     grbound_midi_out_port(grbound*);
 void        grbound_midi_out_port_set(grbound*, moport*);
 
@@ -38,7 +41,7 @@ void        grbound_channel_set(grbound*, int);
 
 fsbound*    grbound_fsbound(grbound*);
 
-void        grbound_set_global_input_port(grbound*, evport*);
+void        grbound_set_input_port(grbound*, evport*);
 
 /*  although the grbound has it's own input port, we need to place the
     data coming in from that port into another port which contains the
