@@ -518,6 +518,17 @@ llist_unlink(llist* ll, lnode* ln)
 }
 
 
+void llist_unlink_free(llist* ll, lnode* ln)
+{
+    lnode* remln = llist_unlink(ll, ln);
+
+    if (remln != ln)
+        return;
+
+    ll->cb_free(ln->data);
+    free(ln);
+}
+
 lnode*
 llist_add_data(llist* ll, void* data)
 {

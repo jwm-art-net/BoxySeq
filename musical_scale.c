@@ -23,10 +23,28 @@ static const char* note_names[] = {
     "B"
 };
 
+
+int note_number(const char* name)
+{
+    const char* p;
+    const char* chromatic_names = "C C#D D#E F F#G G#A A#B ";
+    size_t n = strlen(name);
+
+    if (!n || n > 2 || *name == ' ')
+        return -1;
+
+    if (!(p = strstr(chromatic_names, name)))
+        return -1;
+
+    return ((p - chromatic_names) / 2);
+}
+
+
 const char* note_name(int n)
 {
     return note_names[n % 12];
 }
+
 
 int note_to_octave(int n)
 {

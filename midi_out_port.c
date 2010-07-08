@@ -119,7 +119,9 @@ const char* moport_name(moport* mo)
 
 
 int moport_start_event(moport* midiport, const event* ev,
-                                            int grb_flags, int scalebin)
+                                            int grb_flags,
+                                            int scale_bin,
+                                            int scale_key )
 {
     if (ev->note_dur == ev->pos)
         return -1;
@@ -131,7 +133,7 @@ int moport_start_event(moport* midiport, const event* ev,
 
     if (grb_flags & GRBOUND_PITCH_STRICT_POS)
     {
-        if (!scale_note_is_valid(scalebin, pitch))
+        if (!scale_note_is_valid(scale_bin, scale_key, pitch))
             return -1;
 
         if (start[pitch].flags || play[pitch].flags)
@@ -152,7 +154,7 @@ int moport_start_event(moport* midiport, const event* ev,
             pitchdir = -1;
         }
 
-        while( !scale_note_is_valid(scalebin, pitch)
+        while( !scale_note_is_valid(scale_bin, scale_key, pitch)
             || start[pitch].flags
             || play[pitch].flags   )
         {

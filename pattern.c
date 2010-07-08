@@ -170,7 +170,7 @@ static signed char  plist_default_width = 0;
 static signed char  plist_default_height = 0;
 
 
-static plist* plist_pri_new(void)
+plist* plist_new(void)
 {
     plist* pl = malloc(sizeof(*pl));
 
@@ -231,9 +231,21 @@ size_t plist_event_count(const plist* pl)
 }
 
 
+lnode* plist_head(const plist* pl)
+{
+    return llist_head(pl->ll);
+}
+
+
+lnode* plist_tail(const plist* pl)
+{
+    return llist_tail(pl->ll);
+}
+
+
 plist*  plist_dup(const plist* pl)
 {
-    plist* newpl = plist_pri_new();
+    plist* newpl = plist_new();
 
     if (!newpl)
         return 0;
@@ -320,6 +332,23 @@ lnode* plist_add_event_new(plist* pl, bbt_t start_tick)
 }
 
 
+lnode* plist_add_event_copy(plist* pl, event* ev)
+{
+    event* evcopy = event_new();
+
+    if (!ev)
+        return 0;
+
+    event_copy(evcopy, ev);
+
+    lnode* ln = plist_add_event(pl, evcopy);
+
+    if (!ln)
+        free(evcopy);
+
+    return ln;
+}
+
 lnode* plist_unlink(plist* pl, lnode* ln)
 {
     #ifdef PATTERN_DEBUG
@@ -328,6 +357,11 @@ lnode* plist_unlink(plist* pl, lnode* ln)
     #endif
 
     return llist_unlink(pl->ll, ln);
+}
+
+void plist_unlink_free(plist* pl, lnode* ln)
+{
+    llist_unlink_free(pl->ll, ln);
 }
 
 
@@ -530,7 +564,7 @@ void prtdata_trigger(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
 }
 
 
-void prtdata_play(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
+void prtdata_play(prtdata* prt, bbt_t ph, bbt_t nph)
 {
     pdata* pd =         prt->pd;
     event* ev_arr =     prt->ev_arr;
@@ -541,15 +575,7 @@ void prtdata_play(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
     prt->pd_in_use =    pd;
     prt->ev_arr_in_use =ev_arr;
 
-/*
-    if (start_tick < prt->start_tick)
-        start_tick = prt->start_tick;
-
-    if (end_tick < prt->end_tick)
-        end_tick = prt->end_tick;
-*/
-
-    bbt_t   tick =       start_tick - prt->start_tick;
+    bbt_t   tick =       ph - prt->start_tick;
     int     num_played = tick / pd->loop_length;
 
     bbt_t   offset = prt->start_tick + (pd->loop_length * num_played);
@@ -576,12 +602,12 @@ void prtdata_play(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
         play_event = 0;
         evpos = ev->pos + offset;
 
-        if (evpos >= start_tick && evpos < end_tick)
+        if (evpos >= ph && evpos < nph)
             play_event = 1;
         else
         {
             evpos = ev->pos + nextoffset;
-            if (evpos >= start_tick && evpos < end_tick)
+            if (evpos >= ph && evpos < nph)
                 play_event = 1;
         }
 
@@ -673,7 +699,7 @@ pattern* pattern_new(void)
     }
 
     pat->pd = pdata_pri_new();
-    pat->pl = plist_pri_new();
+    pat->pl = plist_new();
     pat->prt = prtdata_pri_new();
 
     if (!pat->pd || !pat->pl || !pat->prt)

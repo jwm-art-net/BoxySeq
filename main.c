@@ -50,13 +50,13 @@ int main(int argc, char** argv)
 
     pat1->pd->width_min = 4;
     pat1->pd->width_max = 8;
-    pat1->pd->height_min = 8;
-    pat1->pd->height_max = 24;
+    pat1->pd->height_min = 4;
+    pat1->pd->height_max = 12;
 
     pl = pat1->pl;
 
-    count = 8;
-    steps = 8;
+    count = 16;
+    steps = 16;
     st = pat1->pd->loop_length / steps;
     dur = st / 1.25; // - pat1->pd->loop_length / (steps * 8);
     t = 0;
@@ -64,38 +64,28 @@ int main(int argc, char** argv)
     for (i = 0; i < count; ++i, t += st)
     {
         ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur * 4;
-        ev->box_release = dur * 6;
+        ev->note_dur = dur;
+        ev->box_release = dur * 3;
 
-        ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur * 4;
-        ev->box_release = dur * 6;
-
-        ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur * 4;
-        ev->box_release = dur * 6;
-
-        if (i == 7)
+        if (i % 2 == 0)
         {
-            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
-            ev->note_dur = dur * 4;
-            ev->box_release = dur * 6;
-
-            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
-            ev->note_dur = dur * 4;
-            ev->box_release = dur * 6;
-
-            ev = lnode_data(plist_add_event_new(pl, t + st / 2));
-            ev->note_dur = dur * 4;
-            ev->box_release = dur * 6;
+            ev = lnode_data(plist_add_event_new(pl, t+10));
+            ev->note_dur = dur;
+            ev->box_release = dur * 5;
         }
 
+        if (i == 4)
+        {
+            ev = lnode_data(plist_add_event_new(pl, t+24));
+            ev->note_dur = dur;
+            ev->box_release = dur * 7;
+        }
     }
 
     grbound* grb1;
 
 
-    grboundslot = boxyseq_grbound_new(bs, 31, 60, 64, 64);
+    grboundslot = boxyseq_grbound_new(bs, 54, 60, 12, 24);
     grb1 = boxyseq_grbound(bs, grboundslot);
 
 
@@ -124,9 +114,11 @@ int main(int argc, char** argv)
 
     sclist_add_default_scales(scales);
 
-    scale* sc = sclist_scale_by_name(scales, "Augmented");
+    scale* sc = sclist_scale_by_name(scales, "Major");
 
     grbound_scale_binary_set(grb1, scale_as_int(sc));
+    grbound_scale_key_set(grb1, note_number("F"));
+
 
     pattern_prtdata_update(pat1);
 
@@ -176,12 +168,22 @@ printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
 
     err = 0;
 
+    printf("%d %d %d %d %d\n",
+            note_number("C"),
+            note_number("D"),
+            note_number("C#"),
+            note_number("D#"),
+            note_number("EG")  );
+
+
+
 quit:
 
     boxyseq_free(bs);
 
     if (err)
         exit(err);
+
 
     exit(0);
 }

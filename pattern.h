@@ -57,13 +57,13 @@ void    pdata_dump(const pdata*);
 
 /* ---------------------------------------------------------------------
  * * * * * * PLIST * * * * *
-    there is no method to create a plist - it's an opaque data structure.
-    only by creating a pattern, is a plist created.
  */
 
 typedef struct plist plist;
 
 /* plist_free won't work on the plist created by pattern_new */
+
+plist*  plist_new(void);
 
 plist*  plist_dup(const plist*);
 
@@ -80,8 +80,10 @@ void    plist_set_default_height(signed char);
 
 lnode*  plist_add_event(plist*, event*);
 lnode*  plist_add_event_new( plist*, bbt_t start_tick);
+lnode*  plist_add_event_copy(plist*, event*);
 
 lnode*  plist_unlink(   plist*, lnode*);
+void    plist_unlink_free(   plist*, lnode*);
 
 lnode*  plist_select(   const plist*,
                         bbt_t start_tick,

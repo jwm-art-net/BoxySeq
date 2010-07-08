@@ -50,7 +50,6 @@ int             boxyseq_grbound_new(boxyseq*,   int x, int y,
                                                 int w, int h  );
 void            boxyseq_grbound_free(boxyseq*,  int slot);
 grbound*        boxyseq_grbound(boxyseq*,       int slot);
-evport_manager* boxyseq_bound_ports(boxyseq*);
 
 
 /*  midi out ports ---------->
@@ -61,9 +60,17 @@ void            boxyseq_moport_free(boxyseq*,  int slot);
 moport*         boxyseq_moport(boxyseq*,       int slot);
 
 
+evport*         boxyseq_gui_place_port(const boxyseq*);
+evport*         boxyseq_gui_remove_port(const boxyseq*);
+
+
+
+
+
 void            boxyseq_rt_play(boxyseq*,
                                 jack_nframes_t,
                                 bbt_t ph, bbt_t nph);
+
 
 void boxyseq_empty(boxyseq*);
 

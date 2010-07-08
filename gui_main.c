@@ -4,12 +4,7 @@
 #include "jack_transport.h"
 
 
-
-#include "freespace_state.h"
-static freespace* fs = 0;
-
-
-
+#include <stdlib.h>
 #include <time.h>
 
 static GtkWidget*   window =        0;
@@ -19,6 +14,7 @@ static GtkWidget*   rew_button =    0;
 static GtkWidget*   rew_img =       0;
 static GtkWidget*   play_img =      0;
 static GtkWidget*   stop_img =      0;
+static GtkWidget*   drawing_area =  0;
 
 static guint    pos_idle_id = 0;
 static int      gui_jack_rolling = 0;
@@ -31,22 +27,41 @@ static void gui_quit(void)
 }
 
 
-static gboolean idle_update_position(jtransp* tr)
+struct bsdata
 {
-    /* use nanosleep to prevent eating the cpu for breakfast... */
-    struct timespec req = { .tv_sec = 0, .tv_nsec = 50000000 };
-    struct timespec rem = { 0, 0 };
+    jtransp*    tr;
+    evport*     place_port;
+    evport*     remove_port;
+    boxyseq*    bs;
+    plist*      evlist;
+};
 
-    /* when the GUI is doing *a lot* more work, that value may
-        need reducing... on a side note:
-        the priority setting which can be used with g_idle_add_full
-        is not enough to remove the requirement of nanosleep in
-        this case.
-    */
-    nanosleep(&req, &rem);
 
+void bsgui_box(cairo_t* cr, int x, int y, int w, int h)
+{
+    cairo_rectangle(cr, x, y, w, h);
+
+    cairo_set_source_rgba(cr, 1, 0, 0, 0.5);
+    cairo_fill_preserve (cr);
+    cairo_set_source_rgba(cr, 0.5, 0, 0, 0.5);
+    cairo_set_line_width (cr, 1.0);
+    cairo_stroke (cr);
+
+}
+
+static gboolean timed_updater(GtkWidget *widget)
+{
+    gtk_widget_queue_draw(window);
+    gtk_widget_queue_draw(drawing_area);
+    return TRUE;
+}
+
+
+static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpointer data)
+{
+    struct bsdata* bsd = (struct bsdata*)data;
     jack_position_t pos;
-    jack_transport_state_t jstate = jtransp_state(tr, &pos);
+    jack_transport_state_t jstate = jtransp_state(bsd->tr, &pos);
 
     if (jstate == JackTransportStopped && gui_jack_rolling)
     {
@@ -67,7 +82,63 @@ static gboolean idle_update_position(jtransp* tr)
 
     gtk_label_set_text(GTK_LABEL(timelabel), buf);
 
+    cairo_t* cr = gdk_cairo_create(drawing_area->window);
 
+    event evin;
+    event* ev;
+    lnode* ln;
+    lnode* nln;
+
+    evport_read_reset(bsd->remove_port);
+
+    while(evport_read_and_remove_event(bsd->remove_port, &evin))
+    {
+        ln = plist_head(bsd->evlist);
+
+        while (ln)
+        {
+            ev = lnode_data(ln);
+            nln = lnode_next(ln);
+
+            if (ev->box_x == evin.box_x
+             && ev->box_y == evin.box_y
+             && ev->box_width == evin.box_width
+             && ev->box_height == evin.box_height)
+            {
+                plist_unlink_free(bsd->evlist, ln);
+                nln = 0;
+                MESSAGE("event removed - it's grbound was:%p\n", ev->misc);
+            }
+
+            ln = nln;
+        }
+    }
+
+    ln = plist_head(bsd->evlist);
+
+    while(ln)
+    {
+        ev = (event*)lnode_data(ln);
+        bsgui_box(cr, ev->box_x * 4, ev->box_y * 4, ev->box_width * 4, ev->box_height * 4);
+        ln = lnode_next(ln);
+    }
+
+    evport_read_reset(bsd->place_port);
+
+    while(evport_read_and_remove_event(bsd->place_port, &evin))
+        plist_add_event_copy(bsd->evlist, &evin);
+
+    ln = plist_head(bsd->evlist);
+
+    while(ln)
+    {
+        ev = (event*)lnode_data(ln);
+        bsgui_box(cr, ev->box_x * 4, ev->box_y * 4, ev->box_width * 4, ev->box_height * 4);
+        ln = lnode_next(ln);
+    }
+
+
+/* bye bye crappy 128x128 character stdio dump!
 static int p = 0;
     ++p;
     if (p == 1)
@@ -76,7 +147,8 @@ static int p = 0;
         printf("\n");
         p = 0;
     }
-
+*/
+    cairo_destroy(cr);
 
     return TRUE;
 }
@@ -114,8 +186,17 @@ static gboolean gui_transport_play(     GtkWidget *widget,
 
 int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
 {
+    struct bsdata* bsd = malloc(sizeof(*bsd));
 
-    fs = grid_freespace(boxyseq_grid(bs));
+    if (!bsd)
+        return FALSE;
+
+    bsd->bs = bs;
+    bsd->place_port =   boxyseq_gui_place_port(bs);
+    bsd->remove_port =  boxyseq_gui_remove_port(bs);
+    bsd->tr = jmidi_jtransp(jm);
+
+    bsd->evlist = plist_new();
 
     GtkWidget* tmp;
     GtkWidget* vbox;
@@ -212,15 +293,64 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
     gtk_widget_show(tmp);
     gtk_box_pack_start(GTK_BOX(vbox), tmp, FALSE, FALSE, 0);
 
-    /* add a callback to update the buttons and the BBT counter */
-    pos_idle_id = g_idle_add((GtkFunction)idle_update_position, tr);
+
+    tmp = gtk_drawing_area_new();
+    gtk_widget_set_size_request(tmp, 800, 600);
+
+    gtk_box_pack_start(GTK_BOX(vbox), tmp, TRUE, TRUE, 0);
+    gtk_widget_show(tmp);
+
+    drawing_area = tmp;
+
+    g_signal_connect(GTK_OBJECT(tmp), "expose_event",
+                       G_CALLBACK(on_expose_event), bsd);
+
+
+/*
+    gtk_widget_set_events (tmp, GDK_BUTTON_PRESS_MASK
+                           | GDK_BUTTON_RELEASE_MASK
+                           | GDK_POINTER_MOTION_MASK
+                           | GDK_ENTER_NOTIFY_MASK
+                           | GDK_LEAVE_NOTIFY_MASK
+                           | GDK_EXPOSURE_MASK);
+    gtk_widget_set_size_request(tmp, 
+                        (img->user_width >= MIN_WINDOW_WIDTH)
+                        ? img->user_width : MIN_WINDOW_WIDTH,
+                        img->user_height);
+    gtk_box_pack_start(GTK_BOX(vbox), tmp, TRUE, TRUE, 0);
+    gtk_widget_show(tmp);
+    g_signal_connect(GTK_OBJECT(tmp), "button_press_event",
+                        G_CALLBACK(button_press_event), NULL);
+    g_signal_connect(GTK_OBJECT(tmp), "button_release_event",
+                        G_CALLBACK(button_release_event), NULL);
+    g_signal_connect(GTK_OBJECT(tmp), "expose_event",
+                       G_CALLBACK(expose_event), img);
+    g_signal_connect(GTK_OBJECT(tmp), "motion_notify_event",
+                       G_CALLBACK(motion_event), NULL);
+    g_signal_connect(GTK_OBJECT(tmp), "enter_notify_event",
+                       G_CALLBACK(notify_enter_leave_event), NULL);
+    g_signal_connect(GTK_OBJECT(tmp), "leave_notify_event",
+                       G_CALLBACK(notify_enter_leave_event), NULL);
+
+
+    img->drawing_area = drawing_area = tmp;
+*/
+
+
 
     gtk_widget_show(window);
+
+    /* add a callback to update the buttons and the BBT counter */
+    pos_idle_id = g_timeout_add(10, (GtkFunction)timed_updater, bsd);
+
     gtk_main();
 
     /* free the play & stop images */
     g_object_unref(stop_img);
     g_object_unref(play_img);
 
+    free(bsd);
+
     return TRUE;
 }
+

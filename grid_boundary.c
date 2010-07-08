@@ -12,13 +12,13 @@ struct grid_boundary
 {
     int         flags;
     int         channel;
-    int         scale;
+    int         scale_bin;
+    int         scale_key;
 
     evport*     evinput;
     fsbound*    bound;
 
     moport*     midiout;
-
 };
 
 
@@ -39,7 +39,8 @@ grbound* grbound_new(void)
                | FSPLACE_TOP_TO_BOTTOM
                | GRBOUND_BLOCK_ON_NOTE_FAIL;
 
-    grb->scale = binary_string_to_int("111111111111");
+    grb->scale_bin = binary_string_to_int("111111111111");
+    grb->scale_key = 0;
     grb->evinput = 0;
     grb->midiout = 0;
 
@@ -91,15 +92,27 @@ void grbound_flags_unset(grbound* grb, int flags)
 }
 
 
+int grbound_scale_key_set(grbound* grb, int scale_key)
+{
+    return (grb->scale_key = scale_key);
+}
+
+
+int grbound_scale_key(grbound* grb)
+{
+    return grb->scale_key;
+}
+
+
 int grbound_scale_binary_set(grbound* grb, int scale_bin)
 {
-    return grb->scale = scale_bin;
+    return (grb->scale_bin = scale_bin);
 }
 
 
 int grbound_scale_binary(grbound* grb)
 {
-    return grb->scale;
+    return grb->scale_bin;
 }
 
 
@@ -169,6 +182,9 @@ struct box_grid
     evport* unplace_port;
     evport* block_port;
 
+    evport*     gui_place_port;
+    evport*     gui_remove_port;
+
     freespace*  fs;
 };
 
@@ -203,6 +219,9 @@ grid* grid_new(void)
 
     if (!(gr->fs = freespace_new()))
         goto fail2;
+
+    gr->gui_place_port = 0;
+    gr->gui_remove_port = 0;
 
     return gr;
 
@@ -239,6 +258,18 @@ freespace*  grid_freespace(grid* gr)
 }
 
 
+void grid_set_gui_place_port(grid* gr, evport* evp)
+{
+    gr->gui_place_port = evp;
+}
+
+
+void grid_set_gui_remove_port(grid* gr, evport* evp)
+{
+    gr->gui_remove_port = evp;
+}
+
+
 void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 {
     event ev;
@@ -266,25 +297,8 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
             ev.note_pitch =
                     pitch = moport_start_event( grb->midiout, &ev,
                                                 grb->flags,
-                                                grb->scale );
-/*
-            if (pitch == -1)
-            {
-                if (grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL)
-                {
-                    ev.flags = EV_TYPE_BLOCK | EV_STATUS_PLAY;
-                    evport_write_event(gr->block_port, &ev);
-                    ev.note_pitch = pitch = 0;
-                }
-            }
-
-            if (pitch >= 0)
-                freespace_remove(gr->fs,    ev.box_x,
-                                            ev.box_y,
-                                            ev.box_width,
-                                            ev.box_height );
-*/
-
+                                                grb->scale_bin,
+                                                grb->scale_key );
             if (pitch == -1)
             {
                 continue;
@@ -301,6 +315,8 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
                                         ev.box_y,
                                         ev.box_width,
                                         ev.box_height );
+
+            evport_write_event(gr->gui_place_port, &ev);
         }
 /*
         #ifdef GRID_DEBUG
@@ -400,6 +416,7 @@ void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
                                     ev.box_width,   ev.box_height );
 
             evport_and_remove_event(gr->unplace_port);
+            evport_write_event(gr->gui_remove_port, &ev);
             if (done)
                 WARNING("unplace port not sorted!*****************\n");
         }

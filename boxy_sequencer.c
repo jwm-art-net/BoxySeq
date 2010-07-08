@@ -20,10 +20,14 @@ struct boxy_sequencer
     moport*     moport_slot[MAX_MOPORT_SLOTS];
 
     evport_manager* ports_pattern;
-    evport_manager* ports_bound;
     evport_manager* ports_midi_out;
 
+    evport_manager* ports_grid;
+
     grid*       gr;
+
+    evport*     gui_place_port;
+    evport*     gui_remove_port;
 
     jack_client_t*  client;
     jtransp*        jacktransport;
@@ -56,7 +60,7 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->ports_pattern = evport_manager_new("pattern")))
         goto fail2;
 
-    if (!(bs->ports_bound = evport_manager_new("boundary")))
+    if (!(bs->ports_grid = evport_manager_new("grid")))
         goto fail3;
 
     if (!(bs->ports_midi_out = evport_manager_new("midi_out")))
@@ -65,14 +69,25 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->gr = grid_new()))
         goto fail5;
 
+    bs->gui_place_port = evport_manager_evport_new(bs->ports_grid, RT_EVLIST_SORT_POS);
+    bs->gui_remove_port = evport_manager_evport_new(bs->ports_grid, RT_EVLIST_SORT_REL);
+
+    if (!bs->gui_place_port || !bs->gui_remove_port)
+        goto fail6;
+
+    grid_set_gui_place_port(bs->gr, bs->gui_place_port);
+    grid_set_gui_remove_port(bs->gr, bs->gui_remove_port);
+
     bs->jacktransport = 0;
 
     return bs;
 
+fail6:
+    grid_free(bs->gr);
 fail5:
     evport_manager_free(bs->ports_midi_out);
 fail4:
-    evport_manager_free(bs->ports_bound);
+    evport_manager_free(bs->ports_grid);
 fail3:
     evport_manager_free(bs->ports_pattern);
 fail2:
@@ -95,7 +110,7 @@ void boxyseq_free(boxyseq* bs)
     grid_free(bs->gr);
 
     evport_manager_free(bs->ports_midi_out);
-    evport_manager_free(bs->ports_bound);
+    evport_manager_free(bs->ports_grid);
     evport_manager_free(bs->ports_pattern);
 
     for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
@@ -133,12 +148,6 @@ void boxyseq_set_jtransp(boxyseq* bs, jtransp* jacktransport)
 evport_manager* boxyseq_pattern_ports(boxyseq* bs)
 {
     return bs->ports_pattern;
-}
-
-
-evport_manager* boxyseq_bound_ports(boxyseq* bs)
-{
-    return bs->ports_bound;
 }
 
 
@@ -299,6 +308,18 @@ void boxyseq_moport_free(boxyseq* bs, int slot)
 moport* boxyseq_moport(boxyseq* bs, int slot)
 {
     return bs->moport_slot[slot];
+}
+
+
+evport* boxyseq_gui_place_port(const boxyseq* bs)
+{
+    return bs->gui_place_port;
+}
+
+
+evport* boxyseq_gui_remove_port(const boxyseq* bs)
+{
+    return bs->gui_remove_port;
 }
 
 

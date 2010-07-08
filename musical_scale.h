@@ -2,10 +2,11 @@
 #define SCALE_H
 
 
-#define scale_note_is_valid( scale_binary, note ) \
-    ( (scale_binary) & (1 << (12 - ( (note) % 12))))
+#define scale_note_is_valid( scale_binary, key, note ) \
+    ( (scale_binary) & (1 << (12 - (( (note) + (key) ) % 12))))
 
 
+int             note_number(const char*);
 const char*     note_name(int);
 int             note_to_octave(int);
 

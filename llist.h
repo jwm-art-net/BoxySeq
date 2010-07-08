@@ -128,6 +128,8 @@ size_t  llist_data_size(const llist*);
 
 
 lnode*  llist_unlink(   llist*, lnode*);
+void    llist_unlink_free(llist*, lnode*);
+
 lnode*  llist_add_data( llist*, void* data); /* sorted insertion */
 
 lnode*  llist_select(       llist*, datacb_sel, const void* crit);

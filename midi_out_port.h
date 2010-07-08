@@ -41,7 +41,9 @@ const char* moport_name(moport*);
 */
 
 int         moport_start_event(moport*, const event* ev,
-                                        int grb_flags, int scalebin );
+                                        int grb_flags,
+                                        int scale_bin,
+                                        int scale_key  );
 
 void        moport_rt_play_old(moport*, bbt_t ph, bbt_t nph, grid*);
 void        moport_rt_play_new(moport*, bbt_t ph, bbt_t nph);
