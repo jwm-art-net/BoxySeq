@@ -157,7 +157,7 @@ static void evport_free(evport* port)
 }
 
 
-event* evport_write_event(evport* port, const event* ev)
+int evport_write_event(evport* port, const event* ev)
 {
     return rt_evlist_event_add(port->data, ev);
 }

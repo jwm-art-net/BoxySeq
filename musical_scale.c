@@ -36,7 +36,7 @@ int note_number(const char* name)
     if (!(p = strstr(chromatic_names, name)))
         return -1;
 
-    return ((p - chromatic_names) / 2);
+    return ((int)(p - chromatic_names) / 2);
 }
 
 

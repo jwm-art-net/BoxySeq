@@ -30,8 +30,11 @@ static void gui_quit(void)
 struct bsdata
 {
     jtransp*    tr;
-    evport*     place_port;
-    evport*     remove_port;
+
+    evbuf*      note_on_buf;
+    evbuf*      note_off_buf;
+    evbuf*      unplace_buf;
+
     boxyseq*    bs;
     plist*      evlist;
 };
@@ -89,9 +92,7 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
     lnode* ln;
     lnode* nln;
 
-    evport_read_reset(bsd->remove_port);
-
-    while(evport_read_and_remove_event(bsd->remove_port, &evin))
+    while(evbuf_read(bsd->unplace_buf, &evin)) 
     {
         ln = plist_head(bsd->evlist);
 
@@ -102,12 +103,11 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
 
             if (ev->box_x == evin.box_x
              && ev->box_y == evin.box_y
-             && ev->box_width == evin.box_width
+             && ev->box_width  == evin.box_width
              && ev->box_height == evin.box_height)
             {
                 plist_unlink_free(bsd->evlist, ln);
                 nln = 0;
-                MESSAGE("event removed - it's grbound was:%p\n", ev->misc);
             }
 
             ln = nln;
@@ -119,13 +119,14 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
     while(ln)
     {
         ev = (event*)lnode_data(ln);
-        bsgui_box(cr, ev->box_x * 4, ev->box_y * 4, ev->box_width * 4, ev->box_height * 4);
+
+        bsgui_box(cr,   ev->box_x * 4,      ev->box_y * 4,
+                        ev->box_width * 4,  ev->box_height * 4);
+
         ln = lnode_next(ln);
     }
 
-    evport_read_reset(bsd->place_port);
-
-    while(evport_read_and_remove_event(bsd->place_port, &evin))
+    while(evbuf_read(bsd->note_on_buf, &evin))
         plist_add_event_copy(bsd->evlist, &evin);
 
     ln = plist_head(bsd->evlist);
@@ -133,21 +134,13 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
     while(ln)
     {
         ev = (event*)lnode_data(ln);
-        bsgui_box(cr, ev->box_x * 4, ev->box_y * 4, ev->box_width * 4, ev->box_height * 4);
+
+        bsgui_box(cr,   ev->box_x * 4,      ev->box_y * 4,
+                        ev->box_width * 4,  ev->box_height * 4);
+
         ln = lnode_next(ln);
     }
 
-
-/* bye bye crappy 128x128 character stdio dump!
-static int p = 0;
-    ++p;
-    if (p == 1)
-    {
-        freespace_dump(fs);
-        printf("\n");
-        p = 0;
-    }
-*/
     cairo_destroy(cr);
 
     return TRUE;
@@ -192,8 +185,11 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
         return FALSE;
 
     bsd->bs = bs;
-    bsd->place_port =   boxyseq_gui_place_port(bs);
-    bsd->remove_port =  boxyseq_gui_remove_port(bs);
+
+    bsd->note_on_buf =  boxyseq_gui_note_on_buf(bs);
+    bsd->note_off_buf = boxyseq_gui_note_off_buf(bs);
+    bsd->unplace_buf =  boxyseq_gui_unplace_buf(bs);
+
     bsd->tr = jmidi_jtransp(jm);
 
     bsd->evlist = plist_new();

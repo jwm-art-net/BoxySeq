@@ -22,12 +22,11 @@ struct boxy_sequencer
     evport_manager* ports_pattern;
     evport_manager* ports_midi_out;
 
-    evport_manager* ports_grid;
-
     grid*       gr;
 
-    evport*     gui_place_port;
-    evport*     gui_remove_port;
+    evbuf*      gui_note_on_buf;
+    evbuf*      gui_note_off_buf;
+    evbuf*      gui_unplace_buf;
 
     jack_client_t*  client;
     jtransp*        jacktransport;
@@ -39,7 +38,7 @@ boxyseq* boxyseq_new(int argc, char** argv)
     boxyseq* bs = malloc(sizeof(*bs));
 
     if (!bs)
-        goto fail;
+        goto fail0;
 
     bs->basename = 0;
     char* tmp = strrchr( argv[0], '/' );
@@ -57,44 +56,40 @@ boxyseq* boxyseq_new(int argc, char** argv)
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
         bs->moport_slot[i] = 0;
 
-    if (!(bs->ports_pattern = evport_manager_new("pattern")))
+    if (!(bs->ports_pattern =   evport_manager_new("pattern")))
         goto fail2;
 
-    if (!(bs->ports_grid = evport_manager_new("grid")))
+    if (!(bs->ports_midi_out =  evport_manager_new("midi_out")))
         goto fail3;
 
-    if (!(bs->ports_midi_out = evport_manager_new("midi_out")))
+    if (!(bs->gr = grid_new()))
         goto fail4;
 
-    if (!(bs->gr = grid_new()))
+    if (!(bs->gui_note_on_buf =     evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail5;
 
-    bs->gui_place_port = evport_manager_evport_new(bs->ports_grid, RT_EVLIST_SORT_POS);
-    bs->gui_remove_port = evport_manager_evport_new(bs->ports_grid, RT_EVLIST_SORT_REL);
-
-    if (!bs->gui_place_port || !bs->gui_remove_port)
+    if (!(bs->gui_note_off_buf =    evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail6;
 
-    grid_set_gui_place_port(bs->gr, bs->gui_place_port);
-    grid_set_gui_remove_port(bs->gr, bs->gui_remove_port);
+    if (!(bs->gui_unplace_buf =     evbuf_new(DEFAULT_EVBUF_SIZE)))
+        goto fail7;
+
+    grid_set_gui_note_on_buf(bs->gr,    bs->gui_note_on_buf);
+    grid_set_gui_note_off_buf(bs->gr,   bs->gui_note_off_buf);
+    grid_set_gui_unplace_buf(bs->gr,    bs->gui_unplace_buf);
 
     bs->jacktransport = 0;
 
     return bs;
 
-fail6:
-    grid_free(bs->gr);
-fail5:
-    evport_manager_free(bs->ports_midi_out);
-fail4:
-    evport_manager_free(bs->ports_grid);
-fail3:
-    evport_manager_free(bs->ports_pattern);
-fail2:
-    free(bs->basename);
-fail1:
-    free(bs);
-fail:
+fail7:  evbuf_free(bs->gui_note_off_buf);
+fail6:  evbuf_free(bs->gui_note_on_buf);
+fail5:  grid_free(bs->gr);
+fail4:  evport_manager_free(bs->ports_midi_out);
+fail3:  evport_manager_free(bs->ports_pattern);
+fail2:  free(bs->basename);
+fail1:  free(bs);
+fail0:
     WARNING("out of memory allocating boxyseq data\n");
     return 0;
 }
@@ -107,10 +102,13 @@ void boxyseq_free(boxyseq* bs)
     if (!bs)
         return;
 
+    evbuf_free(bs->gui_unplace_buf);
+    evbuf_free(bs->gui_note_off_buf);
+    evbuf_free(bs->gui_note_on_buf);
+
     grid_free(bs->gr);
 
     evport_manager_free(bs->ports_midi_out);
-    evport_manager_free(bs->ports_grid);
     evport_manager_free(bs->ports_pattern);
 
     for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
@@ -310,19 +308,20 @@ moport* boxyseq_moport(boxyseq* bs, int slot)
     return bs->moport_slot[slot];
 }
 
-
-evport* boxyseq_gui_place_port(const boxyseq* bs)
+evbuf* boxyseq_gui_note_on_buf(const boxyseq* bs)
 {
-    return bs->gui_place_port;
+    return bs->gui_note_on_buf;
 }
 
-
-evport* boxyseq_gui_remove_port(const boxyseq* bs)
+evbuf* boxyseq_gui_note_off_buf(const boxyseq* bs)
 {
-    return bs->gui_remove_port;
+    return bs->gui_note_off_buf;
 }
 
-
+evbuf* boxyseq_gui_unplace_buf(const boxyseq* bs)
+{
+    return bs->gui_unplace_buf;
+}
 
 
 

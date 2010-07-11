@@ -14,13 +14,7 @@ typedef enum EVENT_FLAGS
     EV_TYPE_BLOCK =     0x0002,
     EV_TYPEMASK =       0x000f,
 
-    EV_STATUS_START =   0x0010,
-    EV_STATUS_PLAY =    0x0020,
-    EV_STATUS_OFF =     0x0030,
-    EV_STATUS_RELEASE = 0x0040,
-    EV_STATUS_END =     0x0080,
-
-    EV_STATUSMASK =     0x00f0,
+    EV_STATUS_ON =      0x0010, /* or off */
 
     EV_CHANNEL_MASK =   0xf000,
 
@@ -60,21 +54,40 @@ event*  event_dup(const event*);
 void    event_dump(const event*);
 void    event_copy(event* dest, const event* src);
 
-/*
-int     event_channel(const event*);
-void    event_channel_set(event*, int);
-*/
 
 
-#define event_channel( ev ) \
+#define EVENT_IS_STATUS_ON( ev ) \
+    ((( ev )->flags & EV_STATUS_ON ) == EV_STATUS_ON)
+
+#define EVENT_IS_STATUS_OFF( ev ) \
+    ((( ev )->flags & EV_STATUS_ON ) != EV_STATUS_ON)
+
+#define EVENT_IS_TYPE_NOTE( ev ) \
+    ((( ev )->flags & EV_TYPE_NOTE ) == EV_TYPE_NOTE)
+
+#define EVENT_IS_TYPE_BLOCK( ev ) \
+    ((( ev )->flags & EV_TYPE_NOTE ) != EV_TYPE_NOTE)
+
+
+#define EVENT_SET_STATUS_ON( ev ) \
+    ( ev )->flags |= EV_STATUS_ON
+
+#define EVENT_SET_STATUS_OFF( ev ) \
+    ( ev )->flags &= ~EV_STATUS_ON
+
+#define EVENT_SET_TYPE_NOTE( ev ) \
+    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_NOTE
+
+#define EVENT_SET_TYPE_BLOCK( ev ) \
+    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_BLOCK
+
+#define EVENT_CHANNEL( ev ) \
     ((0xf000 & ( ev )->flags) >> 12)
 
-#define event_channel_set( ev, ch ) \
+#define EVENT_CHANNEL_SET( ev, ch ) \
     ( ev )->flags = (0xf000 & (( ch ) << 12)) + (0x0fff & ( ev )->flags);
 
 
-void    event_flag_set(event*, int);
-void    event_flag_unset(event*, int);
 
 /* list manipulation callbacks */
 

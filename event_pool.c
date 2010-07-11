@@ -233,7 +233,6 @@ const char* rt_evlist_get_origin_string(rt_evlist* rtevl)
 
 void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
 {
-    MESSAGE("integrity check...\n");
     rt_evlink* fwd_track[500];
     rt_evlink* rev_track[500];
 
@@ -452,7 +451,7 @@ int rt_evlist_count(rt_evlist* rtevl)
 }
 
 
-event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
+int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 {
     #ifdef EVPOOL_DEBUG999
     rt_evlist_integrity_dump(rtevl, __FUNCTION__);
@@ -478,21 +477,29 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 
     event_copy(&newlnk->ev, ev);
 
-    if (!cur)
+    if (!cur) /* no head, list is empty */
     {
         rtevl->head = rtevl->tail = newlnk;
         rtevl->head->next = 0;
         rtevl->head->prev = 0;
         ++rtevl->count;
-        return (event*)rtevl->head;
+
+        return 1;
+        /* ---------------------------------- */
     }
 
     switch (rtevl->flags)
     {
     case RT_EVLIST_SORT_POS:    newval = ev->pos;
         break;
-    case RT_EVLIST_SORT_DUR:    newval = ev->note_dur;
+
+    case RT_EVLIST_SORT_DUR:
+
+        if ((newval = ev->note_dur) == -1)
+            goto add_at_tail;
+
         break;
+
     case RT_EVLIST_SORT_REL:    newval = ev->box_release;
         break;
     default:                    WARNING("ERROR: insane flags\n");
@@ -528,22 +535,22 @@ event* rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 
             ++rtevl->count;
 
-            return &newlnk->ev;
+            return 1;
         }
-
-        if (!cur->next)
-            break;
 
         cur = cur->next;
     }
 
-    rtevl->tail = cur->next = newlnk;
-    newlnk->prev = cur;
+add_at_tail:
+
+    rtevl->tail->next = newlnk;
+    newlnk->prev = rtevl->tail;
     newlnk->next = 0;
+    rtevl->tail = newlnk;
 
     ++rtevl->count;
 
-    return &newlnk->ev;
+    return 1;
 }
 
 

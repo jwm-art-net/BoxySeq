@@ -20,7 +20,7 @@ inline void bbtpos_copy(bbtpos* dest, const bbtpos* src)
 
 const char* string_set(char** str_ptr, const char* new_str)
 {
-    int n = strlen(new_str);
+    size_t n = strlen(new_str);
     char* str = malloc(n + 1);
 
     if (!str)
@@ -104,7 +104,7 @@ char* int_to_binary_string(int n, int sigbits)
     if (sigbits < 0)
         return 0;
 
-    if (!(bstr = malloc(sigbits + 1)))
+    if (!(bstr = malloc((size_t)sigbits + 1)))
         return 0;
 
     p = bstr;

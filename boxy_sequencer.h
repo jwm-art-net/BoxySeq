@@ -60,10 +60,9 @@ void            boxyseq_moport_free(boxyseq*,  int slot);
 moport*         boxyseq_moport(boxyseq*,       int slot);
 
 
-evport*         boxyseq_gui_place_port(const boxyseq*);
-evport*         boxyseq_gui_remove_port(const boxyseq*);
-
-
+evbuf*          boxyseq_gui_note_on_buf(const boxyseq*);
+evbuf*          boxyseq_gui_note_off_buf(const boxyseq*);
+evbuf*          boxyseq_gui_unplace_buf(const boxyseq*);
 
 
 
@@ -76,6 +75,5 @@ void boxyseq_empty(boxyseq*);
 
 void            boxyseq_rt_stop(boxyseq*);
 
-grid*   boxyseq_grid(boxyseq*);
 
 #endif

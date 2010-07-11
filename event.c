@@ -57,34 +57,6 @@ void event_copy(event* dest, const event* src)
     dest->misc =            src->misc;
 }
 
-/*
-int event_channel(const event* ev)
-{
-    return (0xf000 & ev->flags) >> 12;
-}
-
-void event_channel_set(event* ev, int ch)
-{
-    ev->flags = (0xf000 & (ch << 12)) + (0x0fff & ev->flags);
-}
-
-*/
-
-void event_flag_set(event* ev, int f)
-{
-    if (!f)
-    {
-        ev->flags = 0;
-        return;
-    }
-
-    if (f & EV_TYPEMASK)
-        ev->flags = (0xfff0 & ev->flags) + (0x000f & f);
-
-    if (f & EV_STATUSMASK)
-        ev->flags = (0xff0f & ev->flags) + (0x00f0 & f);
-}
-
 
 void event_dump(const event* ev)
 {

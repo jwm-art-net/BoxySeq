@@ -308,6 +308,8 @@ lnode* plist_add_event_new(plist* pl, bbt_t start_tick)
     if (!ev)
         return 0;
 
+    EVENT_SET_TYPE_NOTE( ev );
+
     ev->pos =  start_tick;
     ev->note_dur =  plist_default_duration;
 
@@ -575,11 +577,24 @@ void prtdata_play(prtdata* prt, bbt_t ph, bbt_t nph)
     prt->pd_in_use =    pd;
     prt->ev_arr_in_use =ev_arr;
 
+/*  this was from when the pattern was 'triggered':
     bbt_t   tick =       ph - prt->start_tick;
-    int     num_played = tick / pd->loop_length;
+    instead of just infinitely looping
+*/
 
-    bbt_t   offset = prt->start_tick + (pd->loop_length * num_played);
+    bbt_t   tick = ph % pd->loop_length;
+
+    int     patix = ph / pd->loop_length;
+
+    bbt_t   offset = prt->start_tick + (pd->loop_length * patix);
     bbt_t   nextoffset = offset + pd->loop_length;
+
+
+    printf("ph:%8.0lf nph:%8.0lf tick:%6.0lf patix:%4.0lf ",
+            (double)ph, (double)nph, (double)tick, (double)patix);
+
+    printf("offset:%8.0lf nextoffset:%8.0lf\n",
+            (double)offset, (double)nextoffset);
 
     int count = 1;
 
@@ -611,8 +626,12 @@ void prtdata_play(prtdata* prt, bbt_t ph, bbt_t nph)
                 play_event = 1;
         }
 
-        if (play_event)
+        if (play_event) /* store/restore to not modify pattern */
         {
+            bbt_t opos = ev->pos;
+            bbt_t odur = ev->note_dur;
+            bbt_t orel = ev->box_release;
+
             ev->box_width = g_rand_int_range(   prt->rnd,
                                                 pd->width_min,
                                                 pd->width_max  );
@@ -620,16 +639,18 @@ void prtdata_play(prtdata* prt, bbt_t ph, bbt_t nph)
             ev->box_height = g_rand_int_range(  prt->rnd,
                                                 pd->height_min,
                                                 pd->height_max  );
+            ev->pos = evpos;
+            ev->note_dur += evpos;
+            ev->box_release += ev->note_dur;
 
-            if ((ev_out = evport_write_event(prt->evoutput, ev)))
-            {
-                ev_out->pos = evpos;
-                ev_out->note_dur += evpos;
-                ev_out->box_release += ev_out->note_dur;
-            }
-            else
+            if (!evport_write_event(prt->evoutput, ev))
                 WARNING("dropped event\n");
+
+            ev->pos = opos;
+            ev->note_dur = odur;
+            ev->box_release = orel;
         }
+
         ++ev;
     }
 }

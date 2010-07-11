@@ -49,7 +49,7 @@ void        rt_evlist_integrity_dump(rt_evlist*, const char* from);
 
 
 /* adding events copies them */
-event*      rt_evlist_event_add(rt_evlist*, const event*);
+int         rt_evlist_event_add(rt_evlist*, const event*);
 
 void        rt_evlist_clear_events(rt_evlist*);
 

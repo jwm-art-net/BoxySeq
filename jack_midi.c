@@ -167,12 +167,6 @@ jtransp* jmidi_jtransp(jmidi* jm)
     return jm->tr;
 }
 
-/*
-void midi_RT_queue_note(int port, pnote*)
-{
-
-}
-*/
 
 
 static int jmidi_process(jack_nframes_t nframes, void* arg)

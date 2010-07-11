@@ -48,7 +48,7 @@ typedef struct event_port evport;
 
 const char* evport_name(evport*);
 
-event*      evport_write_event(evport*, const event*);
+int         evport_write_event(evport*, const event*);
 
 void        evport_clear_data(evport*);
 void        evport_read_reset(evport* port);
