@@ -8,7 +8,15 @@
 #include <string.h>
 
 
-const int ppqn = 2520;
+/*
+const int internal_ppqn = 24;
+const int internal_ppqn = 720720;     it's important to have 1/4 notes
+                                      evenly divisible by 16 isn't it?
+                                      ...but not that important.
+*/
+
+
+const int internal_ppqn = 2520;     /* divisible by 1-10 */
 
 
 inline void bbtpos_copy(bbtpos* dest, const bbtpos* src)

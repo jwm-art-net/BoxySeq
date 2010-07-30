@@ -2,7 +2,7 @@
 #include "debug.h"
 #include "event_buffer.h"
 #include "gui_main.h"
-#include "jack_midi.h"
+#include "jack_process.h"
 #include "musical_scale.h"
 
 #include <stdlib.h>
@@ -40,9 +40,9 @@ int main(int argc, char** argv)
     rt_evlist_free(rtl);
 
 */
-    boxyseq* bs;
-    jmidi*  jm;
-    evbuf*  evb;
+    boxyseq*    bs;
+    jackdata*   jd;
+    evbuf*      evb;
 
     int patslot;
     int evslot;
@@ -53,10 +53,10 @@ int main(int argc, char** argv)
     if (!(bs = boxyseq_new(argc, argv)))
         exit(err);
 
-    if (!(jm = jmidi_new()))
+    if (!(jd = jackdata_new()))
         goto quit;
 
-    if (!jmidi_startup(jm, bs))
+    if (!jackdata_startup(jd, bs))
         goto quit;
 
     pattern* pat1;
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     patslot = boxyseq_pattern_new(bs, 4, 4);
     pat1 = boxyseq_pattern(bs, patslot);
 
-    pdata_set_loop_length(pat1->pd, ppqn * 8);
+    pdata_set_loop_length(pat1->pd, internal_ppqn * 4);
 
     pat1->pd->width_min = 4;
     pat1->pd->width_max = 12;
@@ -82,11 +82,10 @@ int main(int argc, char** argv)
 
     pl = pat1->pl;
 
-    count = 1;
-    steps = 8;
-    st = (ppqn * 4) / steps;
-    dur = st;
-    rel = st;
+    count = steps = 4;
+    st = (internal_ppqn * 4) / steps;
+    dur = st / 1;
+    rel = st / 1;
     t = 0;
 
 /*  DO NOT test infinite durations by adding an event with infinite
@@ -100,8 +99,8 @@ int main(int argc, char** argv)
         ev->note_dur = dur;
         ev->box_release = rel;
 
-//        if (!(i % 4))
-//            EVENT_SET_TYPE_BLOCK( ev );
+        if (!((i + 1) % 4))
+            EVENT_SET_TYPE_BLOCK( ev );
 /*
         if ((i % 5) == 0)
         {
@@ -118,7 +117,7 @@ int main(int argc, char** argv)
     grbound* grb1;
 
 
-    grboundslot = boxyseq_grbound_new(bs, 40, 20, 32, 66);
+    grboundslot = boxyseq_grbound_new(bs, 32, 60, 32, 66);
     grb1 = boxyseq_grbound(bs, grboundslot);
 
 
@@ -187,28 +186,15 @@ for (i = 0; i <  pat1->pd->loop_length * 8; i += st)
 printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
 
 #ifndef NO_REAL_TIME
-    if (!gui_init(&argc, &argv, bs, jm))
+    if (!gui_init(&argc, &argv, bs, jd))
         goto quit;
 #endif
 
-    jmidi_shutdown(jm);
+    jackdata_shutdown(jd);
 
     printf("sizeof(event):%d\n",sizeof(event));
 
-    jmidi_free(jm);
-
-    boxyseq_empty(bs);
-
-    err = 0;
-
-    printf("%d %d %d %d %d\n",
-            note_number("C"),
-            note_number("D"),
-            note_number("C#"),
-            note_number("D#"),
-            note_number("EG")  );
-
-
+    jackdata_free(jd);
 
 quit:
 
@@ -217,8 +203,6 @@ quit:
     if (err)
         exit(err);
 
-
     exit(0);
 
 }
-

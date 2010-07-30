@@ -74,7 +74,7 @@ void moport_free(moport* mo)
 {
     if (!mo)
         return;
-
+/*
     int c, p;
 
     MESSAGE("midi out port data:\n");
@@ -107,8 +107,7 @@ void moport_free(moport* mo)
 
         MESSAGE("total: %d\n", count);
     }
-
-
+*/
     free(mo);
 }
 

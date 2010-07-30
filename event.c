@@ -30,6 +30,7 @@ void event_init(event* ev)
 {
     ev->flags =         0;
     ev->pos =           -1;
+    ev->frame =         0;
     ev->note_dur =      -1;
     ev->note_pitch =    -1;
     ev->note_velocity = -1;

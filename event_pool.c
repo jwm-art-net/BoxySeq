@@ -374,7 +374,7 @@ fail:
 
     rev = rtevl->tail;
 
-    while (rev)
+    while (rev && rev_count > -5)
     {
         MESSAGE("rev: %3d: %p prev: %p next: %p\n",
                 rev_count--, rev, rev->prev, rev->next);

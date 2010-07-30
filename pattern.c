@@ -85,7 +85,7 @@ void pdata_get_event_bbt(const pdata* pd,
                          bbtpos* pos,
                          bbtpos* dur         )
 {
-    bbt_t ticks_per_beat = (bbt_t)(pd->beat_ratio * ppqn);
+    bbt_t ticks_per_beat = (bbt_t)(pd->beat_ratio * internal_ppqn);
     bbt_t ticks_per_bar =  pd->beats_per_bar * ticks_per_beat;
     bbt_t tick = 0;
 
@@ -118,7 +118,7 @@ bbt_t pdata_duration_bbt_to_ticks(const pdata* pd,
                                         bbt_t beat,
                                         bbt_t tick      )
 {
-    bbt_t ticks_per_beat = (bbt_t)(pd->beat_ratio * ppqn);
+    bbt_t ticks_per_beat = (bbt_t)(pd->beat_ratio * internal_ppqn);
     return (ticks_per_beat * pd->beats_per_bar * bar
             + ticks_per_beat * beat + tick);
 }
@@ -588,14 +588,14 @@ void prtdata_play(prtdata* prt, bbt_t ph, bbt_t nph)
 
     bbt_t   offset = prt->start_tick + (pd->loop_length * patix);
     bbt_t   nextoffset = offset + pd->loop_length;
-
+/*
 
     printf("ph:%8.0lf nph:%8.0lf tick:%6.0lf patix:%4.0lf ",
             (double)ph, (double)nph, (double)tick, (double)patix);
 
     printf("offset:%8.0lf nextoffset:%8.0lf\n",
             (double)offset, (double)nextoffset);
-
+*/
     int count = 1;
 
     prt->index = tick % pd->loop_length;

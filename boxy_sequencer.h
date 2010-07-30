@@ -6,7 +6,7 @@
 #include "event_port.h"
 #include "freespace_state.h"
 #include "grid_boundary.h"
-#include "jack_transport.h"
+#include "jack_process.h"
 #include "pattern.h"
 
 
@@ -23,7 +23,7 @@ void        boxyseq_shutdown(boxyseq*);
 const char* boxyseq_basename(const boxyseq*);
 
 void        boxyseq_set_jack_client(boxyseq*, jack_client_t* client);
-void        boxyseq_set_jtransp(boxyseq*, jtransp* jacktransport);
+void        boxyseq_set_jackdata(boxyseq*, jackdata*);
 
 /*  patterns ---------------->
 */
@@ -71,9 +71,7 @@ void            boxyseq_rt_play(boxyseq*,
                                 bbt_t ph, bbt_t nph);
 
 
-void boxyseq_empty(boxyseq*);
-
-void            boxyseq_rt_stop(boxyseq*);
+void            boxyseq_rt_clear(boxyseq*);
 
 
 #endif

@@ -2,7 +2,6 @@
 
 #include "debug.h"
 #include "event_port.h"
-#include "jack_midi.h"
 #include "midi_out_port.h"
 #include "pattern.h"
 
@@ -29,7 +28,7 @@ struct boxy_sequencer
     evbuf*      gui_unplace_buf;
 
     jack_client_t*  client;
-    jtransp*        jacktransport;
+    jackdata*       jd;
 };
 
 
@@ -77,8 +76,6 @@ boxyseq* boxyseq_new(int argc, char** argv)
     grid_set_gui_note_on_buf(bs->gr,    bs->gui_note_on_buf);
     grid_set_gui_note_off_buf(bs->gr,   bs->gui_note_off_buf);
     grid_set_gui_unplace_buf(bs->gr,    bs->gui_unplace_buf);
-
-    bs->jacktransport = 0;
 
     return bs;
 
@@ -137,9 +134,9 @@ void boxyseq_set_jack_client(boxyseq* bs, jack_client_t* client)
 }
 
 
-void boxyseq_set_jtransp(boxyseq* bs, jtransp* jacktransport)
+void boxyseq_set_jackdata(boxyseq* bs, jackdata* jd)
 {
-    bs->jacktransport = jacktransport;
+    bs->jd = jd;
 }
 
 
@@ -370,7 +367,7 @@ void boxyseq_rt_play(boxyseq* bs,
                     #ifdef NO_REAL_TIME
                     0
                     #else
-                    jtransp_rt_frames_per_tick(bs->jacktransport)
+                    jackdata_rt_transport_frames_per_tick(bs->jd)
                     #endif
                 );
         }
@@ -379,9 +376,11 @@ void boxyseq_rt_play(boxyseq* bs,
     grid_rt_block(bs->gr, ph, nph);
 }
 
-void boxyseq_empty(boxyseq* bs)
+void boxyseq_rt_clear(boxyseq* bs)
 {
     int i = 0;
+
+    MESSAGE("massive event clearing!\n");
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
         if (bs->moport_slot[i])
@@ -389,16 +388,7 @@ void boxyseq_empty(boxyseq* bs)
 
     grid_remove_events(bs->gr);
 
-/*
-    freespace_dump(grid_freespace(bs->gr));
-*/
 }
-
-void boxyseq_rt_stop(boxyseq* bs)
-{
-    
-}
-
 
 
 

@@ -1,0 +1,26 @@
+2010-07-29  James Morris  <james@jwm-art.net>
+
+    * jack_midi.c (all): deleted/moved to jack_process.c
+
+    * jack_transport.c (all): deleted/moved to jack_process.c
+
+    * jack_process.c (all): new file is a conglomeration of the code
+    formerly found in jack_midi.c and jack_transport.c. The API is now
+    more concise with less implementation leaking into it.
+
+    * include/jack_process_data.c: new file, contains a single data 
+    structure used by jack_process.c implementation. Is a merger of the
+    two data structures originally contained in jack_midi.c and 
+    jack_transport.c.
+
+    * jack_process.c (jd_rt_poll, jack_process_callback): additional
+    stopped/started detection, new transport reposition detection. These
+    trigger a call to boxyseq_rt_clear to wipe all event data from buffers
+    etc, as well as disabling the duplication/dropped ticks messages on
+    transport repositions.
+
+    * jack_process.c (jack_process_callback): some playhead fiddling
+    added to prevent dropped ticks when trying to synchronise with other
+    timebase master applications.
+
+*****        2010-07-29 was first ChangeLog entry for BoxySeq        *****

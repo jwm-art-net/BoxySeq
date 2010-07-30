@@ -32,6 +32,8 @@ typedef struct event_
     int     flags;
     bbt_t   pos;
 
+    uint32_t    frame;
+
     bbt_t   note_dur;
     int     note_pitch;
     int     note_velocity;

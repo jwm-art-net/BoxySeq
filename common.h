@@ -16,7 +16,7 @@
 
 
 /* 2520 gives int result for div by 2 ... 9 */
-extern const int ppqn;
+extern const int internal_ppqn;
 
 
 typedef int32_t bbt_t;

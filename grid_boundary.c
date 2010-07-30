@@ -433,4 +433,7 @@ void grid_remove_events(grid* gr)
         freespace_add(gr->fs,   ev.box_x,       ev.box_y,
                                 ev.box_width,   ev.box_height );
     }
+
+    ev.box_x = ev.box_y = ev.box_width = ev.box_height = -1;
+    evbuf_write(gr->gui_unplace_buf, &ev);
 }

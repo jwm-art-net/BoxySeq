@@ -24,7 +24,10 @@ struct event_buffer
 
     size_t  items;
 
-    char*   name;   /* yes we're naming ring buffers */
+    char*   name;   /*  yes we're naming ring buffers...
+                        are we?
+                        do we still need to do this?
+                    */
 };
 
 

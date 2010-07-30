@@ -1,7 +1,9 @@
 #include "gui_main.h"
 
+#include "boxy_sequencer.h"
 #include "debug.h"
-#include "jack_transport.h"
+#include "event_buffer.h"
+#include "pattern.h"
 
 
 #include <stdlib.h>
@@ -29,7 +31,7 @@ static void gui_quit(void)
 
 struct bsdata
 {
-    jtransp*    tr;
+    jackdata*   jd;
 
     evbuf*      note_on_buf;
     evbuf*      note_off_buf;
@@ -64,7 +66,9 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
 {
     struct bsdata* bsd = (struct bsdata*)data;
     jack_position_t pos;
-    jack_transport_state_t jstate = jtransp_state(bsd->tr, &pos);
+    jack_transport_state_t jstate;
+
+    jstate = jackdata_transport_state(bsd->jd, &pos);
 
     if (jstate == JackTransportStopped && gui_jack_rolling)
     {
@@ -92,9 +96,19 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
     lnode* ln;
     lnode* nln;
 
-    while(evbuf_read(bsd->unplace_buf, &evin)) 
+    while(evbuf_read(bsd->unplace_buf, &evin))
     {
         ln = plist_head(bsd->evlist);
+
+        if (evin.box_x == -1
+         && evin.box_y == -1
+         && evin.box_width  == -1
+         && evin.box_height == -1)
+        {
+            plist_select_all(bsd->evlist, 1);
+            plist_delete(bsd->evlist, 1);
+            ln = 0;
+        }
 
         while (ln)
         {
@@ -150,8 +164,8 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
 static gboolean gui_transport_rewind(   GtkWidget *widget,
                                         gpointer data       )
 {
-    jtransp* tr = (jtransp*)data;
-    jtransp_rewind(tr);
+    jackdata* jd = (jackdata*)data;
+    jackdata_transport_rewind(jd);
     return TRUE;
 }
 
@@ -159,15 +173,15 @@ static gboolean gui_transport_rewind(   GtkWidget *widget,
 static gboolean gui_transport_play(     GtkWidget *widget,
                                         gpointer data       )
 {
-    jtransp* tr = (jtransp*)data;
+    jackdata* jd = (jackdata*)data;
 
-    switch(jtransp_state(tr, NULL))
+    switch(jackdata_transport_state(jd, NULL))
     {
     case JackTransportStopped:
-        jtransp_play(tr);
+        jackdata_transport_play(jd);
         break;
     case JackTransportRolling:
-        jtransp_stop(tr);
+        jackdata_transport_stop(jd);
         break;
     default:
         return TRUE;
@@ -177,7 +191,7 @@ static gboolean gui_transport_play(     GtkWidget *widget,
 }
 
 
-int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
+int gui_init(int* argc, char*** argv, boxyseq* bs, jackdata* jd)
 {
     struct bsdata* bsd = malloc(sizeof(*bsd));
 
@@ -190,7 +204,7 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
     bsd->note_off_buf = boxyseq_gui_note_off_buf(bs);
     bsd->unplace_buf =  boxyseq_gui_unplace_buf(bs);
 
-    bsd->tr = jmidi_jtransp(jm);
+    bsd->jd = jd;
 
     bsd->evlist = plist_new();
 
@@ -198,8 +212,6 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
     GtkWidget* vbox;
     GtkWidget* hbox;
     GtkWidget* evbox;
-
-    jtransp* tr = jmidi_jtransp(jm);
 
     if (!gtk_init_check(argc, argv))
     {
@@ -255,7 +267,7 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
     g_signal_connect(   GTK_OBJECT(rew_button),
                         "clicked",
                         G_CALLBACK(gui_transport_rewind),
-                        tr                        );
+                        jd                        );
 
     play_button = gtk_button_new();
     gtk_button_set_focus_on_click(GTK_BUTTON(play_button), FALSE);
@@ -266,7 +278,7 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jmidi* jm)
     g_signal_connect(   GTK_OBJECT(play_button),
                         "clicked",
                         G_CALLBACK(gui_transport_play),
-                        tr                        );
+                        jd                        );
 
     tmp = gtk_vseparator_new();
     gtk_widget_show(tmp);
