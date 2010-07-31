@@ -17,7 +17,8 @@ struct midi_out_port
 
     evport* intersort;
 
-    jack_port_t* jack_out_port;
+    jack_port_t*    jack_out_port;
+    void*           jport_buf;
 
 };
 
@@ -50,6 +51,8 @@ moport* moport_new(jack_client_t* client, evport_manager* portman)
     #else
     mo->jack_out_port = 0;
     #endif
+
+    mo->jport_buf = 0;
 
     int c, p;
 
@@ -240,12 +243,20 @@ void moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
 }
 
 
+void moport_rt_init_jack_cycle(moport* midiport, jack_nframes_t nframes)
+{
+    midiport->jport_buf = jack_port_get_buffer( midiport->jack_out_port,
+                                                nframes);
+    jack_midi_clear_buffer(midiport->jport_buf);
+}
+
+
 void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
                                                   double frames_per_tick )
 {
     event ev;
     unsigned char* buf;
-    void* jport_buf;
+    void* jport_buf = midiport->jport_buf;
 
     evport_read_reset(midiport->intersort);
 
@@ -257,9 +268,6 @@ void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
         event_dump(&ev);
     return;
     #endif
-
-    jport_buf = jack_port_get_buffer(midiport->jack_out_port, nframes);
-    jack_midi_clear_buffer(jport_buf);
 
     while(evport_read_and_remove_event(midiport->intersort, &ev))
     {
@@ -299,30 +307,55 @@ void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
 }
 
 
-void moport_empty(moport* midiport, grid* gr)
+void moport_empty(moport* midiport, grid* gr, jack_nframes_t nframes)
 {
-    int channel, pitch;
-    event* start;
+    int channel;
+    int pitch;
+    event  ev;
     event* play;
+    unsigned char* buf;
+    void* jport_buf = midiport->jport_buf;
 
     for (channel = 0; channel < 16; ++channel)
     {
-        start = midiport->start[channel];
         play = midiport->play[channel];
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
-            if (start[pitch].flags)
-            {
-                grid_remove_event(gr, &start[pitch]);
-                start[pitch].flags = 0;
-            }
-
             if (play[pitch].flags)
             {
+                EVENT_SET_STATUS_OFF( &play[pitch] );
+
+                if (!evport_write_event(midiport->intersort,
+                                                    &play[pitch]))
+                {
+                    WARNING("failed to write event to intersort\n");
+                }
+
                 grid_remove_event(gr, &play[pitch]);
                 play[pitch].flags = 0;
             }
+        }
+    }
+
+    evport_read_reset(midiport->intersort);
+
+    while(evport_read_and_remove_event(midiport->intersort, &ev))
+    {
+        if (EVENT_IS_STATUS_OFF( &ev ))
+        {
+            buf = jack_midi_event_reserve(jport_buf,(jack_nframes_t)0, 3);
+
+            if (buf)
+            {
+                buf[0] = (unsigned char)(0x80 | EVENT_CHANNEL( &ev ));
+                buf[1] = (unsigned char)ev.note_pitch;
+                buf[2] = (unsigned char)ev.note_velocity;
+            }
+            #ifdef GRID_DEBUG
+            else
+                WARNING("note-OFF event was not reserved by JACK\n");
+            #endif
         }
     }
 }

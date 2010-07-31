@@ -58,6 +58,11 @@ void        evport_and_remove_event(evport*);
 
 int         evport_count(evport*);
 
+
+#ifdef EVPORT_DEBUG
+void        evport_dump(evport*);
+#endif
+
 typedef struct event_port_manager evport_manager;
 
 evport_manager* evport_manager_new(const char* groupname);

@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 
 struct boxy_sequencer
@@ -27,8 +28,12 @@ struct boxy_sequencer
     evbuf*      gui_note_off_buf;
     evbuf*      gui_unplace_buf;
 
+    evbuf*      gui_input_buf;
+
     jack_client_t*  client;
     jackdata*       jd;
+
+    _Bool quitting;
 };
 
 
@@ -73,12 +78,18 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->gui_unplace_buf =     evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail7;
 
+    if (!(bs->gui_input_buf =       evbuf_new(DEFAULT_EVBUF_SIZE)))
+        goto fail8;
+
     grid_set_gui_note_on_buf(bs->gr,    bs->gui_note_on_buf);
     grid_set_gui_note_off_buf(bs->gr,   bs->gui_note_off_buf);
     grid_set_gui_unplace_buf(bs->gr,    bs->gui_unplace_buf);
 
+    bs->quitting = 0;
+
     return bs;
 
+fail8:  evbuf_free(bs->gui_input_buf);
 fail7:  evbuf_free(bs->gui_note_off_buf);
 fail6:  evbuf_free(bs->gui_note_on_buf);
 fail5:  grid_free(bs->gr);
@@ -99,6 +110,7 @@ void boxyseq_free(boxyseq* bs)
     if (!bs)
         return;
 
+    evbuf_free(bs->gui_input_buf);
     evbuf_free(bs->gui_unplace_buf);
     evbuf_free(bs->gui_note_off_buf);
     evbuf_free(bs->gui_note_on_buf);
@@ -321,14 +333,36 @@ evbuf* boxyseq_gui_unplace_buf(const boxyseq* bs)
 }
 
 
+void boxyseq_rt_init_jack_cycle(boxyseq* bs, jack_nframes_t nframes)
+{
+    int i;
+
+    for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
+        if (bs->moport_slot[i])
+            moport_rt_init_jack_cycle(bs->moport_slot[i], nframes);
+}
+
 
 void boxyseq_rt_play(boxyseq* bs,
                      jack_nframes_t nframes,
                      bbt_t ph, bbt_t nph)
 {
     int i;
+    event ev;
+    evport* grid_port;
 
-    evport* grid_port = grid_global_input_port(bs->gr);
+    if (bs->quitting)
+        return;
+
+    while(evbuf_read(bs->gui_input_buf, &ev))
+    {
+        if (EVENT_IS_TYPE_SHUTDOWN( &ev ))
+        {
+            bs->quitting = 1;
+            boxyseq_rt_clear(bs, nframes);
+            return;
+        }
+    }
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
@@ -345,6 +379,8 @@ void boxyseq_rt_play(boxyseq* bs,
         if (bs->pattern_slot[i])
             prtdata_play(bs->pattern_slot[i]->prt, ph, nph);
     }
+
+    grid_port = grid_global_input_port(bs->gr);
 
     for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
     {
@@ -376,23 +412,37 @@ void boxyseq_rt_play(boxyseq* bs,
     grid_rt_block(bs->gr, ph, nph);
 }
 
-void boxyseq_rt_clear(boxyseq* bs)
+
+void boxyseq_rt_clear(boxyseq* bs, jack_nframes_t nframes)
 {
     int i = 0;
 
-    MESSAGE("massive event clearing!\n");
-
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
         if (bs->moport_slot[i])
-            moport_empty(bs->moport_slot[i], bs->gr);
+            moport_empty(bs->moport_slot[i], bs->gr, nframes);
 
     grid_remove_events(bs->gr);
 
 }
 
 
-
-grid* boxyseq_grid(boxyseq* bs)
+void boxyseq_shutdown(boxyseq* bs)
 {
-    return bs->gr;
+    struct timespec ts;
+    event ev;
+
+    EVENT_SET_TYPE_SHUTDOWN( &ev );
+
+    if (!evbuf_write(bs->gui_input_buf, &ev))
+        WARNING("failed to queue shutdown event\n");
+
+    /*  wait for RT thread to discover what we've done...
+        ...by waiting for a tenth of a second.
+    */
+    ts.tv_sec = 0;
+    ts.tv_nsec = 100000000;
+    nanosleep(&ts, 0);
 }
+
+
+

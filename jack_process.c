@@ -345,7 +345,6 @@ static void jd_rt_poll(jackdata* jd, jack_nframes_t nframes)
     pos.bar--;
     pos.beat--;
 
-
     if (meter_change || bpm_change || frame_rate_change)
     {
         jd->frame_rate =        pos.frame_rate;
@@ -374,8 +373,6 @@ static void jd_rt_poll(jackdata* jd, jack_nframes_t nframes)
 
     jd->ticks = (pos.bar * pos.beats_per_bar + pos.beat) *
                     internal_ppqn + jd->tick;
-
-
 }
 
 
@@ -391,13 +388,15 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
     if (!jd->is_valid)
         return 0;
 
+    boxyseq_rt_init_jack_cycle(jd->bs, nframes);
+
     if (!jd->is_rolling)
     {
         if (!jd->stopped)
         {
             jd->stopped = 1;
             jd->was_stopped = 1;
-            boxyseq_rt_clear(jd->bs);
+            boxyseq_rt_clear(jd->bs, nframes);
         }
         return 0;
     }
@@ -406,7 +405,7 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
     {
         repositioned = 1;
         jd->repositioned = 0;
-        boxyseq_rt_clear(jd->bs);
+        boxyseq_rt_clear(jd->bs, nframes);
     }
 
     jd->was_stopped = 0;

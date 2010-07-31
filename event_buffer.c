@@ -15,14 +15,13 @@ static int evbuf_id = 0;
 struct event_buffer
 {
     size_t  count;
+    size_t  count_mask;
 
-    event*   buf;
-    event*   bufend;
+    event*  buf;
+    event*  bufend;
 
-    event*   head;   /* write ptr */
-    event*   tail;   /* read ptr */
-
-    size_t  items;
+    event*  head;   /* write ptr */
+    event*  tail;   /* read ptr */
 
     char*   name;   /*  yes we're naming ring buffers...
                         are we?
@@ -33,6 +32,7 @@ struct event_buffer
 
 evbuf* evbuf_new(size_t count)
 {
+    size_t sz = 1;
     evbuf* rb = malloc(sizeof(*rb));
 
     if (!rb)
@@ -41,9 +41,13 @@ evbuf* evbuf_new(size_t count)
         return 0;
     }
 
-    rb->count = count;
+    for (sz = 1; sz < count; sz <<= 1)
+        ;
 
-    rb->buf = malloc(sizeof(*rb->buf) * count);
+    rb->count = sz;
+    rb->count_mask = sz - 1;
+
+    rb->buf = malloc(sizeof(*rb->buf) * rb->count);
 
     if (!rb->buf)
     {
@@ -55,7 +59,6 @@ evbuf* evbuf_new(size_t count)
     rb->bufend = rb->buf + rb->count - 1;
     rb->head = rb->buf;
     rb->tail = rb->buf;
-    rb->items = 0;
 
     rb->name = name_and_number("buffer", ++evbuf_id);
 
@@ -73,16 +76,29 @@ void evbuf_free(evbuf* rb)
 
 size_t evbuf_write_count(const evbuf* rb)
 {
-    return rb->count - rb->items;
+    size_t s,e,w,r;
+
+    w = (size_t)rb->head;
+    r = (size_t)rb->tail;
+    s = (size_t)rb->buf;
+    e = (size_t)rb->bufend;
+
+    if (w > r)
+        return ((e - w) + (r - s)) - 1;
+
+    if (w < r)
+        return (r - w) - 1;
+
+    return rb->count - 1;
 }
 
 
 event* evbuf_write(evbuf* rb, const event* data)
 {
-    if (rb->items == rb->count)
-        return 0;
-
     event* ret = rb->head;
+
+    if (!evbuf_write_count(rb))
+        return 0;
 
     memcpy(rb->head, data, sizeof(event));
 
@@ -91,24 +107,35 @@ event* evbuf_write(evbuf* rb, const event* data)
     else
         ++rb->head;
 
-    ++rb->items;
-
     return ret;
 }
 
 
 size_t evbuf_read_count(const evbuf* rb)
 {
-    return rb->items;
+    size_t s,e,w,r;
+
+    w = (size_t)rb->head;
+    r = (size_t)rb->tail;
+    s = (size_t)rb->buf;
+    e = (size_t)rb->bufend;
+
+    if (w == r)
+        return 0;
+
+    if (w > r)
+        return w - r;
+
+    return ((e - r) + (w - s)) - 1;
 }
 
 
 event* evbuf_read(evbuf* rb, event* data)
 {
-    if (rb->items == 0)
-        return 0;
-
     event* ret = rb->tail;
+
+    if (!evbuf_read_count(rb))
+        return 0;
 
     memcpy(data, rb->tail, sizeof(event));
 
@@ -117,29 +144,26 @@ event* evbuf_read(evbuf* rb, event* data)
     else
         ++rb->tail;
 
-    --rb->items;
-
     return ret;
 }
 
 
 void evbuf_reset(evbuf* rb)
-{
+{ /* hmmm, not thread safe this, is it? */
     rb->head = rb->buf;
     rb->tail = rb->buf;
-    rb->items = 0;
 }
 
 
 void evbuf_dump(const evbuf* rb)
 {
-    MESSAGE("evbuf:%p name:%s items:%d\n", rb, rb->name, rb->items);
+    size_t items = evbuf_read_count(rb);
+
+    MESSAGE("evbuf:%p name:%s items:%d\n", rb, rb->name, items);
 
     MESSAGE("max items %d\n", rb->count);
     MESSAGE("buf:%p bufend:%p head:%p tail:%p\ndata:\n",
             rb->buf, rb->bufend, rb->head, rb->tail);
-
-    size_t items = rb->items;
 
     if (!items)
     {

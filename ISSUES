@@ -1,0 +1,15 @@
+Currently I'm concentrating on the backend mechanics of boxyseq. While 
+there is a rudimentary GUI, there is very little that can be done within 
+it.
+
+The thing about this is, I've put very little in place which will allow 
+the user to interact via the GUI with the backend. In other words, I've 
+not considered how to make such operations happen in a thread safe way.
+
+There is only one data structure in place which can handle this, and 
+that is the pattern data structure. The thread safety is based upon the 
+assumption pointer assignment (ie assignment to a pointer, ptr = &something)
+is thread safe. The code built up around this was a PITA to write and 
+has so far put me off from transferring the idea to all the other (many 
+and varied) data structures in the program.
+

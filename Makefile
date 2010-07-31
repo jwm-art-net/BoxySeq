@@ -10,7 +10,7 @@ CC := gcc
 DEFS := -std=gnu99 -fsigned-char -Wall -Wextra 			\
 	-Wunused-parameter -Wfloat-equal -Wshadow 		\
 	-Wunsafe-loop-optimizations 				\
-	 -funsafe-loop-optimizations 				\
+	-funsafe-loop-optimizations 				\
 	-Wpointer-arith -Wbad-function-cast 			\
 	-Wcast-qual -Wcast-align -Wwrite-strings 		\
 	-Wconversion -Waddress -Wlogical-op -Wmissing-prototypes\
@@ -20,7 +20,9 @@ HDRS := `pkg-config --cflags gtk+-2.0` `pkg-config --cflags jack`
 
 DEBUGS:=-DFREESPACE_DEBUG	\
 	-DEVPOOL_DEBUG		\
+	-DEVPORT_DEBUG		\
 	-DGRID_DEBUG		
+	
 
 #	-DNO_REAL_TIME
 #	-DLLIST_DEBUG

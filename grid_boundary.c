@@ -354,8 +354,6 @@ void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
 
     event ev;
 
-    event* out;
-
     evport_read_reset(gr->block_port);
 
     while(evport_read_event(gr->block_port, &ev))
@@ -426,14 +424,36 @@ void grid_remove_events(grid* gr)
 {
     event ev;
 
+    evport_clear_data(gr->global_in_port);
+
     evport_read_reset(gr->unplace_port);
 
-    while(evport_read_event(gr->unplace_port, &ev))
+    while(evport_read_and_remove_event(gr->unplace_port, &ev))
     {
         freespace_add(gr->fs,   ev.box_x,       ev.box_y,
                                 ev.box_width,   ev.box_height );
     }
 
-    ev.box_x = ev.box_y = ev.box_width = ev.box_height = -1;
+    evport_read_reset(gr->block_port);
+
+    /* FIXME:   at some point we'll need to distinguish between blocks
+                which have been placed by the user, and blocks which
+                *became* blocks because the event could not be played
+                as a MIDI event.
+    */
+
+    while(evport_read_and_remove_event(gr->block_port, &ev))
+    {
+        freespace_add(gr->fs,   ev.box_x,       ev.box_y,
+                                ev.box_width,   ev.box_height );
+    }
+
+    evbuf_reset(gr->gui_note_on_buf);
+    evbuf_reset(gr->gui_note_off_buf);
+    evbuf_reset(gr->gui_unplace_buf);
+
+    /* signal (primitively) to GUI to remove everything... */
+
+    EVENT_SET_TYPE_CLEAR( &ev );
     evbuf_write(gr->gui_unplace_buf, &ev);
 }

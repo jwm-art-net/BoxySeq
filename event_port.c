@@ -136,9 +136,8 @@ static void evport_free(evport* port)
         return;
 
     #ifdef EVPOOL_DEBUG
-    MESSAGE("freeing port: '%s'\n", port->name);
-    MESSAGE("port contains: %d events\n",  rt_evlist_count(port->data));
-    rt_evlist_integrity_dump(port->data, __FUNCTION__);
+    evport_dump(port);
+    #endif
 
     if (rt_evlist_count(port->data))
     {
@@ -147,9 +146,8 @@ static void evport_free(evport* port)
         rt_evlist_read_reset(port->data);
 
         while(rt_evlist_read_and_remove_event(port->data, &ev))
-            event_dump(&ev);
+            ;
     }
-    #endif
 
     rt_evlist_free(port->data);
     free(port->name);
@@ -204,6 +202,24 @@ int evport_count(evport* port)
 }
 
 
+#ifdef EVPORT_DEBUG
+void evport_dump(evport* port)
+{
+    MESSAGE("freeing port: '%s'\n", port->name);
+    MESSAGE("port contains: %d events\n",  rt_evlist_count(port->data));
+    rt_evlist_integrity_dump(port->data, __FUNCTION__);
+
+    if (rt_evlist_count(port->data))
+    {
+        event* ev;
+
+        rt_evlist_read_reset(port->data);
+
+        while((ev = rt_evlist_read_event(port->data)))
+            event_dump(ev);
+    }
+}
+#endif
 
 /*  event_port_manager
 

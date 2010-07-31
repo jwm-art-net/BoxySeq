@@ -12,6 +12,9 @@ typedef enum EVENT_FLAGS
 {
     EV_TYPE_NOTE =      0x0001,
     EV_TYPE_BLOCK =     0x0002,
+    EV_TYPE_CLEAR =     0x0004, /* from RT thread to clear GUI */
+    EV_TYPE_SHUTDOWN =  0x0008, /* from GUI thread to clear RT */
+
     EV_TYPEMASK =       0x000f,
 
     EV_STATUS_ON =      0x0010, /* or off */
@@ -68,7 +71,13 @@ void    event_copy(event* dest, const event* src);
     ((( ev )->flags & EV_TYPE_NOTE ) == EV_TYPE_NOTE)
 
 #define EVENT_IS_TYPE_BLOCK( ev ) \
-    ((( ev )->flags & EV_TYPE_NOTE ) != EV_TYPE_NOTE)
+    ((( ev )->flags & EV_TYPE_BLOCK ) == EV_TYPE_BLOCK)
+
+#define EVENT_IS_TYPE_CLEAR( ev ) \
+    ((( ev )->flags & EV_TYPE_CLEAR ) == EV_TYPE_CLEAR)
+
+#define EVENT_IS_TYPE_SHUTDOWN( ev ) \
+    ((( ev )->flags & EV_TYPE_SHUTDOWN ) == EV_TYPE_SHUTDOWN)
 
 
 #define EVENT_SET_STATUS_ON( ev ) \
@@ -82,6 +91,12 @@ void    event_copy(event* dest, const event* src);
 
 #define EVENT_SET_TYPE_BLOCK( ev ) \
     ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_BLOCK
+
+#define EVENT_SET_TYPE_CLEAR( ev ) \
+    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_CLEAR
+
+#define EVENT_SET_TYPE_SHUTDOWN( ev ) \
+    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_SHUTDOWN
 
 #define EVENT_CHANNEL( ev ) \
     ((0xf000 & ( ev )->flags) >> 12)

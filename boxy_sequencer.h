@@ -17,7 +17,6 @@ boxyseq*    boxyseq_new(int argc, char** argv);
 
 void        boxyseq_free(boxyseq*);
 
-_Bool       boxyseq_startup(boxyseq*);
 void        boxyseq_shutdown(boxyseq*);
 
 const char* boxyseq_basename(const boxyseq*);
@@ -65,13 +64,21 @@ evbuf*          boxyseq_gui_note_off_buf(const boxyseq*);
 evbuf*          boxyseq_gui_unplace_buf(const boxyseq*);
 
 
+/*  rt threads stuff -------->
+*/
+
+void            boxyseq_rt_init_jack_cycle(boxyseq*, jack_nframes_t);
 
 void            boxyseq_rt_play(boxyseq*,
                                 jack_nframes_t,
                                 bbt_t ph, bbt_t nph);
 
 
-void            boxyseq_rt_clear(boxyseq*);
+void            boxyseq_rt_clear(boxyseq*, jack_nframes_t nframes);
 
+/*  UI event triggering... -->
+*/
+
+void            boxyseq_ui_trigger_clear(boxyseq*);
 
 #endif

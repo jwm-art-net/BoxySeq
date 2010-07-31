@@ -1,3 +1,7 @@
+2010-07-30  James Morris  <james@jwm-art.net>
+
+    * grid_boundary.c (grid_remove_events): added calls to clear remaining     buffers.
+
 2010-07-29  James Morris  <james@jwm-art.net>
 
     * jack_midi.c (all): deleted/moved to jack_process.c

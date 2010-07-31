@@ -100,10 +100,7 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
     {
         ln = plist_head(bsd->evlist);
 
-        if (evin.box_x == -1
-         && evin.box_y == -1
-         && evin.box_width  == -1
-         && evin.box_height == -1)
+        if (EVENT_IS_TYPE_CLEAR( &evin ))
         {
             plist_select_all(bsd->evlist, 1);
             plist_delete(bsd->evlist, 1);

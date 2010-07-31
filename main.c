@@ -82,10 +82,10 @@ int main(int argc, char** argv)
 
     pl = pat1->pl;
 
-    count = steps = 4;
+    count = steps = 12;
     st = (internal_ppqn * 4) / steps;
-    dur = st / 1;
-    rel = st / 1;
+    dur = st * 2;
+    rel = st * 2;
     t = 0;
 
 /*  DO NOT test infinite durations by adding an event with infinite
@@ -189,6 +189,8 @@ printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
     if (!gui_init(&argc, &argv, bs, jd))
         goto quit;
 #endif
+
+    boxyseq_shutdown(bs);
 
     jackdata_shutdown(jd);
 
