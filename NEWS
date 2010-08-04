@@ -1,3 +1,23 @@
+* Wednesday 4th August 2010
+
+    * The display is looking a bit spiffier.
+
+    * Event boxes change colour after note-off during the
+      release phase.
+
+    * Events are removed upon stop/reposition transport
+
+    * etc, lots of stuff which doesn't sound that much
+      when i write it like this.
+
+
+* Saturday 31st July 2010
+
+* note off events are generated for all notes currently playing
+  upon a transport reposition, transport stop, and application
+  quit.
+
+
 * 15:16 Sunday 4th July 2010
 
 i've been attempting to investigate the source of a certain 

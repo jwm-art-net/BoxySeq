@@ -27,6 +27,8 @@ jack_transport_state_t
         jackdata_transport_state(jackdata*, jack_position_t* pos);
 
 
+
+
 double  jackdata_rt_transport_frames_per_tick(jackdata*);
 
 #endif

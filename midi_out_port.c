@@ -77,40 +77,7 @@ void moport_free(moport* mo)
 {
     if (!mo)
         return;
-/*
-    int c, p;
 
-    MESSAGE("midi out port data:\n");
-
-    for (c = 0; c < 16; ++c)
-    {
-        int count = 0;
-        MESSAGE("channel: %d\n", c);
-        MESSAGE("start events...\n");
-
-        for (p = 0; p < 128; ++p)
-            if (mo->start[c][p].flags)
-            {
-                ++count;
-                event_dump(&mo->start[c][p]);
-            }
-
-        MESSAGE("total: %d\n", count);
-
-        count = 0;
-
-        MESSAGE("play events...\n");
-
-        for (p = 0; p < 128; ++p)
-            if (mo->play[c][p].flags)
-            {
-                ++count;
-                event_dump(&mo->play[c][p]);
-            }
-
-        MESSAGE("total: %d\n", count);
-    }
-*/
     free(mo);
 }
 
@@ -200,7 +167,7 @@ void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
                         WARNING("failed to write event to intersort\n");
                     }
 
-                    if (!grid_rt_unplace_event(gr, &play[pitch]))
+                    if (!grid_rt_note_off_event(gr, &play[pitch]))
                         WARNING("old event output to unplace failed\n");
 
                     play[pitch].flags = 0;

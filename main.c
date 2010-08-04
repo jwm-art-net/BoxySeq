@@ -75,17 +75,17 @@ int main(int argc, char** argv)
 
     pdata_set_loop_length(pat1->pd, internal_ppqn * 4);
 
-    pat1->pd->width_min = 4;
-    pat1->pd->width_max = 12;
-    pat1->pd->height_min = 4;
+    pat1->pd->width_min = 2;
+    pat1->pd->width_max = 8;
+    pat1->pd->height_min = 2;
     pat1->pd->height_max = 8;
 
     pl = pat1->pl;
 
-    count = steps = 12;
+    count = steps = 16;
     st = (internal_ppqn * 4) / steps;
-    dur = st * 2;
-    rel = st * 2;
+    dur = st * 12.25;
+    rel = st * 33.75;
     t = 0;
 
 /*  DO NOT test infinite durations by adding an event with infinite
@@ -96,11 +96,15 @@ int main(int argc, char** argv)
     for (i = 0; i < count; ++i, t += st)
     {
         ev = lnode_data(plist_add_event_new(pl, t));
-        ev->note_dur = dur;
-        ev->box_release = rel;
+        ev->note_dur = st + rand() % dur;
+        ev->box_release = st + rand() % rel;
 
         if (!((i + 1) % 4))
+        {
             EVENT_SET_TYPE_BLOCK( ev );
+            ev->box_release /= 4;
+            ev->note_dur /= 4;
+        }
 /*
         if ((i % 5) == 0)
         {
@@ -117,7 +121,7 @@ int main(int argc, char** argv)
     grbound* grb1;
 
 
-    grboundslot = boxyseq_grbound_new(bs, 32, 60, 32, 66);
+    grboundslot = boxyseq_grbound_new(bs, 40, 40, 64, 64);
     grb1 = boxyseq_grbound(bs, grboundslot);
 
 
@@ -146,10 +150,10 @@ int main(int argc, char** argv)
 
     sclist_add_default_scales(scales);
 
-    scale* sc = sclist_scale_by_name(scales, "Major");
+    scale* sc = sclist_scale_by_name(scales, "Harmonic Minor");
 
     grbound_scale_binary_set(grb1, scale_as_int(sc));
-    grbound_scale_key_set(grb1, note_number("F"));
+    grbound_scale_key_set(grb1, note_number("A#"));
 
 
     pattern_prtdata_update(pat1);
@@ -185,10 +189,8 @@ for (i = 0; i <  pat1->pd->loop_length * 8; i += st)
 
 printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
 
-#ifndef NO_REAL_TIME
-    if (!gui_init(&argc, &argv, bs, jd))
+    if (!gui_init(&argc, &argv, bs))
         goto quit;
-#endif
 
     boxyseq_shutdown(bs);
 

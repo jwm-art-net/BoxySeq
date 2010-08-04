@@ -36,6 +36,11 @@ int         grbound_scale_key(grbound*);
 int         grbound_scale_binary_set(grbound*, int scale_bin);
 int         grbound_scale_binary(grbound*);
 
+/*
+int         grbound_midi_out_port(grbound*);
+void        grbound_midi_out_port_set(grbound*, int);
+*/
+
 moport*     grbound_midi_out_port(grbound*);
 void        grbound_midi_out_port_set(grbound*, moport*);
 
@@ -63,15 +68,18 @@ void        grid_free(grid*);
 evport*     grid_global_input_port(grid*);
 freespace*  grid_freespace(grid*);
 
-void        grid_set_gui_note_on_buf(grid*, evbuf*);
-void        grid_set_gui_note_off_buf(grid*, evbuf*);
-void        grid_set_gui_unplace_buf(grid*, evbuf*);
+void        grid_set_ui_note_on_buf(grid*, evbuf*);
+void        grid_set_ui_note_off_buf(grid*, evbuf*);
+void        grid_set_ui_unplace_buf(grid*, evbuf*);
 
 void        grid_rt_place(grid*, bbt_t ph, bbt_t nph);
 void        grid_rt_block(grid*, bbt_t ph, bbt_t nph);
 void        grid_rt_unplace(grid*, bbt_t ph, bbt_t nph);
 
+
+int         grid_rt_note_off_event(grid*, event*);
 int         grid_rt_unplace_event(grid*, event*);
+
 
 void        grid_remove_event(grid*, event*);
 void        grid_remove_events(grid*);

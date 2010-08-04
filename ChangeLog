@@ -1,6 +1,28 @@
+2010-08-04  James Morris  <james@jwm-art.net>
+
+    * Lots, again and again.
+
+
+2010-07-31  James Morris  <james@jwm-art.net>
+
+    * boxy_sequencer.c (boxyseq_rt_init_jack_cycle): new function.
+    calls moport_rt_init_jack_cycle.
+
+    * boxy_sequencer.c (boxyseq_rt_play): code to detect 'shutdown'
+    events. when detected calls boxyseq_rt_clear and sets 'quitting'
+    flag so no further event processing ever takes place from that point
+    on.
+
+    * boxy_sequencer.c (boxyseq_rt_clear): calls moport_empty on all
+    midi out ports.
+
+    * boxy_sequencer.c (boxyseq_shutdown): initiates the shutdown 
+    procedure.
+
 2010-07-30  James Morris  <james@jwm-art.net>
 
-    * grid_boundary.c (grid_remove_events): added calls to clear remaining     buffers.
+    * grid_boundary.c (grid_remove_events): added calls to clear remaining
+    buffers.
 
 2010-07-29  James Morris  <james@jwm-art.net>
 

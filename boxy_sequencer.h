@@ -21,8 +21,9 @@ void        boxyseq_shutdown(boxyseq*);
 
 const char* boxyseq_basename(const boxyseq*);
 
-void        boxyseq_set_jack_client(boxyseq*, jack_client_t* client);
 void        boxyseq_set_jackdata(boxyseq*, jackdata*);
+jackdata*   boxyseq_jackdata(boxyseq*);
+
 
 /*  patterns ---------------->
 */
@@ -59,10 +60,9 @@ void            boxyseq_moport_free(boxyseq*,  int slot);
 moport*         boxyseq_moport(boxyseq*,       int slot);
 
 
-evbuf*          boxyseq_gui_note_on_buf(const boxyseq*);
-evbuf*          boxyseq_gui_note_off_buf(const boxyseq*);
-evbuf*          boxyseq_gui_unplace_buf(const boxyseq*);
-
+evbuf*          boxyseq_ui_note_on_buf(const boxyseq*);
+evbuf*          boxyseq_ui_note_off_buf(const boxyseq*);
+evbuf*          boxyseq_ui_unplace_buf(const boxyseq*);
 
 /*  rt threads stuff -------->
 */
@@ -80,5 +80,8 @@ void            boxyseq_rt_clear(boxyseq*, jack_nframes_t nframes);
 */
 
 void            boxyseq_ui_trigger_clear(boxyseq*);
+
+int             boxyseq_ui_collect_events(boxyseq*);
+plist*          boxyseq_ui_event_list(boxyseq*);
 
 #endif

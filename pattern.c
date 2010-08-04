@@ -790,7 +790,7 @@ void pattern_set_output_port(pattern* pat, evport* port)
 
 void pattern_prtdata_update(const pattern* pat)
 {
-    struct timespec req = { .tv_sec = 0, .tv_nsec = 50 };
+    struct timespec req = { .tv_sec = 0, .tv_nsec = 500 };
     struct timespec rem = { 0, 0 };
 
     #ifdef PATTERN_DEBUG

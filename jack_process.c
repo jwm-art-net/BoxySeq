@@ -126,7 +126,6 @@ _Bool jackdata_startup(jackdata* jd, boxyseq* bs)
     }
     #endif
 
-    boxyseq_set_jack_client(bs, jd->client);
     boxyseq_set_jackdata(bs, jd);
     jd->bs = bs;
 
@@ -140,7 +139,6 @@ _Bool jackdata_startup(jackdata* jd, boxyseq* bs)
 
     if (status & JackNameNotUnique)
         MESSAGE("unique name `%s' assigned\n", jd->client_name);
-    #endif
 
     if (jack_set_timebase_callback( jd->client, 1,
                                     jack_timebase_callback, jd) == 0)
@@ -154,8 +152,6 @@ _Bool jackdata_startup(jackdata* jd, boxyseq* bs)
         WARNING("running as slave\n");
     }
 
-    #ifdef NO_REAL_TIME
-    #else
     if (jack_set_process_callback(  jd->client,
                                     jack_process_callback, jd) != 0)
     {
@@ -199,24 +195,43 @@ const char* jackdata_client_name(jackdata* jd)
 
 void jackdata_transport_rewind(jackdata* jd)
 {
+    #ifndef NO_REAL_TIME
     jack_transport_locate(jd->client, 0);
+    #endif
 }
 
 void jackdata_transport_play(jackdata* jd)
 {
+    #ifdef NO_REAL_TIME
+    jd->is_rolling = 1;
+    #else
     jack_transport_start(jd->client);
+    #endif
 }
 
 void jackdata_transport_stop(jackdata* jd)
 {
+    #ifdef NO_REAL_TIME
+    jd->is_rolling = 0;
+    #else
     jack_transport_stop(jd->client);
+    #endif
 }
 
 
 jack_transport_state_t
 jackdata_transport_state(jackdata* jd, jack_position_t* pos)
 {
+    #ifdef NO_REAL_TIME
+    if (pos)
+        memset(pos, 0, sizeof(*pos));
+
+    return (jd->is_rolling)
+                ? JackTransportRolling
+                : JackTransportStopped;
+    #else
     return jack_transport_query(jd->client, pos);
+    #endif
 }
 
 

@@ -28,6 +28,7 @@ size_t  evbuf_write_count(const evbuf*);
                                 not copy to param, if nothing to read.
 */
 event*  evbuf_read(evbuf*, event*);
+event*  evbuf_peek(evbuf*, event*);
 size_t  evbuf_read_count(const evbuf*);
 
 

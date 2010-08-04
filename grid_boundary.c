@@ -182,9 +182,9 @@ struct box_grid
     evport* unplace_port;
     evport* block_port;
 
-    evbuf*     gui_note_on_buf;
-    evbuf*     gui_note_off_buf;
-    evbuf*     gui_unplace_buf;
+    evbuf*     ui_note_on_buf;
+    evbuf*     ui_note_off_buf;
+    evbuf*     ui_unplace_buf;
 
     freespace*  fs;
 };
@@ -221,9 +221,9 @@ grid* grid_new(void)
     if (!(gr->fs = freespace_new()))
         goto fail2;
 
-    gr->gui_note_on_buf = 0;
-    gr->gui_note_off_buf = 0;
-    gr->gui_unplace_buf = 0;
+    gr->ui_note_on_buf = 0;
+    gr->ui_note_off_buf = 0;
+    gr->ui_unplace_buf = 0;
 
     return gr;
 
@@ -260,19 +260,19 @@ freespace*  grid_freespace(grid* gr)
 }
 
 
-void grid_set_gui_note_on_buf(grid* gr, evbuf* evb)
+void grid_set_ui_note_on_buf(grid* gr, evbuf* evb)
 {
-    gr->gui_note_on_buf = evb;
+    gr->ui_note_on_buf = evb;
 }
 
-void grid_set_gui_note_off_buf(grid* gr, evbuf* evb)
+void grid_set_ui_note_off_buf(grid* gr, evbuf* evb)
 {
-    gr->gui_note_off_buf = evb;
+    gr->ui_note_off_buf = evb;
 }
 
-void grid_set_gui_unplace_buf(grid* gr, evbuf* evb)
+void grid_set_ui_unplace_buf(grid* gr, evbuf* evb)
 {
-    gr->gui_unplace_buf = evb;
+    gr->ui_unplace_buf = evb;
 }
 
 
@@ -314,22 +314,23 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
                     if (!(grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
                         continue;
 
-                    EVENT_SET_TYPE_BLOCK( &ev );
+                    EVENT_SET_TYPE_BLOCKED_NOTE( &ev );
                 }
             }
 
-            if (EVENT_IS_TYPE_BLOCK( &ev ))
-            {
-                EVENT_SET_STATUS_ON( &ev );
+            /*  event status is a bit hit and miss until now...
+            */
+            EVENT_SET_STATUS_ON( &ev );
+
+            if (EVENT_IS_BLOCK( &ev ))
                 evport_write_event(gr->block_port, &ev);
-            }
 
             freespace_remove(gr->fs,    ev.box_x,
                                         ev.box_y,
                                         ev.box_width,
                                         ev.box_height );
 
-            evbuf_write(gr->gui_note_on_buf, &ev);
+            evbuf_write(gr->ui_note_on_buf, &ev);
         }
     }
 }
@@ -379,6 +380,13 @@ void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
 }
 
 
+int grid_rt_note_off_event(grid* gr, event* ev)
+{
+    evbuf_write(gr->ui_note_off_buf, ev);
+    return evport_write_event(gr->unplace_port, ev);
+}
+
+
 int grid_rt_unplace_event(grid* gr, event* ev)
 {
     return evport_write_event(gr->unplace_port, ev);
@@ -404,7 +412,7 @@ void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
                                     ev.box_width,   ev.box_height );
 
             evport_and_remove_event(gr->unplace_port);
-            evbuf_write(gr->gui_unplace_buf, &ev);
+            evbuf_write(gr->ui_unplace_buf, &ev);
 
             if (done)
                 WARNING("unplace port not sorted!*****************\n");
@@ -448,12 +456,12 @@ void grid_remove_events(grid* gr)
                                 ev.box_width,   ev.box_height );
     }
 
-    evbuf_reset(gr->gui_note_on_buf);
-    evbuf_reset(gr->gui_note_off_buf);
-    evbuf_reset(gr->gui_unplace_buf);
+    evbuf_reset(gr->ui_note_on_buf);
+    evbuf_reset(gr->ui_note_off_buf);
+    evbuf_reset(gr->ui_unplace_buf);
 
-    /* signal (primitively) to GUI to remove everything... */
+    /* signal (primitively) to UI to remove everything... */
 
     EVENT_SET_TYPE_CLEAR( &ev );
-    evbuf_write(gr->gui_unplace_buf, &ev);
+    evbuf_write(gr->ui_unplace_buf, &ev);
 }

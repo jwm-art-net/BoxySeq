@@ -148,6 +148,19 @@ event* evbuf_read(evbuf* rb, event* data)
 }
 
 
+event* evbuf_peek(evbuf* rb, event* data)
+{
+    event* ret = rb->tail;
+
+    if (!evbuf_read_count(rb))
+        return 0;
+
+    memcpy(data, rb->tail, sizeof(event));
+
+    return ret;
+}
+
+
 void evbuf_reset(evbuf* rb)
 { /* hmmm, not thread safe this, is it? */
     rb->head = rb->buf;

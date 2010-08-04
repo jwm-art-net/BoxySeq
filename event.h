@@ -10,12 +10,14 @@
  
 typedef enum EVENT_FLAGS
 {
-    EV_TYPE_NOTE =      0x0001,
-    EV_TYPE_BLOCK =     0x0002,
-    EV_TYPE_CLEAR =     0x0004, /* from RT thread to clear GUI */
-    EV_TYPE_SHUTDOWN =  0x0008, /* from GUI thread to clear RT */
+    EV_TYPE_NOTE =          0x0001,
+    EV_TYPE_BLOCK =         0x0002,
+    EV_TYPE_BLOCKED_NOTE =  0x0003,
 
-    EV_TYPEMASK =       0x000f,
+    EV_TYPE_CLEAR =         0x000d, /* from RT thread to clear GUI */
+    EV_TYPE_SHUTDOWN =      0x000e, /* from GUI thread to clear RT */
+
+    EV_TYPEMASK =           0x000f,
 
     EV_STATUS_ON =      0x0010, /* or off */
 
@@ -35,7 +37,7 @@ typedef struct event_
     int     flags;
     bbt_t   pos;
 
-    uint32_t    frame;
+    uint32_t frame;
 
     bbt_t   note_dur;
     int     note_pitch;
@@ -68,17 +70,22 @@ void    event_copy(event* dest, const event* src);
     ((( ev )->flags & EV_STATUS_ON ) != EV_STATUS_ON)
 
 #define EVENT_IS_TYPE_NOTE( ev ) \
-    ((( ev )->flags & EV_TYPE_NOTE ) == EV_TYPE_NOTE)
+    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_NOTE)
 
 #define EVENT_IS_TYPE_BLOCK( ev ) \
-    ((( ev )->flags & EV_TYPE_BLOCK ) == EV_TYPE_BLOCK)
+    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_BLOCK)
+
+#define EVENT_IS_TYPE_BLOCKED_NOTE( ev ) \
+    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_BLOCKED_NOTE)
 
 #define EVENT_IS_TYPE_CLEAR( ev ) \
-    ((( ev )->flags & EV_TYPE_CLEAR ) == EV_TYPE_CLEAR)
+    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_CLEAR)
 
 #define EVENT_IS_TYPE_SHUTDOWN( ev ) \
-    ((( ev )->flags & EV_TYPE_SHUTDOWN ) == EV_TYPE_SHUTDOWN)
+    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_SHUTDOWN)
 
+#define EVENT_IS_BLOCK( ev ) \
+    (EVENT_IS_TYPE_BLOCK( ev ) || EVENT_IS_TYPE_BLOCKED_NOTE( ev ))
 
 #define EVENT_SET_STATUS_ON( ev ) \
     ( ev )->flags |= EV_STATUS_ON
@@ -91,6 +98,9 @@ void    event_copy(event* dest, const event* src);
 
 #define EVENT_SET_TYPE_BLOCK( ev ) \
     ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_BLOCK
+
+#define EVENT_SET_TYPE_BLOCKED_NOTE( ev ) \
+    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_BLOCKED_NOTE
 
 #define EVENT_SET_TYPE_CLEAR( ev ) \
     ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_CLEAR

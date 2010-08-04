@@ -24,11 +24,13 @@ struct boxy_sequencer
 
     grid*       gr;
 
-    evbuf*      gui_note_on_buf;
-    evbuf*      gui_note_off_buf;
-    evbuf*      gui_unplace_buf;
+    evbuf*      ui_note_on_buf;
+    evbuf*      ui_note_off_buf;
+    evbuf*      ui_unplace_buf;
 
-    evbuf*      gui_input_buf;
+    evbuf*      ui_input_buf;
+
+    plist*      ui_eventlist; /* stores collect events from buffers */
 
     jack_client_t*  client;
     jackdata*       jd;
@@ -69,35 +71,41 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->gr = grid_new()))
         goto fail4;
 
-    if (!(bs->gui_note_on_buf =     evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_note_on_buf =  evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail5;
 
-    if (!(bs->gui_note_off_buf =    evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_note_off_buf = evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail6;
 
-    if (!(bs->gui_unplace_buf =     evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_unplace_buf =  evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail7;
 
-    if (!(bs->gui_input_buf =       evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_input_buf =    evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail8;
 
-    grid_set_gui_note_on_buf(bs->gr,    bs->gui_note_on_buf);
-    grid_set_gui_note_off_buf(bs->gr,   bs->gui_note_off_buf);
-    grid_set_gui_unplace_buf(bs->gr,    bs->gui_unplace_buf);
+    if (!(bs->ui_eventlist = plist_new()))
+        goto fail9;
+
+    grid_set_ui_note_on_buf(bs->gr,     bs->ui_note_on_buf);
+    grid_set_ui_note_off_buf(bs->gr,    bs->ui_note_off_buf);
+    grid_set_ui_unplace_buf(bs->gr,     bs->ui_unplace_buf);
 
     bs->quitting = 0;
 
     return bs;
 
-fail8:  evbuf_free(bs->gui_input_buf);
-fail7:  evbuf_free(bs->gui_note_off_buf);
-fail6:  evbuf_free(bs->gui_note_on_buf);
+
+fail9:  evbuf_free(bs->ui_input_buf);
+fail8:  evbuf_free(bs->ui_unplace_buf);
+fail7:  evbuf_free(bs->ui_note_off_buf);
+fail6:  evbuf_free(bs->ui_note_on_buf);
 fail5:  grid_free(bs->gr);
 fail4:  evport_manager_free(bs->ports_midi_out);
 fail3:  evport_manager_free(bs->ports_pattern);
 fail2:  free(bs->basename);
 fail1:  free(bs);
 fail0:
+
     WARNING("out of memory allocating boxyseq data\n");
     return 0;
 }
@@ -110,10 +118,12 @@ void boxyseq_free(boxyseq* bs)
     if (!bs)
         return;
 
-    evbuf_free(bs->gui_input_buf);
-    evbuf_free(bs->gui_unplace_buf);
-    evbuf_free(bs->gui_note_off_buf);
-    evbuf_free(bs->gui_note_on_buf);
+    plist_free(bs->ui_eventlist);
+
+    evbuf_free(bs->ui_input_buf);
+    evbuf_free(bs->ui_unplace_buf);
+    evbuf_free(bs->ui_note_off_buf);
+    evbuf_free(bs->ui_note_on_buf);
 
     grid_free(bs->gr);
 
@@ -140,15 +150,16 @@ const char* boxyseq_basename(const boxyseq* bs)
 }
 
 
-void boxyseq_set_jack_client(boxyseq* bs, jack_client_t* client)
-{
-    bs->client = client;
-}
-
-
 void boxyseq_set_jackdata(boxyseq* bs, jackdata* jd)
 {
     bs->jd = jd;
+    bs->client = jackdata_client(jd);
+}
+
+
+jackdata* boxyseq_jackdata(boxyseq* bs)
+{
+    return bs->jd;
 }
 
 
@@ -317,19 +328,19 @@ moport* boxyseq_moport(boxyseq* bs, int slot)
     return bs->moport_slot[slot];
 }
 
-evbuf* boxyseq_gui_note_on_buf(const boxyseq* bs)
+evbuf* boxyseq_ui_note_on_buf(const boxyseq* bs)
 {
-    return bs->gui_note_on_buf;
+    return bs->ui_note_on_buf;
 }
 
-evbuf* boxyseq_gui_note_off_buf(const boxyseq* bs)
+evbuf* boxyseq_ui_note_off_buf(const boxyseq* bs)
 {
-    return bs->gui_note_off_buf;
+    return bs->ui_note_off_buf;
 }
 
-evbuf* boxyseq_gui_unplace_buf(const boxyseq* bs)
+evbuf* boxyseq_ui_unplace_buf(const boxyseq* bs)
 {
-    return bs->gui_unplace_buf;
+    return bs->ui_unplace_buf;
 }
 
 
@@ -354,7 +365,7 @@ void boxyseq_rt_play(boxyseq* bs,
     if (bs->quitting)
         return;
 
-    while(evbuf_read(bs->gui_input_buf, &ev))
+    while(evbuf_read(bs->ui_input_buf, &ev))
     {
         if (EVENT_IS_TYPE_SHUTDOWN( &ev ))
         {
@@ -433,7 +444,7 @@ void boxyseq_shutdown(boxyseq* bs)
 
     EVENT_SET_TYPE_SHUTDOWN( &ev );
 
-    if (!evbuf_write(bs->gui_input_buf, &ev))
+    if (!evbuf_write(bs->ui_input_buf, &ev))
         WARNING("failed to queue shutdown event\n");
 
     /*  wait for RT thread to discover what we've done...
@@ -445,4 +456,71 @@ void boxyseq_shutdown(boxyseq* bs)
 }
 
 
+int boxyseq_ui_collect_events(boxyseq* bs)
+{
+    int evcount = 0;
+    event evin;
+    event* ev;
+    lnode* ln;
+    lnode* nln;
 
+    while(evbuf_read(bs->ui_unplace_buf, &evin))
+    {
+        ln = plist_head(bs->ui_eventlist);
+
+        if (EVENT_IS_TYPE_CLEAR( &evin ))
+        {
+            plist_select_all(bs->ui_eventlist, 1);
+            plist_delete(bs->ui_eventlist, 1);
+            ln = 0;
+        }
+
+        while (ln)
+        {
+            ev = lnode_data(ln);
+            nln = lnode_next(ln);
+
+            if (ev->box_x == evin.box_x
+             && ev->box_y == evin.box_y
+             && ev->box_width  == evin.box_width
+             && ev->box_height == evin.box_height)
+            {
+                plist_unlink_free(bs->ui_eventlist, ln);
+                nln = 0;
+            }
+
+            ln = nln;
+        }
+    }
+
+    while(evbuf_read(bs->ui_note_off_buf, &evin))
+    {
+        ln = plist_head(bs->ui_eventlist);
+
+        while (ln)
+        {
+            ev = lnode_data(ln);
+
+            if (ev->box_x == evin.box_x
+             && ev->box_y == evin.box_y
+             && ev->box_width  == evin.box_width
+             && ev->box_height == evin.box_height)
+            {
+                EVENT_SET_STATUS_OFF( ev );
+            }
+
+            ln = lnode_next(ln);
+        }
+    }
+
+    while(evbuf_read(bs->ui_note_on_buf, &evin))
+        plist_add_event_copy(bs->ui_eventlist, &evin);
+
+    return evcount;
+}
+
+
+plist* boxyseq_ui_event_list(boxyseq* bs)
+{
+    return bs->ui_eventlist;
+}

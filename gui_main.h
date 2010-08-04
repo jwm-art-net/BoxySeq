@@ -9,7 +9,7 @@
 #include <gtk/gtk.h>
 
 
-int gui_init(int* argc, char*** argv, boxyseq*, jackdata*);
+int gui_init(int* argc, char*** argv, boxyseq*);
 
 
 #endif

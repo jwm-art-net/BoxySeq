@@ -11,8 +11,8 @@
 #define MAX_GRBOUND_SLOTS 16
 #define MAX_MOPORT_SLOTS 16
 
-#define DEFAULT_EVBUF_SIZE 128
-#define DEFAULT_EVPOOL_SIZE 512
+#define DEFAULT_EVBUF_SIZE 1024
+#define DEFAULT_EVPOOL_SIZE 4096
 
 
 /* 2520 gives int result for div by 2 ... 9 */

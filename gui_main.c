@@ -3,11 +3,16 @@
 #include "boxy_sequencer.h"
 #include "debug.h"
 #include "event_buffer.h"
-#include "pattern.h"
+#include "gui_grid.h"
+#include "gui_pattern.h"
+
 
 
 #include <stdlib.h>
 #include <time.h>
+
+
+static boxyseq* _bs = 0;
 
 static GtkWidget*   window =        0;
 static GtkWidget*   timelabel =     0;
@@ -18,9 +23,17 @@ static GtkWidget*   play_img =      0;
 static GtkWidget*   stop_img =      0;
 static GtkWidget*   drawing_area =  0;
 
-static guint    pos_idle_id = 0;
+static GtkWidget*   test_button =   0;
+
+
+static guint    pos_timeout_id = 0;
+static guint    bs_timeout_id = 0;
+
 static int      gui_jack_rolling = 0;
 
+
+static gui_pattern* gui_pattern_edit = 0;
+static gui_grid*    gui_grid_edit = 0;
 
 
 static void gui_quit(void)
@@ -29,46 +42,10 @@ static void gui_quit(void)
 }
 
 
-struct bsdata
+static gboolean idle_update_position(jackdata* jd)
 {
-    jackdata*   jd;
-
-    evbuf*      note_on_buf;
-    evbuf*      note_off_buf;
-    evbuf*      unplace_buf;
-
-    boxyseq*    bs;
-    plist*      evlist;
-};
-
-
-void bsgui_box(cairo_t* cr, int x, int y, int w, int h)
-{
-    cairo_rectangle(cr, x, y, w, h);
-
-    cairo_set_source_rgba(cr, 1, 0, 0, 0.5);
-    cairo_fill_preserve (cr);
-    cairo_set_source_rgba(cr, 0.5, 0, 0, 0.5);
-    cairo_set_line_width (cr, 1.0);
-    cairo_stroke (cr);
-
-}
-
-static gboolean timed_updater(GtkWidget *widget)
-{
-    gtk_widget_queue_draw(window);
-    gtk_widget_queue_draw(drawing_area);
-    return TRUE;
-}
-
-
-static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpointer data)
-{
-    struct bsdata* bsd = (struct bsdata*)data;
     jack_position_t pos;
-    jack_transport_state_t jstate;
-
-    jstate = jackdata_transport_state(bsd->jd, &pos);
+    jack_transport_state_t jstate = jackdata_transport_state(jd, &pos);
 
     if (jstate == JackTransportStopped && gui_jack_rolling)
     {
@@ -84,76 +61,18 @@ static gboolean on_expose_event(GtkWidget *widget, GdkEventExpose *gdkevent, gpo
     char buf[40] = "BBT ----:--.----";
 
     if (pos.valid & JackPositionBBT)
-        snprintf(buf, 40,   "BBT %4d:%2d.%04d",
+        snprintf(buf, 40, "BBT %4d:%2d.%04d",
                             pos.bar, pos.beat, pos.tick);
 
     gtk_label_set_text(GTK_LABEL(timelabel), buf);
 
-    cairo_t* cr = gdk_cairo_create(drawing_area->window);
+    return TRUE;
+}
 
-    event evin;
-    event* ev;
-    lnode* ln;
-    lnode* nln;
 
-    while(evbuf_read(bsd->unplace_buf, &evin))
-    {
-        ln = plist_head(bsd->evlist);
-
-        if (EVENT_IS_TYPE_CLEAR( &evin ))
-        {
-            plist_select_all(bsd->evlist, 1);
-            plist_delete(bsd->evlist, 1);
-            ln = 0;
-        }
-
-        while (ln)
-        {
-            ev = lnode_data(ln);
-            nln = lnode_next(ln);
-
-            if (ev->box_x == evin.box_x
-             && ev->box_y == evin.box_y
-             && ev->box_width  == evin.box_width
-             && ev->box_height == evin.box_height)
-            {
-                plist_unlink_free(bsd->evlist, ln);
-                nln = 0;
-            }
-
-            ln = nln;
-        }
-    }
-
-    ln = plist_head(bsd->evlist);
-
-    while(ln)
-    {
-        ev = (event*)lnode_data(ln);
-
-        bsgui_box(cr,   ev->box_x * 4,      ev->box_y * 4,
-                        ev->box_width * 4,  ev->box_height * 4);
-
-        ln = lnode_next(ln);
-    }
-
-    while(evbuf_read(bsd->note_on_buf, &evin))
-        plist_add_event_copy(bsd->evlist, &evin);
-
-    ln = plist_head(bsd->evlist);
-
-    while(ln)
-    {
-        ev = (event*)lnode_data(ln);
-
-        bsgui_box(cr,   ev->box_x * 4,      ev->box_y * 4,
-                        ev->box_width * 4,  ev->box_height * 4);
-
-        ln = lnode_next(ln);
-    }
-
-    cairo_destroy(cr);
-
+static gboolean gui_boxyseq_update(boxyseq* bs)
+{
+    boxyseq_ui_collect_events(bs);
     return TRUE;
 }
 
@@ -188,22 +107,20 @@ static gboolean gui_transport_play(     GtkWidget *widget,
 }
 
 
-int gui_init(int* argc, char*** argv, boxyseq* bs, jackdata* jd)
+void gui_do_pattern_show(void)
 {
-    struct bsdata* bsd = malloc(sizeof(*bsd));
+    gui_pattern_show(&gui_pattern_edit, 0);
+}
 
-    if (!bsd)
-        return FALSE;
 
-    bsd->bs = bs;
+void gui_do_grid_show(void)
+{
+    gui_grid_show(&gui_grid_edit, 0, _bs);
+}
 
-    bsd->note_on_buf =  boxyseq_gui_note_on_buf(bs);
-    bsd->note_off_buf = boxyseq_gui_note_off_buf(bs);
-    bsd->unplace_buf =  boxyseq_gui_unplace_buf(bs);
 
-    bsd->jd = jd;
-
-    bsd->evlist = plist_new();
+int gui_init(int* argc, char*** argv, boxyseq* bs)
+{
 
     GtkWidget* tmp;
     GtkWidget* vbox;
@@ -216,11 +133,13 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jackdata* jd)
         return FALSE;
     }
 
+    _bs = bs;
+    jackdata* jd = boxyseq_jackdata(bs);
+
     /* main window */
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
-    gtk_widget_realize(window);
+    gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 
     vbox = gtk_vbox_new(FALSE, 0);
     gtk_container_add(GTK_CONTAINER(window), vbox);
@@ -277,6 +196,18 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jackdata* jd)
                         G_CALLBACK(gui_transport_play),
                         jd                        );
 
+
+    test_button = gtk_button_new_with_label("grid");
+    gtk_button_set_focus_on_click(GTK_BUTTON(test_button), FALSE);
+    gtk_button_set_relief(GTK_BUTTON(test_button), GTK_RELIEF_NONE);
+    gtk_box_pack_start(GTK_BOX(hbox), test_button, FALSE, FALSE, 0);
+    gtk_widget_show(test_button);
+    g_signal_connect(   GTK_OBJECT(test_button),
+                        "clicked",
+                        G_CALLBACK(gui_do_grid_show),
+                        jd                        );
+
+
     tmp = gtk_vseparator_new();
     gtk_widget_show(tmp);
     gtk_box_pack_start(GTK_BOX(hbox), tmp, FALSE, FALSE, 0);
@@ -298,63 +229,22 @@ int gui_init(int* argc, char*** argv, boxyseq* bs, jackdata* jd)
     gtk_widget_show(tmp);
     gtk_box_pack_start(GTK_BOX(vbox), tmp, FALSE, FALSE, 0);
 
+    pos_timeout_id = g_timeout_add(100,
+                                (GtkFunction)idle_update_position,
+                                jd);
 
-    tmp = gtk_drawing_area_new();
-    gtk_widget_set_size_request(tmp, 800, 600);
-
-    gtk_box_pack_start(GTK_BOX(vbox), tmp, TRUE, TRUE, 0);
-    gtk_widget_show(tmp);
-
-    drawing_area = tmp;
-
-    g_signal_connect(GTK_OBJECT(tmp), "expose_event",
-                       G_CALLBACK(on_expose_event), bsd);
-
-
-/*
-    gtk_widget_set_events (tmp, GDK_BUTTON_PRESS_MASK
-                           | GDK_BUTTON_RELEASE_MASK
-                           | GDK_POINTER_MOTION_MASK
-                           | GDK_ENTER_NOTIFY_MASK
-                           | GDK_LEAVE_NOTIFY_MASK
-                           | GDK_EXPOSURE_MASK);
-    gtk_widget_set_size_request(tmp, 
-                        (img->user_width >= MIN_WINDOW_WIDTH)
-                        ? img->user_width : MIN_WINDOW_WIDTH,
-                        img->user_height);
-    gtk_box_pack_start(GTK_BOX(vbox), tmp, TRUE, TRUE, 0);
-    gtk_widget_show(tmp);
-    g_signal_connect(GTK_OBJECT(tmp), "button_press_event",
-                        G_CALLBACK(button_press_event), NULL);
-    g_signal_connect(GTK_OBJECT(tmp), "button_release_event",
-                        G_CALLBACK(button_release_event), NULL);
-    g_signal_connect(GTK_OBJECT(tmp), "expose_event",
-                       G_CALLBACK(expose_event), img);
-    g_signal_connect(GTK_OBJECT(tmp), "motion_notify_event",
-                       G_CALLBACK(motion_event), NULL);
-    g_signal_connect(GTK_OBJECT(tmp), "enter_notify_event",
-                       G_CALLBACK(notify_enter_leave_event), NULL);
-    g_signal_connect(GTK_OBJECT(tmp), "leave_notify_event",
-                       G_CALLBACK(notify_enter_leave_event), NULL);
-
-
-    img->drawing_area = drawing_area = tmp;
-*/
-
-
+    bs_timeout_id = g_timeout_add(10,
+                                    (GtkFunction)gui_boxyseq_update,
+                                    bs);
 
     gtk_widget_show(window);
 
-    /* add a callback to update the buttons and the BBT counter */
-    pos_idle_id = g_timeout_add(10, (GtkFunction)timed_updater, bsd);
 
     gtk_main();
 
     /* free the play & stop images */
     g_object_unref(stop_img);
     g_object_unref(play_img);
-
-    free(bsd);
 
     return TRUE;
 }
