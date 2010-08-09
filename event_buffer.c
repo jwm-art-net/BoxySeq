@@ -3,7 +3,7 @@
 #include "common.h"
 #include "debug.h"
 
-
+#include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,8 +20,8 @@ struct event_buffer
     event*  buf;
     event*  bufend;
 
-    event*  head;   /* write ptr */
-    event*  tail;   /* read ptr */
+    event*  volatile head;   /* write ptr */
+    event*  volatile tail;   /* read ptr */
 
     char*   name;   /*  yes we're naming ring buffers...
                         are we?
@@ -78,8 +78,8 @@ size_t evbuf_write_count(const evbuf* rb)
 {
     size_t s,e,w,r;
 
-    w = (size_t)rb->head;
-    r = (size_t)rb->tail;
+    w = (size_t)g_atomic_pointer_get(&rb->head);
+    r = (size_t)g_atomic_pointer_get(&rb->tail);
     s = (size_t)rb->buf;
     e = (size_t)rb->bufend;
 
@@ -95,19 +95,26 @@ size_t evbuf_write_count(const evbuf* rb)
 
 event* evbuf_write(evbuf* rb, const event* data)
 {
-    event* ret = rb->head;
+    event* head;
 
     if (!evbuf_write_count(rb))
+    {
+        WARNING("failed to write event to buffer\n");
         return 0;
+    }
 
-    memcpy(rb->head, data, sizeof(event));
+    head = g_atomic_pointer_get(&rb->head);
 
-    if (rb->head == rb->bufend)
-        rb->head = rb->buf;
+    memcpy(head, data, sizeof(event));
+
+    if (head == rb->bufend)
+        head = rb->buf;
     else
-        ++rb->head;
+        ++head;
 
-    return ret;
+    g_atomic_pointer_set(&rb->head, head);
+
+    return head;
 }
 
 
@@ -115,8 +122,8 @@ size_t evbuf_read_count(const evbuf* rb)
 {
     size_t s,e,w,r;
 
-    w = (size_t)rb->head;
-    r = (size_t)rb->tail;
+    w = (size_t)g_atomic_pointer_get(&rb->head);
+    r = (size_t)g_atomic_pointer_get(&rb->tail);
     s = (size_t)rb->buf;
     e = (size_t)rb->bufend;
 
@@ -132,32 +139,23 @@ size_t evbuf_read_count(const evbuf* rb)
 
 event* evbuf_read(evbuf* rb, event* data)
 {
-    event* ret = rb->tail;
+    event* tail;
 
     if (!evbuf_read_count(rb))
         return 0;
 
-    memcpy(data, rb->tail, sizeof(event));
+    tail = g_atomic_pointer_get(&rb->tail);
 
-    if (rb->tail == rb->bufend)
-        rb->tail = rb->buf;
+    memcpy(data, tail, sizeof(event));
+
+    if (tail == rb->bufend)
+        tail = rb->buf;
     else
-        ++rb->tail;
+        ++tail;
 
-    return ret;
-}
+    g_atomic_pointer_set(&rb->tail, tail);
 
-
-event* evbuf_peek(evbuf* rb, event* data)
-{
-    event* ret = rb->tail;
-
-    if (!evbuf_read_count(rb))
-        return 0;
-
-    memcpy(data, rb->tail, sizeof(event));
-
-    return ret;
+    return tail;
 }
 
 

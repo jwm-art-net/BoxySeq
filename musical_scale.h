@@ -35,7 +35,8 @@ void        sclist_add_default_scales(sclist*);
 scale*      sclist_add(sclist*, const char* name, const char* binary);
 
 scale*      sclist_scale_by_binary(sclist*, int);
-scale*      sclist_scale_by_name(sclist*, const char* name);
+scale*      sclist_scale_by_binary_string(sclist*, const char*);
+scale*      sclist_scale_by_name(sclist*, const char*);
 
 
 #endif

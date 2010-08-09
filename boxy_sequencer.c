@@ -30,7 +30,7 @@ struct boxy_sequencer
 
     evbuf*      ui_input_buf;
 
-    plist*      ui_eventlist; /* stores collect events from buffers */
+    evlist*     ui_eventlist; /* stores collect events from buffers */
 
     jack_client_t*  client;
     jackdata*       jd;
@@ -83,7 +83,7 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->ui_input_buf =    evbuf_new(DEFAULT_EVBUF_SIZE)))
         goto fail8;
 
-    if (!(bs->ui_eventlist = plist_new()))
+    if (!(bs->ui_eventlist = evlist_new()))
         goto fail9;
 
     grid_set_ui_note_on_buf(bs->gr,     bs->ui_note_on_buf);
@@ -118,7 +118,7 @@ void boxyseq_free(boxyseq* bs)
     if (!bs)
         return;
 
-    plist_free(bs->ui_eventlist);
+    evlist_free(bs->ui_eventlist);
 
     evbuf_free(bs->ui_input_buf);
     evbuf_free(bs->ui_unplace_buf);
@@ -171,8 +171,8 @@ evport_manager* boxyseq_pattern_ports(boxyseq* bs)
 
 
 int boxyseq_pattern_new(boxyseq* bs,
-                        bbt_t beats_per_bar,
-                        bbt_t beat_type     )
+                        float beats_per_bar,
+                        float beat_type     )
 {
     int slot = 0;
 
@@ -191,10 +191,9 @@ int boxyseq_pattern_new(boxyseq* bs,
     if (!(bs->pattern_slot[slot] = pat = pattern_new()))
         return -1;
 
-    pdata_set_meter(pat->pd, beats_per_bar, beat_type);
-    pdata_set_loop_length(  pat->pd,
-                            pdata_duration_bbt_to_ticks(pat->pd,
-                                                        1, 0, 0  ));
+    pattern_set_meter(pat, beats_per_bar, beat_type);
+    pattern_set_loop_length(
+                pat, pattern_duration_bbt_to_ticks(pat, 1, 0, 0  ));
 
     return slot;
 }
@@ -356,6 +355,7 @@ void boxyseq_rt_init_jack_cycle(boxyseq* bs, jack_nframes_t nframes)
 
 void boxyseq_rt_play(boxyseq* bs,
                      jack_nframes_t nframes,
+                     _Bool repositioned,
                      bbt_t ph, bbt_t nph)
 {
     int i;
@@ -388,7 +388,7 @@ void boxyseq_rt_play(boxyseq* bs,
     for (i = 0; i < MAX_PATTERN_SLOTS; ++i)
     {
         if (bs->pattern_slot[i])
-            prtdata_play(bs->pattern_slot[i]->prt, ph, nph);
+            pattern_rt_play(bs->pattern_slot[i], repositioned, ph, nph);
     }
 
     grid_port = grid_global_input_port(bs->gr);
@@ -458,48 +458,46 @@ void boxyseq_shutdown(boxyseq* bs)
 
 int boxyseq_ui_collect_events(boxyseq* bs)
 {
-    int evcount = 0;
+    int ret = 0;
     event evin;
-    event* ev;
-    lnode* ln;
-    lnode* nln;
 
     while(evbuf_read(bs->ui_unplace_buf, &evin))
     {
-        ln = plist_head(bs->ui_eventlist);
+        lnode* ln = evlist_head(bs->ui_eventlist);
 
         if (EVENT_IS_TYPE_CLEAR( &evin ))
         {
-            plist_select_all(bs->ui_eventlist, 1);
-            plist_delete(bs->ui_eventlist, 1);
+            evlist_select_all(bs->ui_eventlist, 1);
+            evlist_delete(bs->ui_eventlist, 1);
             ln = 0;
         }
 
         while (ln)
         {
-            ev = lnode_data(ln);
-            nln = lnode_next(ln);
+            event* ev = lnode_data(ln);
+            lnode* nln = lnode_next(ln);
 
             if (ev->box_x == evin.box_x
              && ev->box_y == evin.box_y
              && ev->box_width  == evin.box_width
              && ev->box_height == evin.box_height)
             {
-                plist_unlink_free(bs->ui_eventlist, ln);
+                evlist_unlink_free(bs->ui_eventlist, ln);
                 nln = 0;
             }
 
             ln = nln;
         }
+        ret = 1;
     }
 
     while(evbuf_read(bs->ui_note_off_buf, &evin))
     {
-        ln = plist_head(bs->ui_eventlist);
+        lnode* ln = evlist_head(bs->ui_eventlist);
 
         while (ln)
         {
-            ev = lnode_data(ln);
+            event* ev = lnode_data(ln);
 
             if (ev->box_x == evin.box_x
              && ev->box_y == evin.box_y
@@ -511,16 +509,20 @@ int boxyseq_ui_collect_events(boxyseq* bs)
 
             ln = lnode_next(ln);
         }
+        ret = 1;
     }
 
     while(evbuf_read(bs->ui_note_on_buf, &evin))
-        plist_add_event_copy(bs->ui_eventlist, &evin);
+    {
+        evlist_add_event_copy(bs->ui_eventlist, &evin);
+        ret = 1;
+    }
 
-    return evcount;
+    return ret;
 }
 
 
-plist* boxyseq_ui_event_list(boxyseq* bs)
+evlist* boxyseq_ui_event_list(boxyseq* bs)
 {
     return bs->ui_eventlist;
 }

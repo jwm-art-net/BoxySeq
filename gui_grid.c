@@ -3,9 +3,9 @@
 
 #include "boxy_sequencer.h"
 #include "debug.h"
+#include "event_list.h"
 #include "grid_boundary.h"
 #include "jack_process.h"
-#include "pattern.h"
 
 
 #include <gtk/gtk.h>
@@ -20,7 +20,7 @@ struct gui_grid_editor
     boxyseq*    bs;
     jackdata*   jd;
 
-    plist*      evlist;
+    evlist*      events;
 
     double scale;
 
@@ -47,9 +47,9 @@ static void gui_grid_note_on(cairo_t* cr, int x, int y, int w, int h)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 1);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.5, 0.0, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.5, 0.0, 1);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 
@@ -59,9 +59,9 @@ static void gui_grid_note_off(cairo_t* cr, int x, int y, int w, int h)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 0.5, 0.0, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.5, 0.0, 1);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.2, 0.0, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.2, 0.0, 1);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 }
@@ -71,9 +71,9 @@ static void gui_grid_block(cairo_t* cr, int x, int y, int w, int h)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 1);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.0, 0.5, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.5, 1);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 }
@@ -83,9 +83,9 @@ static void gui_grid_block_on(cairo_t* cr, int x, int y, int w, int h)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 1.0, 1.0, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 1.0, 1.0, 1);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.5, 0.5, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.5, 0.5, 1);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 }
@@ -95,9 +95,9 @@ static void gui_grid_block_off(cairo_t* cr, int x, int y, int w, int h)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 1);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.0, 0.5, 0.25);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.5, 1);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 }
@@ -134,7 +134,7 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
     cairo_fill (cr);
     cairo_pattern_destroy (pat);
 
-    ln = plist_head(boxyseq_ui_event_list(ggr->bs));
+    ln = evlist_head(boxyseq_ui_event_list(ggr->bs));
 
     int bx, by, bw, bh;
 
@@ -204,8 +204,8 @@ static gboolean gui_grid_motion_event(  GtkWidget* widget,
 {
     gui_grid* ggr = (gui_grid*)data;
 
-    ggr->ptr_x = gdkevent->x;
-    ggr->ptr_y = gdkevent->y;
+    ggr->ptr_x = (int)gdkevent->x;
+    ggr->ptr_y = (int)gdkevent->y;
 
     ggr->ptr_grid_x = (int)(ggr->ptr_x / ggr->scale);
     ggr->ptr_grid_y = (int)(ggr->ptr_y / ggr->scale);
@@ -254,10 +254,6 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
 
     GtkWidget* tmp;
     GtkWidget* vbox;
-    GtkWidget* hbox;
-    GtkWidget* evbox;
-
-    event evtmp;
 
     if (*ggr_ptr)
         return;
@@ -322,7 +318,7 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
 
     gtk_widget_show_all(ggr->window);
 
-    ggr->timeout_id = g_timeout_add(66,
+    ggr->timeout_id = g_timeout_add(33,
                                     (GtkFunction)gui_grid_timed_updater,
                                     ggr);
 

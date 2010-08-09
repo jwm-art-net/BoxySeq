@@ -39,7 +39,7 @@ void event_init(event* ev)
     ev->box_width =     -1;
     ev->box_height =    -1;
     ev->box_release =   -1;
-    ev->misc =          0;
+    ev->grb =            0;
 }
 
 
@@ -55,7 +55,7 @@ void event_copy(event* dest, const event* src)
     dest->box_width =       src->box_width;
     dest->box_height =      src->box_height;
     dest->box_release =     src->box_release;
-    dest->misc =            src->misc;
+    dest->grb =             src->grb;
 }
 
 
@@ -66,14 +66,14 @@ void event_dump(const event* ev)
             "pitch:%3d  |  vel:%3d  |  "
             "x:%3d  |  y:%3d  |  "
             "w:%3d  |  h:%3d  |  "
-            "misc:%p \n",
+            "grb:%p \n",
 
             ev,             ev->flags,
             ev->pos,   ev->note_dur,   ev->box_release,
             ev->note_pitch, ev->note_velocity,
             ev->box_x,      ev->box_y,
             ev->box_width,  ev->box_height,
-            ev->misc );
+            ev->grb );
 }
 
 

@@ -13,3 +13,7 @@ is thread safe. The code built up around this was a PITA to write and
 has so far put me off from transferring the idea to all the other (many 
 and varied) data structures in the program.
 
+
+see also: grep FIXME *.c
+
+

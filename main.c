@@ -13,33 +13,6 @@
 
 int main(int argc, char** argv)
 {
-/*
-    rt_evlist* rtl = rt_evlist_new(0, RT_EVLIST_SORT_POS);
-
-    int i;
-
-    event ev;
-    event* ev_p;
-
-    for (i = 0; i < 15; ++i)
-    {
-        ev.pos = rand() % 16;
-        ev_p = rt_evlist_event_add(rtl, &ev);
-        if (!ev_p)
-            WARNING("poo pah\n");
-        ev_p = rt_evlist_event_add(rtl, &ev);
-        if (!ev_p)
-            WARNING("poo pah\n");
-    }
-
-    rt_evlist_read_reset(rtl);
-
-    while(rt_evlist_read_and_remove_event(rtl, &ev))
-        event_dump(&ev);
-
-    rt_evlist_free(rtl);
-
-*/
     boxyseq*    bs;
     jackdata*   jd;
     evbuf*      evb;
@@ -62,7 +35,7 @@ int main(int argc, char** argv)
     pattern* pat1;
     pattern* pat2;
 
-    plist* pl;
+    evlist* el;
     event* ev;
 
     int count, steps, i, n;
@@ -73,55 +46,41 @@ int main(int argc, char** argv)
     patslot = boxyseq_pattern_new(bs, 4, 4);
     pat1 = boxyseq_pattern(bs, patslot);
 
-    pdata_set_loop_length(pat1->pd, internal_ppqn * 4);
+    pattern_set_loop_length(pat1, internal_ppqn * 4);
 
-    pat1->pd->width_min = 2;
-    pat1->pd->width_max = 8;
-    pat1->pd->height_min = 2;
-    pat1->pd->height_max = 8;
+    pattern_set_event_width_range(pat1, 8, 12);
+    pattern_set_event_height_range(pat1, 8, 12);
 
-    pl = pat1->pl;
+    el = pattern_event_list(pat1);
 
     count = steps = 16;
     st = (internal_ppqn * 4) / steps;
-    dur = st * 12.25;
-    rel = st * 33.75;
+    dur = st * 4;
+    rel = st * 4;
     t = 0;
-
-/*  DO NOT test infinite durations by adding an event with infinite
-    duration (ie ev.note_dur = -1) to pattern - the pattern is not
-    designed (nor will be altered) to handle them in this way.
-*/
 
     for (i = 0; i < count; ++i, t += st)
     {
-        ev = lnode_data(plist_add_event_new(pl, t));
+        ev = lnode_data(evlist_add_event_new(el, t));
         ev->note_dur = st + rand() % dur;
         ev->box_release = st + rand() % rel;
 
         if (!((i + 1) % 4))
-        {
             EVENT_SET_TYPE_BLOCK( ev );
-            ev->box_release /= 4;
-            ev->note_dur /= 4;
-        }
-/*
-        if ((i % 5) == 0)
+        else
         {
-            ev = lnode_data(plist_add_event_new(pl, t));
-            ev->note_dur = dur;
-            ev->box_release = rel;
-            ev = lnode_data(plist_add_event_new(pl, t));
-            ev->note_dur = dur;
-            ev->box_release = rel;
+            ev = lnode_data(evlist_add_event_new(el,
+                                (i % 5 == 0) ? t + st / 2 : t));
+            ev->note_dur = st + rand() % dur;
+            ev->box_release = st + rand() % rel;
         }
-*/
+
+
     }
 
     grbound* grb1;
 
-
-    grboundslot = boxyseq_grbound_new(bs, 40, 40, 64, 64);
+    grboundslot = boxyseq_grbound_new(bs, 50, 50, 32, 32);
     grb1 = boxyseq_grbound(bs, grboundslot);
 
 
@@ -156,7 +115,7 @@ int main(int argc, char** argv)
     grbound_scale_key_set(grb1, note_number("A#"));
 
 
-    pattern_prtdata_update(pat1);
+    pattern_update_rt_data(pat1);
 
 /*******************************************
  *******************************************
@@ -168,14 +127,18 @@ int main(int argc, char** argv)
 #ifdef NO_REAL_TIME
 st = 128;
 t = 0;
+_Bool repositioned = 1;
 
-for (i = 0; i <  pat1->pd->loop_length * 8; i += st)
+bbt_t looplen = pattern_loop_length(pat1);
+
+for (i = 0; i <  looplen * 8; i += st)
 {
-    if ((i % pat1->pd->loop_length) < st)
+    if ((i % looplen ) < st)
         MESSAGE("-----------ph:%d nph:%d looplen:%d\n",
-                i, i + st, pat1->pd->loop_length);
+                i, i + st, looplen );
 
-    boxyseq_rt_play(bs, st, i,   i + st);
+    boxyseq_rt_play(bs, st, repositioned, i,   i + st);
+    repositioned = 0;
 }
 #endif
 

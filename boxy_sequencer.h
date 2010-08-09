@@ -29,8 +29,8 @@ jackdata*   boxyseq_jackdata(boxyseq*);
 */
 
 int             boxyseq_pattern_new(boxyseq*,
-                                bbt_t beats_per_bar,
-                                bbt_t beat_type    );
+                                float beats_per_bar,
+                                float beat_type    );
 
 void            boxyseq_pattern_free(boxyseq*,  int slot);
 pattern*        boxyseq_pattern_dup(boxyseq*,   int dest_slot,
@@ -71,6 +71,7 @@ void            boxyseq_rt_init_jack_cycle(boxyseq*, jack_nframes_t);
 
 void            boxyseq_rt_play(boxyseq*,
                                 jack_nframes_t,
+                                _Bool repositioned,
                                 bbt_t ph, bbt_t nph);
 
 
@@ -82,6 +83,6 @@ void            boxyseq_rt_clear(boxyseq*, jack_nframes_t nframes);
 void            boxyseq_ui_trigger_clear(boxyseq*);
 
 int             boxyseq_ui_collect_events(boxyseq*);
-plist*          boxyseq_ui_event_list(boxyseq*);
+evlist*         boxyseq_ui_event_list(boxyseq*);
 
 #endif

@@ -382,12 +382,19 @@ static void jd_rt_poll(jackdata* jd, jack_nframes_t nframes)
 
     if (jd->is_master)
         jd->tick = pos.tick;
-    else    /* FIXME: with ardour as timebase master this frequently */
-        jd->tick = jd->ftick = pos.tick * jd->tick_ratio;
-            /* drops 2 ticks. See also: jack_midi.c:jmidi_process. */
+    else
+    {
+        /* FIXME: with ardour as timebase master this frequently */
+        jd->ftick = pos.tick * jd->tick_ratio;
+        jd->tick = (bbt_t)jd->ftick;
+        /* drops 2 ticks. See also: jack_midi.c:jmidi_process. */
+    }
 
-    jd->ticks = (pos.bar * pos.beats_per_bar + pos.beat) *
-                    internal_ppqn + jd->tick;
+    jd->ticks = ((float)pos.bar * pos.beats_per_bar + (float)pos.beat)
+                    *
+                 (float)internal_ppqn
+                    +
+                 (float)jd->tick;
 }
 
 
@@ -423,13 +430,14 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
         boxyseq_rt_clear(jd->bs, nframes);
     }
 
-    jd->was_stopped = 0;
-
     ph =  (bbt_t)(0 + jd->ticks);
     nph = (bbt_t)(0 + trunc(ph + jd->ticks_per_period));
 
     if (ph && ph == jd->oph)
+    {
+        jd->was_stopped = 0;
         return 0;
+    }
 
     if (ph != jd->onph && !repositioned)
     {
@@ -445,9 +453,11 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
                     (long unsigned int)(ph - jd->onph));
     }
 
+    jd->was_stopped = 0;
+
     jd->onph = nph;
 
-    boxyseq_rt_play(jd->bs, nframes, ph, nph);
+    boxyseq_rt_play(jd->bs, nframes, repositioned, ph, nph);
 
     jd->oph = ph;
 

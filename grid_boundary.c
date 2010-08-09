@@ -8,6 +8,16 @@
 #include <stdlib.h>
 
 
+typedef struct rt_grid_boundary
+{
+    int flags;
+    int channel;
+    int scale_bin;
+    int scale_key;
+
+} rtbound;
+
+
 struct grid_boundary
 {
     int         flags;
@@ -19,6 +29,11 @@ struct grid_boundary
     fsbound*    bound;
 
     moport*     midiout;
+
+    struct grid_boundary* volatile  grb;
+    struct grid_boundary* volatile  grb_in_use;
+    struct grid_boundary*           grb_old;
+    struct grid_boundary*           grb_free;
 };
 
 
@@ -160,7 +175,7 @@ void grbound_rt_sort(grbound* grb, evport* port)
 
     while (evport_read_event(grb->evinput, &ev))
     {
-        ev.misc = grb;
+        ev.grb = grb;
         EVENT_CHANNEL_SET(&ev, grb->channel);
         if (!evport_write_event(port, &ev))
             WARNING("failed to write sort to port\n");
@@ -286,11 +301,10 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 
     while(evport_read_and_remove_event(gr->global_in_port, &ev))
     {
-        grbound* grb = (grbound*)ev.misc;
 
         if (freespace_find(     gr->fs,
-                                grb->bound,
-                                grb->flags,
+                                ev.grb->bound,
+                                ev.grb->flags,
                                 ev.box_width,
                                 ev.box_height,
                                 &ev.box_x,
@@ -298,20 +312,20 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
         {
             int pitch = ev.note_pitch = -1;
 
-            ev.note_velocity = (grb->flags & FSPLACE_TOP_TO_BOTTOM)
+            ev.note_velocity = (ev.grb->flags & FSPLACE_TOP_TO_BOTTOM)
                                     ? ev.box_y
                                     : ev.box_y + ev.box_height;
 
             if (EVENT_IS_TYPE_NOTE( &ev ))
             {
                 ev.note_pitch =
-                    pitch = moport_start_event( grb->midiout, &ev,
-                                                grb->flags,
-                                                grb->scale_bin,
-                                                grb->scale_key );
+                    pitch = moport_start_event( ev.grb->midiout, &ev,
+                                                ev.grb->flags,
+                                                ev.grb->scale_bin,
+                                                ev.grb->scale_key );
                 if (pitch == -1)
                 {
-                    if (!(grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
+                    if (!(ev.grb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
                         continue;
 
                     EVENT_SET_TYPE_BLOCKED_NOTE( &ev );

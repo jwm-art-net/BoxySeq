@@ -1,93 +1,459 @@
 #include "pattern.h"
 
+
 #include "debug.h"
+#include "event_list.h"
+#include "real_time_data.h"
 
-#include <glib.h>   /* for random number using mersene twister */
 
+#include <glib.h>   /* mersene twister RNG */
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
 
-struct plist
+
+#include "include/event_pattern.h"
+
+
+static int pattern_id = 0;
+
+
+static void*    pattern_rtdata_get_cb(const void* pat);
+static void     pattern_rtdata_free_cb(void* pat);
+
+
+pattern* pattern_new(void)
 {
-    llist* ll;
+    pattern* pat = malloc(sizeof(*pat));
 
-    pattern* pat;
-};
+    if (!pat)
+        goto fail0;
 
+    pat->name = name_and_number("pattern", ++pattern_id);
 
-struct prtdata
-{
-    _Bool  playing;    /* states */
-    _Bool  triggered;
+    if (!(pat->name))
+        goto fail1;
 
-    GRand* rnd;
+    pat->events = evlist_new();
 
-    bbt_t  start_tick; /* processing */
-    bbt_t  end_tick;
-    bbt_t  index;
+    if (!pat->events)
+        goto fail2;
 
-    pdata* volatile pd;
-    pdata* volatile pd_in_use;
-    pdata*          pd_old;
-    pdata*          pd_free;
+    pat->rt = rtdata_new(pat,   pattern_rtdata_get_cb,
+                                pattern_rtdata_free_cb );
+    if (!pat->rt)
+        goto fail3;
 
-    event* volatile ev_arr;
-    event* volatile ev_arr_in_use;
-    event*          ev_arr_old;
-    event*          ev_arr_free;
+    pattern_set_loop_length_bbt(pat, 1, 0 ,0);
 
-    evport* evoutput;
-};
+    pattern_set_meter(pat, 4, 4);
+    pattern_set_event_width_range(pat, 2, 8);
+    pattern_set_event_height_range(pat, 2, 8);
+    pattern_set_random_seed_type(pat, SEED_TIME_SYS);
 
+    pat->evout = 0;
 
-/* ---------------------------------------------------------------------
- * * * * * * PDATA * * * * */
+    return pat;
 
-static pdata*  pdata_pri_new(void);
-
-
-pdata* pdata_dup(const pdata* pd)
-{
-    pdata* newpd = malloc(sizeof(*pd));
-
-    if (!newpd)
-    {
-        WARNING("failed to duplicate pdata:%p\n",
-                (const void*)pd);
-        return 0;
-    }
-
-    return memcpy(newpd, pd, sizeof(*pd));
+fail3:  evlist_free(pat->events);
+fail2:  free(pat->name);
+fail1:  free(pat);
+fail0:  WARNING("out of memory for new pattern\n");
+    return 0;
 }
 
 
-void pdata_set_meter(pdata* pd, bbt_t beats_per_bar, bbt_t beat_type)
+pattern* pattern_dup(const pattern* pat)
+{
+    pattern* dest = pattern_new();
+
+    if (!dest)
+        goto fail0;
+
+    dest->events = evlist_dup(pat->events);
+
+    if (!dest->events)
+        goto fail1;
+
+    dest->rt = rtdata_new(pat,  pattern_rtdata_get_cb,
+                                pattern_rtdata_free_cb );
+    if (!pat->rt)
+        goto fail2;
+
+    dest->loop_length =     pat->loop_length;
+
+    dest->width_min =       pat->width_min;
+    dest->width_max =       pat->width_max;
+
+    dest->height_min =      pat->height_min;
+    dest->height_max =      pat->height_max;
+
+    dest->beats_per_bar =   pat->beats_per_bar;
+    dest->beat_type =       pat->beat_type;
+    dest->beat_ratio =      pat->beat_ratio;
+
+    dest->seedtype =        pat->seedtype;
+    dest->seed =            pat->seed;
+
+    dest->evout =           pat->evout;
+
+    return dest;
+
+fail2:  evlist_free(pat->events);
+fail1:  free(dest);
+fail0:
+    return 0;
+}
+
+
+void pattern_free(pattern* pat)
+{
+    if (!pat)
+        return;
+
+    rtdata_free(pat->rt);
+    evlist_free(pat->events);
+    free(pat->name);
+    free(pat);
+}
+
+
+evlist* pattern_event_list(pattern* pat)
+{
+    return pat->events;
+}
+
+
+void pattern_set_meter(pattern* pat, float beats_per_bar, float beat_type)
 {
     if (beats_per_bar <= 1 && beat_type <= 1)
         return;
 
-    pd->beats_per_bar = beats_per_bar;
-    pd->beat_type =     beat_type;
-    pd->beat_ratio =    4.0 / beat_type;
+    pat->beats_per_bar = beats_per_bar;
+    pat->beat_type =     beat_type;
+    pat->beat_ratio =    4.0 / beat_type;
 }
 
 
-void pdata_set_loop_length(pdata* pd, bbt_t ticks)
+void pattern_set_loop_length(pattern* pat, bbt_t ticks)
 {
-    pd->loop_length = ticks;
+    pat->loop_length = (ticks > 0 ? ticks : 0);
 }
 
 
-void pdata_get_event_bbt(const pdata* pd,
-                         const event* ev,
-                         bbtpos* pos,
-                         bbtpos* dur         )
+void pattern_set_loop_length_bbt(pattern* pat,  bbt_t bar,
+                                                bbt_t beat,
+                                                bbt_t ticks)
 {
-    bbt_t ticks_per_beat = (bbt_t)(pd->beat_ratio * internal_ppqn);
-    bbt_t ticks_per_bar =  pd->beats_per_bar * ticks_per_beat;
+    pat->loop_length =
+        pattern_duration_bbt_to_ticks(pat, bar, beat, ticks);
+}
+
+
+bbt_t pattern_loop_length(pattern* pat)
+{
+    return pat->loop_length;
+}
+
+
+void pattern_set_event_width_range( pattern* pat,
+                                    int width_min,
+                                    int width_max  )
+{
+    if (!(width_min < width_max))
+        return;
+
+    pat->width_min = width_min;
+    pat->width_max = width_max;
+}
+
+
+void pattern_set_event_height_range(pattern* pat,
+                                    int height_min,
+                                    int height_max  )
+{
+    if (!(height_min < height_max))
+        return;
+
+    pat->height_min = height_min;
+    pat->height_max = height_max;
+}
+
+
+void pattern_set_random_seed_type(pattern* pat, seed_type seedtype)
+{
+    pat->seedtype = seedtype;
+}
+
+
+void pattern_set_random_seed(pattern* pat, uint32_t seed)
+{
+    pat->seed = seed;
+}
+
+
+void pattern_dump(const pattern* pat)
+{
+    MESSAGE("pattern: %p\n", (const void*)pat);
+
+    if (!pat)
+        return;
+
+    MESSAGE("\tloop length: %d\n"
+            "\twidth_min: %d\twidth_max: %d\n"
+            "\tbeats_per_bar: %d\n\tbeat_type: %d\n"
+            "\tbeat_ratio: %f\n",
+            pat->loop_length,
+            pat->width_min,     pat->width_max,
+            pat->height_min,    pat->height_max,
+            pat->beats_per_bar, pat->beat_type,
+            pat->beat_ratio );
+
+    evlist_dump_events(pat->events);
+}
+
+/*
+void pattern_trigger(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
+{
+    prt->triggered =    1;
+    prt->start_tick =   start_tick;
+    prt->end_tick =     end_tick;
+    prt->index =        0;
+
+    switch(prt->pd->seedtype)
+    {
+    case PDSEED_TIME_SYS:
+        g_rand_set_seed(prt->rnd, (guint32)time(0));
+        break;
+
+    case PDSEED_TIME_TICKS:
+        g_rand_set_seed(prt->rnd, (guint32)start_tick);
+        break;
+
+    case PDSEED_USER:
+        g_rand_set_seed(prt->rnd, prt->pd->seed);
+        break;
+
+    default:
+        WARNING("unknown seedtype for pattern\n");
+        g_rand_set_seed(prt->rnd, 1);
+    }
+}
+*/
+
+
+void pattern_rt_play(pattern* pat,  _Bool repositioned,
+                                    bbt_t ph,
+                                    bbt_t nph)
+{
+    rt_pattern* rtpat;
+    event*      events;
+
+    bbt_t       tick;
+    bbt_t       offset;
+    bbt_t       nextoffset;
+    bbt_t       evpos;
+    int         patix;
+    int         count;
+    event*      ev;
+    event*      evlast;
+    _Bool       play_event;
+
+    rtpat = rtdata_data(pat->rt);
+    events = rtpat->events;
+
+    tick = ph % rtpat->loop_length;
+
+    patix = ph / rtpat->loop_length;
+
+    offset = rtpat->start_tick + (rtpat->loop_length * patix);
+    nextoffset = offset + rtpat->loop_length;
+
+    count = 1;
+
+    rtpat->index = tick % rtpat->loop_length;
+    rtpat->playing = 1;
+
+    if (repositioned || !rtpat->evlast)
+        ev = rtpat->events;
+    else
+        ev = rtpat->evlast;
+
+
+    while (ev->pos > -1)
+    {
+        play_event = 0;
+        evpos = ev->pos + offset;
+
+        if (evpos >= ph && evpos < nph)
+            play_event = 1;
+        else
+        {
+            evpos = ev->pos + nextoffset;
+            if (evpos >= ph && evpos < nph)
+                play_event = 1;
+        }
+
+        if (play_event) /* store/restore to not modify pattern */
+        {
+            bbt_t opos = ev->pos;
+            bbt_t odur = ev->note_dur;
+            bbt_t orel = ev->box_release;
+
+            /* FIXME:   weren't we going to have events where the
+                        dimensions were specified rather than random?
+            */
+
+            ev->box_width = g_rand_int_range(   rtpat->rnd,
+                                                rtpat->width_min,
+                                                rtpat->width_max);
+
+            ev->box_height = g_rand_int_range(  rtpat->rnd,
+                                                rtpat->height_min,
+                                                rtpat->height_max);
+            ev->pos = evpos;
+            ev->note_dur += evpos;
+            ev->box_release += ev->note_dur;
+
+            if (!evport_write_event(rtpat->evout, ev))
+                WARNING("dropped event\n");
+
+            ev->pos = opos;
+            ev->note_dur = odur;
+            ev->box_release = orel;
+            evlast = ev;
+        }
+        ++ev;
+    }
+    rtpat->evlast = (ev->pos > -1) ? evlast : 0;
+}
+
+
+void pattern_rt_stop(pattern* pat)
+{
+    rt_pattern* rtpat = rtdata_data(pat->rt);
+
+    rtpat->playing =      0;
+    rtpat->start_tick =   0;
+    rtpat->end_tick =     0;
+    rtpat->index =        0;
+}
+
+
+static rt_pattern* rt_pattern_new(void)
+{
+    rt_pattern* rtpat = malloc(sizeof(*rtpat));
+
+    MESSAGE("new rt_pattern...\n");
+
+    if (!rtpat)
+        goto fail0;
+
+    rtpat->rnd = g_rand_new();
+
+    if (!rtpat->rnd)
+        goto fail1;
+
+    rtpat->playing = 0;
+    rtpat->triggered = 0;
+
+    rtpat->seedtype = SEED_TIME_SYS;
+
+    rtpat->start_tick = rtpat->end_tick = 0;
+    rtpat->index = rtpat->loop_length = 0;
+
+    rtpat->width_min = rtpat->width_max = 0;
+    rtpat->height_min = rtpat->height_max = 0;
+
+    rtpat->events = 0;
+    rtpat->evlast = 0;
+    rtpat->evout = 0;
+
+    return rtpat;
+
+fail1:  free(rtpat);
+fail0:  MESSAGE("out of memory for rt_pattern\n");
+    return 0;
+}
+
+
+static void rt_pattern_free(rt_pattern* rtpat)
+{
+    if (!rtpat)
+        return;
+
+    g_rand_free(rtpat->rnd);
+    free(rtpat->events);
+    free(rtpat);
+}
+
+
+static void* pattern_rtdata_get_cb(const void* data)
+{
+    const pattern* pat = data;
+    rt_pattern* rtpat = rt_pattern_new();
+
+    MESSAGE("getting rt_pattern from callback\n");
+
+    if (!rtpat)
+        goto fail0;
+
+    rtpat->events = evlist_to_array(pat->events);
+
+    if (!rtpat->events)
+        goto fail1;
+
+    rtpat->loop_length =    pat->loop_length;
+
+    rtpat->width_min =      pat->width_min;
+    rtpat->width_max =      pat->width_max;
+
+    rtpat->height_min =     pat->height_min;
+    rtpat->height_max =     pat->height_max;
+
+    rtpat->seedtype =       pat->seedtype;
+    rtpat->seed =           pat->seed;
+
+    rtpat->evout =          pat->evout;
+
+    return rtpat;
+
+fail1:  free(rtpat);
+fail0:  WARNING("failed to get pattern's real time data\n");
+    return 0;
+}
+
+
+static void pattern_rtdata_free_cb(void* data)
+{
+    rt_pattern_free(data);
+}
+
+
+void pattern_set_output_port(pattern* pat, evport* port)
+{
+    pat->evout = port;
+}
+
+
+void pattern_update_rt_data(const pattern* pat)
+{
+    rtdata_update(pat->rt);
+}
+
+
+void pattern_event_bbt( const pattern* pat,
+                        const event* ev,
+                        bbtpos* pos,
+                        bbtpos* dur         )
+{
+    bbt_t ticks_per_beat;
+    bbt_t ticks_per_bar;
     bbt_t tick = 0;
+
+    ticks_per_beat = (bbt_t)(pat->beat_ratio * (float)internal_ppqn);
+    ticks_per_bar = (bbt_t)(pat->beats_per_bar * (float)ticks_per_beat);
 
     if (pos)
     {
@@ -113,733 +479,14 @@ void pdata_get_event_bbt(const pdata* pd,
 }
 
 
-bbt_t pdata_duration_bbt_to_ticks(const pdata* pd,
+bbt_t pattern_duration_bbt_to_ticks(const pattern* pat,
                                         bbt_t bar,
                                         bbt_t beat,
                                         bbt_t tick      )
 {
-    bbt_t ticks_per_beat = (bbt_t)(pd->beat_ratio * internal_ppqn);
-    return (ticks_per_beat * pd->beats_per_bar * bar
-            + ticks_per_beat * beat + tick);
-}
+    bbt_t ticks_per_beat = (bbt_t)(pat->beat_ratio * internal_ppqn);
 
-
-void pdata_dump(const pdata* pd)
-{
-    MESSAGE("pdata: %p\n", (const void*)pd);
-
-    if (!pd)
-        return;
-
-    MESSAGE("\tbar_trig: %d\n\tloop length: %d\n"
-            "\twidth_min: %d\twidth_max: %d\n"
-            "\tbeats_per_bar: %d\n\tbeat_type: %d\n"
-            "\tbeat_ratio: %f\n",
-            pd->bar_trig,       pd->loop_length,
-            pd->width_min,      pd->width_max,
-            pd->height_min,     pd->height_max,
-            pd->beats_per_bar,  pd->beat_type,
-            pd->beat_ratio);
-}
-
-
-static pdata* pdata_pri_new(void)
-{
-    pdata* pd = malloc(sizeof(*pd));
-
-    if (!pd)
-    {
-        MESSAGE("out of memory for pdata\n");
-        return 0;
-    }
-
-    memset(pd, 0, sizeof(*pd));
-
-    pd->width_min = pd->height_min = 4;
-    pd->width_max = pd->height_max = 16;
-
-    return pd;
-}
-
-
-/* ---------------------------------------------------------------------
- * * * * * * PLIST * * * * */
-
-static bbt_t        plist_default_duration = 0;
-static signed char  plist_default_width = 0;
-static signed char  plist_default_height = 0;
-
-
-plist* plist_new(void)
-{
-    plist* pl = malloc(sizeof(*pl));
-
-    if (!pl)
-    {
-        WARNING("out of memory for new plist\n");
-        return 0;
-    }
-
-    pl->ll = llist_new( sizeof(event),
-                        free,
-                        llist_datacb_dup,
-                        memcpy,
-                        event_get_cmp_cb(EV_TIME),
-                        event_get_str_cb()  );
-
-    if (!pl->ll)
-    {
-        free(pl);
-        return 0;
-    }
-
-    pl->pat = 0;
-
-    return pl;
-}
-
-
-static event* plist_pri_to_array(const plist* pl)
-{
-    lnode* ln = llist_tail(pl->ll);
-
-    ev_sel_time sel = { .start = 0, .end = 1 };
-
-    if (ln)
-        sel.end = ((event*)lnode_data(ln))->pos + 1;
-
-    event terminator;
-    event_init(&terminator);
-
-    event* ev_arr = llist_select_to_array(  pl->ll,
-                                            event_get_sel_cb(EV_TIME),
-                                            &sel,
-                                            &terminator);
-    return ev_arr;
-}
-
-
-static void plist_pri_dump_cb(const void* data)
-{
-    event_dump(data);
-}
-
-
-size_t plist_event_count(const plist* pl)
-{
-    return llist_lnode_count(pl->ll);
-}
-
-
-lnode* plist_head(const plist* pl)
-{
-    return llist_head(pl->ll);
-}
-
-
-lnode* plist_tail(const plist* pl)
-{
-    return llist_tail(pl->ll);
-}
-
-
-plist*  plist_dup(const plist* pl)
-{
-    plist* newpl = plist_new();
-
-    if (!newpl)
-        return 0;
-
-    if (!(newpl->ll = llist_dup(pl->ll)))
-    {
-        free(newpl);
-        return 0;
-    }
-
-    return newpl;
-}
-
-
-void plist_free(plist* pl)
-{
-    if (!pl)
-        return;
-    llist_free(pl->ll);
-    free(pl);
-}
-
-
-void plist_set_default_duration(bbt_t d)
-{
-    if (d > 0)
-        plist_default_duration = d;
-}
-
-
-void plist_set_default_width(signed char w)
-{
-    if (w > -1)
-        plist_default_width = w;
-}
-
-
-void plist_set_default_height(signed char h)
-{
-    if (h > -1)
-        plist_default_height = h;
-}
-
-
-lnode* plist_add_event(plist* pl, event* ev)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("adding event to plist %p position %d\n",
-            (void*)pl, ev->pos);
-    #endif
-
-    return llist_add_data(pl->ll, ev);
-}
-
-
-lnode* plist_add_event_new(plist* pl, bbt_t start_tick)
-{
-    event* ev = event_new();
-
-    if (!ev)
-        return 0;
-
-    EVENT_SET_TYPE_NOTE( ev );
-
-    ev->pos =  start_tick;
-    ev->note_dur =  plist_default_duration;
-
-    ev->box_release =   0;
-    ev->box_width =     plist_default_width;
-    ev->box_height =    plist_default_height;
-
-    #ifdef PATTERN_DEBUG
-    MESSAGE("pos:%d dur:%d w:%d h:%d\n",ev->pos,
-                                        ev->note_dur,
-                                        ev->box_width,
-                                        ev->box_height  );
-                                        
-    #endif
-
-    lnode* ln = plist_add_event(pl, ev);
-
-    if (!ln)
-        free(ev);
-
-    return ln;
-}
-
-
-lnode* plist_add_event_copy(plist* pl, event* ev)
-{
-    event* evcopy = event_new();
-
-    if (!ev)
-        return 0;
-
-    event_copy(evcopy, ev);
-
-    lnode* ln = plist_add_event(pl, evcopy);
-
-    if (!ln)
-        free(evcopy);
-
-    return ln;
-}
-
-lnode* plist_unlink(plist* pl, lnode* ln)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("unlinking lnode:%p from plist:%p\n",
-            (void*)pl, (void*)ln);
-    #endif
-
-    return llist_unlink(pl->ll, ln);
-}
-
-void plist_unlink_free(plist* pl, lnode* ln)
-{
-    llist_unlink_free(pl->ll, ln);
-}
-
-
-lnode* plist_select(const plist* pl, bbt_t start_tick, bbt_t end_tick)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("selecting within plist:%p positions %d - %d\n",
-            (const void*)pl, start_tick, end_tick);
-
-    if (start_tick >= end_tick)
-    {
-        WARNING("selection bounds error\n");
-        return 0;
-    }
-    #endif
-
-    ev_sel_time sel = { .start = start_tick, .end = end_tick };
-
-    return llist_select(pl->ll, event_get_sel_cb(EV_TIME), &sel);
-}
-
-
-lnode* plist_invert_selection(const plist* pl)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("inverting selection within plist:%p\n", (const void*)pl);
-    #endif
-
-    return llist_select_invert(pl->ll);
-}
-
-
-lnode* plist_select_all(const plist* pl, _Bool sel)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("select all within plist:%p\n", (const void*)pl);
-    #endif
-
-    return llist_select_all(pl->ll, sel);
-}
-
-
-plist* plist_cut(plist* pl, _Bool sel)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("cutting from plist:%p select:%d\n", (const void*)pl, sel);
-    #endif
-
-    bbt_t mod = -1;
-
-    llist* newll = llist_cut(pl->ll,
-                                sel, event_get_mod_cb(EV_TIME), &mod);
-
-    if (!newll)
-        return 0;
-
-    plist* newpl = malloc(sizeof(*newpl));
-
-    if (!newpl)
-    {
-        MESSAGE("out of memory creating plist\n");
-        return 0;
-    }
-
-    newpl->ll = newll;
-    newpl->pat = 0;
-
-    return newpl;
-}
-
-
-plist* plist_copy(const plist* pl, _Bool sel)
-{
-    bbt_t mod = -1;
-
-    #ifdef PATTERN_DEBUG
-    MESSAGE("copying from plist:%p select:%d\n", (const void*)pl, sel);
-    MESSAGE("mod:%p %d\n", &mod, mod);
-    #endif
-
-    llist* newll = llist_copy(pl->ll,
-                                 sel, event_get_mod_cb(EV_TIME), &mod);
-
-    if (!newll)
-        return 0;
-
-    plist* newpl = malloc(sizeof(*newpl));
-
-    if (!newpl)
-    {
-        MESSAGE("out of memory creating plist\n");
-        return 0;
-    }
-
-    newpl->ll = newll;
-    newpl->pat = 0;
-
-    return newpl;
-}
-
-
-void plist_delete(plist* pl, _Bool sel)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("deleting within plist:%p select:%d\n", (const void*)pl, sel);
-    #endif
-
-    llist_delete(pl->ll, sel);
-}
-
-
-void plist_paste(plist* dest, float offset, const plist* src)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("inserting plist:%p into plist:%p\n",
-            (void*)dest, (const void*)src);
-    #endif
-
-    llist_paste(dest->ll,
-                src->ll,
-                event_get_edit_cb(EV_POS_ADD),
-                &offset );
-}
-
-
-void plist_edit(plist* pl, evcb_type ecb, float val, _Bool sel)
-{
-    #ifdef PATTERN_DEBUG
-    MESSAGE("editing plist:%p cb_type:%d val:%f sel:%d\n",
-            (void*)pl, ecb, val, sel);
-    #endif
-
-    datacb_edit cb = event_get_edit_cb(ecb);
-
-    if (!cb)
-        return;
-
-    llist_edit(pl->ll, cb, &val, sel);
-
-    if ((ecb == EV_POS_ADD || ecb == EV_POS_MUL) && sel)
-        llist_sort(pl->ll);
-}
-
-
-void plist_dump(const plist* pl)
-{
-    MESSAGE("plist:%p\n", pl);
-    if (!pl)
-        return;
-    MESSAGE("%d events:\n", llist_lnode_count(pl->ll));
-    llist_dump(pl->ll, 0);
-}
-
-
-void plist_dump_events(const plist* pl)
-{
-    MESSAGE("plist:%p\n", pl);
-    if (!pl)
-        return;
-    MESSAGE("%d events:\n", llist_lnode_count(pl->ll));
-    llist_dump(pl->ll, plist_pri_dump_cb);
-}
-
-
-/* ---------------------------------------------------------------------
- * * * * * THE RTDATA STRUCT IS THE ONLY DATA THE RT THREAD * * * * *
- * * * * * SHOULD OPERATE ON. THE RTDATA FUNCTIONS ARE THE  * * * * *
- * * * * * ONLY FUNCTIONS THE RT THREAD SHOULD CALL.        * * * * */
-
-static prtdata*  prtdata_pri_new(void);
-static void     prtdata_pri_free(prtdata*);
-
-
-void prtdata_trigger(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
-{
-    prt->triggered =    1;
-    prt->start_tick =   start_tick;
-    prt->end_tick =     end_tick;
-    prt->index =        0;
-
-    switch(prt->pd->seedtype)
-    {
-    case PDSEED_TIME_SYS:
-        g_rand_set_seed(prt->rnd, (guint32)time(0));
-        break;
-
-    case PDSEED_TIME_TICKS:
-        g_rand_set_seed(prt->rnd, (guint32)start_tick);
-        break;
-
-    case PDSEED_USER:
-        g_rand_set_seed(prt->rnd, prt->pd->seed);
-        break;
-
-    default:
-        WARNING("unknown seedtype for pattern\n");
-        g_rand_set_seed(prt->rnd, 1);
-    }
-
-}
-
-
-void prtdata_play(prtdata* prt, bbt_t ph, bbt_t nph)
-{
-    pdata* pd =         prt->pd;
-    event* ev_arr =     prt->ev_arr;
-
-    if (!pd || !ev_arr)
-        return;
-
-    prt->pd_in_use =    pd;
-    prt->ev_arr_in_use =ev_arr;
-
-/*  this was from when the pattern was 'triggered':
-    bbt_t   tick =       ph - prt->start_tick;
-    instead of just infinitely looping
-*/
-
-    bbt_t   tick = ph % pd->loop_length;
-
-    int     patix = ph / pd->loop_length;
-
-    bbt_t   offset = prt->start_tick + (pd->loop_length * patix);
-    bbt_t   nextoffset = offset + pd->loop_length;
-/*
-
-    printf("ph:%8.0lf nph:%8.0lf tick:%6.0lf patix:%4.0lf ",
-            (double)ph, (double)nph, (double)tick, (double)patix);
-
-    printf("offset:%8.0lf nextoffset:%8.0lf\n",
-            (double)offset, (double)nextoffset);
-*/
-    int count = 1;
-
-    prt->index = tick % pd->loop_length;
-
-    prt->playing = 1;
-
-    event* ev = ev_arr;
-    event* ev_out;
-
-    event tmp;
-
-    int n;
-    bbt_t evpos;
-
-    _Bool play_event;
-
-    while (ev->pos > -1)
-    {
-        play_event = 0;
-        evpos = ev->pos + offset;
-
-        if (evpos >= ph && evpos < nph)
-            play_event = 1;
-        else
-        {
-            evpos = ev->pos + nextoffset;
-            if (evpos >= ph && evpos < nph)
-                play_event = 1;
-        }
-
-        if (play_event) /* store/restore to not modify pattern */
-        {
-            bbt_t opos = ev->pos;
-            bbt_t odur = ev->note_dur;
-            bbt_t orel = ev->box_release;
-
-            ev->box_width = g_rand_int_range(   prt->rnd,
-                                                pd->width_min,
-                                                pd->width_max  );
-
-            ev->box_height = g_rand_int_range(  prt->rnd,
-                                                pd->height_min,
-                                                pd->height_max  );
-            ev->pos = evpos;
-            ev->note_dur += evpos;
-            ev->box_release += ev->note_dur;
-
-            if (!evport_write_event(prt->evoutput, ev))
-                WARNING("dropped event\n");
-
-            ev->pos = opos;
-            ev->note_dur = odur;
-            ev->box_release = orel;
-        }
-
-        ++ev;
-    }
-}
-
-
-void prtdata_stop(prtdata* prt)
-{
-    prt->playing =      0;
-    prt->start_tick =   0;
-    prt->end_tick =     0;
-    prt->index =        0;
-}
-
-
-static prtdata* prtdata_pri_new(void)
-{
-    prtdata* prt = malloc(sizeof(*prt));
-
-    if (!prt)
-        goto fail;
-
-    memset(prt, 0, sizeof(*prt));
-
-    prt->rnd = g_rand_new();
-
-    return prt;
-
-fail:
-    free(prt);
-    MESSAGE("out of memory for prtdata\n");
-    return 0;
-}
-
-
-static void prtdata_pri_free(prtdata* prt)
-{
-    if (!prt)
-        return;
-    free(prt->pd_free);
-    free(prt->pd_old);
-    free(prt->pd);
-    free(prt->ev_arr_free);
-    free(prt->ev_arr_old);
-    free(prt->ev_arr);
-    free(prt->rnd);
-    free(prt);
-}
-
-
-/* ---------------------------------------------------------------------
- * * * * * * PATTERN * * * * */
-
-
-pattern* default_pattern = 0;
-
-static int pattern_id = 0;
-
-
-pattern* pattern_new(void)
-{
-    pattern* pat = malloc(sizeof(*pat));
-
-    if (!pat)
-    {
-        WARNING("out of memory allocating pattern structure\n");
-        return 0;
-    }
-
-    pat->pd = pdata_pri_new();
-    pat->pl = plist_new();
-    pat->prt = prtdata_pri_new();
-
-    if (!pat->pd || !pat->pl || !pat->prt)
-    {
-        free(pat->pd);
-        free(pat->pl);
-        free(pat->prt);
-        free(pat);
-        return 0;
-    }
-
-    pat->pl->pat = pat;
-
-    pat->name = name_and_number("pattern", ++pattern_id);;
-
-    return pat;
-}
-
-
-pattern* pattern_dup(const pattern* src)
-{
-    pattern* dest = pattern_new();
-
-    if (!dest)
-    {
-        WARNING("pattern %p not duplicated\n",(const void*)src);
-        return 0;
-    }
-
-    memcpy(dest->pd, src->pd, sizeof(*src->pd));
-    plist_paste(dest->pl, 0, src->pl);
-
-    dest->pl->pat = dest;
-
-    pattern_prtdata_update(dest);
-
-    return dest;
-}
-
-
-void pattern_free(pattern* pat)
-{
-    if (!pat)
-        return;
-    free(pat->pd);
-    pat->pl->pat = 0;
-    plist_free(pat->pl);
-    prtdata_pri_free(pat->prt);
-    free(pat->name);
-    free(pat);
-}
-
-
-void pattern_dump(const pattern* pat)
-{
-    MESSAGE("pattern: %p\n\tname:%s\n", (const void*)pat, pat->name);
-    pdata_dump(pat->pd);
-    plist_dump(pat->pl);
-}
-
-
-void pattern_set_output_port(pattern* pat, evport* port)
-{
-    pat->prt->evoutput = port;
-}
-
-
-void pattern_prtdata_update(const pattern* pat)
-{
-    struct timespec req = { .tv_sec = 0, .tv_nsec = 500 };
-    struct timespec rem = { 0, 0 };
-
-    #ifdef PATTERN_DEBUG
-    MESSAGE("updating RT data for %s\n", pat->name);
-    #endif
-
-    prtdata* prt = pat->prt;
-
-    pdata* pd_free =     prt->pd_free;
-    event* ev_arr_free = prt->ev_arr_free;
-
-    pdata* pd_copy =     pdata_dup(pat->pd);
-    event* ev_arr_copy = plist_pri_to_array(pat->pl);
-
-    #ifdef PATTERN_DEBUG
-    MESSAGE("RT pnote array:\n");
-    {
-        event* ev = ev_arr_copy;
-        while(ev->pos != -1)
-        {
-            event_dump(ev);
-            ev++;
-        }
-    }
-    #endif
-
-    prt->pd_free =     prt->pd_old;
-    prt->ev_arr_free = prt->ev_arr_old;
-
-    prt->pd_old =     prt->pd;
-    prt->ev_arr_old = prt->ev_arr;
-
-    prt->pd =     pd_copy;
-    prt->ev_arr = ev_arr_copy;
-
-    /*  a (hopefully) very quick tiny little spinlock just to make
-        sure a quick sucession of updates does not free the data
-        currently in use by the RT thread
-    */
-    if (pd_free || ev_arr_free)
-    {
-        while(prt->pd_in_use == pd_free
-           || prt->ev_arr_in_use == ev_arr_free)
-        {
-            nanosleep(&req, &rem);
-        }
-
-        free(pd_free);
-        free(ev_arr_free);
-    }
+    return (bbt_t)((float)ticks_per_beat * pat->beats_per_bar * (float)bar
+            + (float)ticks_per_beat * (float)beat + (float)tick);
 }
 

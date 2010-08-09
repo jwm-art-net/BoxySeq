@@ -1,3 +1,17 @@
+2010-08-09  James Morris  <james@jwm-art.net>
+
+    * real_time_data.c (rtdata_*): new generic real time dat module.
+      this uses glib atomic functions and is a generic version of the
+      rt update process from (the old versions of) pattern.c.
+
+    * pattern.c (*): refactoring. plist moved to event_list.c
+      the data structure which specializes llist for events was previously
+      called plist and resided within pattern.c. it is not called evlist and
+      resides in event_list.c.  new code to handle the rt update process
+      using the new generic mechanism and glib atomic functions. other
+      minor maintanence jobs.
+
+
 2010-08-04  James Morris  <james@jwm-art.net>
 
     * Lots, again and again.

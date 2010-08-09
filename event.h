@@ -1,8 +1,11 @@
 #ifndef EVENT_H
 #define EVENT_H
 
+
+#include "boxyseq.h"
 #include "common.h"
 #include "datacb.h"
+
 
 /**
  * Flags pertaining to event type.
@@ -49,8 +52,7 @@ typedef struct event_
     int     box_height;
     bbt_t   box_release;    /* duration of box after note off (ticks) */
 
-    void*   misc;           /*  all fields copied by event_copy
-                                but not deep in this case...    */
+    grbound* grb;
 
 } event;
 

@@ -72,6 +72,8 @@ scale* scale_new(const char* name, const char* bstr)
     if (!string_set(&sc->name, name))
         goto fail1;
 
+    sc->bstr = 0;
+
     if (scale_set_by_binary_string(sc, bstr) < 0)
         goto fail2;
 

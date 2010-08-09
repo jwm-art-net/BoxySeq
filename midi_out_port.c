@@ -65,10 +65,8 @@ moport* moport_new(jack_client_t* client, evport_manager* portman)
 
     return mo;
 
-fail1:
-    free(mo);
-fail0:
-    WARNING("out of memory for new midi out port\n");
+fail1:  free(mo);
+fail0:  WARNING("out of memory for new midi out port\n");
     return 0;
 }
 

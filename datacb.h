@@ -108,4 +108,21 @@ typedef void    (*datacb_dump)( const void* data);
 typedef char*   (*datacb_str)(  const void* data, int level);
 
 
+/*  datacb_rtdata
+    the data structures used in boxyseq are composed of two parts,
+    the first part being a representation accessed by the user interface,
+    the second being a representation of the same data that is accessed
+    by the REAL TIME thread.
+
+    often they will differ in some way, preventing a straight copy of
+    the ui data to rt data.
+
+    this callback is to provide the rtdata* functions with a method of
+    converting from ui data to rt data.
+*/
+
+
+typedef void*   (*datacb_rtdata)(const void* data);
+
+
 #endif

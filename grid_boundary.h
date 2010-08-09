@@ -20,9 +20,6 @@ enum GRID_BOUNDARY_FLAGS
 };
 
 
-typedef struct grid_boundary grbound;
-
-
 grbound*    grbound_new(void);
 void        grbound_free(grbound*);
 
