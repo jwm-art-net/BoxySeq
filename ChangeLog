@@ -1,3 +1,9 @@
+2010-08-10  James Morris  <james@jwm-art.net>
+
+    * grid_boundary.c (grbound_*): boundary now using the real_time_data
+      update mechanism... (Check MSG displayed by boxyseq when run :-)
+
+
 2010-08-09  James Morris  <james@jwm-art.net>
 
     * real_time_data.c (rtdata_*): new generic real time dat module.

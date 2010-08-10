@@ -66,13 +66,22 @@ void* rtdata_update(rtdata* rt)
     void* ret_free = rt->ptr_free;
     void* ptr_new = rt->cb_rtdata_get(rt->data);
 
-    MESSAGE("updating rtdata... ptr_new:%p\n", ptr_new);
+    MESSAGE("updating rtdata...\n");
+
+    MESSAGE("ptr_new:%p\n", ptr_new);
 
     if (!ptr_new)
         return 0;
 
+    MESSAGE("rt->ptr_free:%p rt->ptr_old:%p...\n",
+            rt->ptr_free, rt->ptr_old);
+    MESSAGE("Updating...\n");
+
     rt->ptr_free =  rt->ptr_old;
     rt->ptr_old =   g_atomic_pointer_get(&rt->ptr);
+
+    MESSAGE("rt->ptr_free:%p rt->ptr_old:%p\n",
+            rt->ptr_free, rt->ptr_old);
 
     if (rt->ptr_free)
     {

@@ -261,6 +261,13 @@ void pattern_rt_play(pattern* pat,  _Bool repositioned,
     _Bool       play_event;
 
     rtpat = rtdata_data(pat->rt);
+
+    if (!rtpat)
+    {
+        WARNING("no pattern RT data\n");
+        return;
+    }
+
     events = rtpat->events;
 
     tick = ph % rtpat->loop_length;

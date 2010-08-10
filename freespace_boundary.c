@@ -25,6 +25,28 @@ fsbound* fsbound_new(void)
 }
 
 
+fsbound* fsbound_dup(const fsbound* fsb)
+{
+    fsbound* b = fsbound_new();
+
+    if (!b)
+        return 0;
+
+    fsbound_copy(b, fsb);
+
+    return b;
+}
+
+
+void fsbound_copy(fsbound* dest, const fsbound* src)
+{
+    dest->x = src->x;
+    dest->y = src->y;
+    dest->w = src->w;
+    dest->h = src->h;
+}
+
+
 void fsbound_free(fsbound* b)
 {
     if (b)

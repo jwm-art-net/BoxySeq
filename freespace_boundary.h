@@ -5,6 +5,8 @@ typedef struct freespace_boundary fsbound;
 
 
 fsbound*    fsbound_new(void);
+fsbound*    fsbound_dup(const fsbound*);
+void        fsbound_copy(fsbound* dest, const fsbound* src);
 void        fsbound_free(fsbound*);
 void        fsbound_init(fsbound*);
 

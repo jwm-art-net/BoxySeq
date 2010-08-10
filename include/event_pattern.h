@@ -37,9 +37,9 @@ struct event_pattern
 };
 
 
-typedef struct pattern_rt_data
+typedef struct rt_event_pattern
 {
-    bbt_t       loop_length;
+    bbt_t   loop_length;
 
     int     width_min;
     int     width_max;

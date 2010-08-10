@@ -255,6 +255,8 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
     GtkWidget* tmp;
     GtkWidget* vbox;
 
+    grbound_update_rt_data(boxyseq_grbound(bs, 0));
+
     if (*ggr_ptr)
         return;
 

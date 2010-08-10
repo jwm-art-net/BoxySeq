@@ -48,8 +48,8 @@ int main(int argc, char** argv)
 
     pattern_set_loop_length(pat1, internal_ppqn * 4);
 
-    pattern_set_event_width_range(pat1, 8, 12);
-    pattern_set_event_height_range(pat1, 8, 12);
+    pattern_set_event_width_range(pat1, 13,14);
+    pattern_set_event_height_range(pat1, 2,39);
 
     el = pattern_event_list(pat1);
 
@@ -109,13 +109,31 @@ int main(int argc, char** argv)
 
     sclist_add_default_scales(scales);
 
-    scale* sc = sclist_scale_by_name(scales, "Harmonic Minor");
+    scale* sc = sclist_scale_by_name(scales, "Major");
 
     grbound_scale_binary_set(grb1, scale_as_int(sc));
-    grbound_scale_key_set(grb1, note_number("A#"));
+    grbound_scale_key_set(grb1, note_number("C"));
 
 
     pattern_update_rt_data(pat1);
+    grbound_update_rt_data(grb1);
+
+
+    sc = sclist_scale_by_name(scales, "Natural Minor");
+    grbound_scale_binary_set(grb1, scale_as_int(sc));
+    grbound_fsbound_set(grb1, 48, 50, 32, 32);
+    grbound_scale_key_set(grb1, note_number("F#"));
+
+
+    MESSAGE("**************************************************\n");
+    MESSAGE("RESIST PRESSING THE GRID BUTTON UNTIL YOU'VE CONNECTED\n");
+    MESSAGE("BOXYSEQ AND PRESSED PLAY. TAKE NOTE OF THE SCALE AND KEY\n");
+    MESSAGE("BOXYSEQ IS PLAYING. ONCE YOU'RE ACCUSTOMED TO THIS\n");
+    MESSAGE("PRESS THE GRID BUTTON AND THE SCALE AND KEY DATA WILL BE\n");
+    MESSAGE("UPDATED TO A NEW SCALE AND KEY (which was actually set\n");
+    MESSAGE("immediately before the display of this message).\n");
+    MESSAGE("**************************************************\n");
+
 
 /*******************************************
  *******************************************

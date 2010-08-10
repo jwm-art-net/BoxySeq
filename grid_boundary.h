@@ -21,6 +21,7 @@ enum GRID_BOUNDARY_FLAGS
 
 
 grbound*    grbound_new(void);
+grbound*    grbound_dup(const grbound*);
 void        grbound_free(grbound*);
 
 int         grbound_flags(grbound*);
@@ -46,6 +47,9 @@ void        grbound_channel_set(grbound*, int);
 
 fsbound*    grbound_fsbound(grbound*);
 
+
+void        grbound_fsbound_set(grbound*, int x, int y, int w, int h);
+
 void        grbound_set_input_port(grbound*, evport*);
 
 /*  although the grbound has it's own input port, we need to place the
@@ -54,6 +58,7 @@ void        grbound_set_input_port(grbound*, evport*);
 
     this essential for the events to be processed in the correct order.
 */
+void        grbound_update_rt_data(const grbound*);
 
 void        grbound_rt_sort(grbound*, evport* output);
 
