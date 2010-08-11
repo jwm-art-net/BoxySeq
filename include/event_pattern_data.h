@@ -1,6 +1,7 @@
 #ifndef INCLUDE_EVENT_PATTERN_H
 #define INCLUDE_EVENT_PATTERN_H
 
+
 /*
 
 ******************* THIS INCLUDE IS IMPLEMENTATION ONLy. *****************

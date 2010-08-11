@@ -13,7 +13,7 @@
 #include <time.h>
 
 
-#include "include/event_pattern.h"
+#include "include/event_pattern_data.h"
 
 
 static int pattern_id = 0;

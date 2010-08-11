@@ -1,16 +1,22 @@
 #ifndef BOXY_SEQUENCER_H
 #define BOXY_SEQUENCER_H
 
+
 #include "boxyseq.h"
 #include "common.h"
+#include "event_buffer.h"
 #include "event_port.h"
 #include "freespace_state.h"
 #include "grid_boundary.h"
 #include "jack_process.h"
 #include "pattern.h"
+#include "real_time_data.h"
 
 
 #include <jack/jack.h>
+
+
+#include "include/boxy_sequencer_data.h"
 
 
 boxyseq*    boxyseq_new(int argc, char** argv);
@@ -63,6 +69,9 @@ moport*         boxyseq_moport(boxyseq*,       int slot);
 evbuf*          boxyseq_ui_note_on_buf(const boxyseq*);
 evbuf*          boxyseq_ui_note_off_buf(const boxyseq*);
 evbuf*          boxyseq_ui_unplace_buf(const boxyseq*);
+
+
+void            boxyseq_update_rt_data(const boxyseq*);
 
 /*  rt threads stuff -------->
 */

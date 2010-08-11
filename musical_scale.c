@@ -140,10 +140,24 @@ int scale_as_int(const scale* sc)
     return sc->binary;
 }
 
+
+void scale_as_rgb(const scale* sc, double* r, double* g, double* b)
+{
+    int scb = sc->binary;
+
+    *b = (double)(scb & 0xf) / 15.0;
+    scb >>= 4;
+    *g = (double)(scb & 0xf) / 15.0;
+    scb >>= 4;
+    *r = (double)(scb & 0xf) / 15.0;
+}
+
+
 const char* scale_name_set(scale* sc, const char* name)
 {
     return string_set(&sc->name, name);
 }
+
 
 int scale_set_by_binary_string(scale* sc, const char* bstr)
 {
@@ -159,6 +173,7 @@ int scale_set_by_binary_string(scale* sc, const char* bstr)
 
     return (sc->binary = n);
 }
+
 
 int scale_set_by_int(scale* sc, int n)
 {

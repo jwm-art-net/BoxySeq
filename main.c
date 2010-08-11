@@ -5,20 +5,17 @@
 #include "jack_process.h"
 #include "musical_scale.h"
 
+
 #include <stdlib.h>
-
-
-
+#include <unistd.h>
 
 
 int main(int argc, char** argv)
 {
     boxyseq*    bs;
     jackdata*   jd;
-    evbuf*      evb;
 
     int patslot;
-    int evslot;
     int grboundslot;
 
     _Bool err = -1;
@@ -33,12 +30,11 @@ int main(int argc, char** argv)
         goto quit;
 
     pattern* pat1;
-    pattern* pat2;
 
     evlist* el;
     event* ev;
 
-    int count, steps, i, n;
+    int count, steps, i;
 
     bbt_t st, dur, rel, t;
 
@@ -48,8 +44,8 @@ int main(int argc, char** argv)
 
     pattern_set_loop_length(pat1, internal_ppqn * 4);
 
-    pattern_set_event_width_range(pat1, 13,14);
-    pattern_set_event_height_range(pat1, 2,39);
+    pattern_set_event_width_range(pat1, 2,4);
+    pattern_set_event_height_range(pat1, 2,12);
 
     el = pattern_event_list(pat1);
 
@@ -114,10 +110,32 @@ int main(int argc, char** argv)
     grbound_scale_binary_set(grb1, scale_as_int(sc));
     grbound_scale_key_set(grb1, note_number("C"));
 
+    double r,g,b;
 
+    scale_as_rgb(sc, &r, &g, &b);
+
+    MESSAGE("scale %s %s as R:%0.2lf G:%0.2lf B:%0.2lf\n",
+        scale_name(sc), scale_as_binary_string(sc),
+        r, g, b);
+
+    MESSAGE("**************************************************\n");
+    MESSAGE("EVERYTHING IS SETUP BUT THE REAL TIME THREAD HAS\n");
+    MESSAGE("NOT BEEN GIVEN ANY DATA YET. I AM GOING TO SLEEP\n");
+    MESSAGE("FOR TEN SECONDS AND THEN I WILL GIVE THE REAL TIME\n");
+    MESSAGE("THE DATA IT SO LONGS FOR...\n");
+    MESSAGE("TRY AND CONNECT BOXYSEQ'S MIDI PORT TO A SOFT SYNTH\n");
+    MESSAGE("WHILE I SLEEP...\n");
+    MESSAGE("**************************************************\n");
+
+    sleep(10);
+
+    boxyseq_update_rt_data(bs);
     pattern_update_rt_data(pat1);
     grbound_update_rt_data(grb1);
 
+    MESSAGE("**************************************************\n");
+    MESSAGE("THE REAL TIME THREAD HAS IT'S DATA NOW. THANKYOU!\n");
+    MESSAGE("**************************************************\n");
 
     sc = sclist_scale_by_name(scales, "Natural Minor");
     grbound_scale_binary_set(grb1, scale_as_int(sc));
@@ -177,7 +195,7 @@ printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
 
     jackdata_shutdown(jd);
 
-    printf("sizeof(event):%d\n",sizeof(event));
+    printf("sizeof(event):%ld\n",sizeof(event));
 
     jackdata_free(jd);
 

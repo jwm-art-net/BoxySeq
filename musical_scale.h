@@ -23,6 +23,7 @@ int         scale_cmp(const scale*, const scale*);
 const char* scale_name(const scale*);
 const char* scale_as_binary_string(const scale*);
 int         scale_as_int(const scale*);
+void        scale_as_rgb(const scale*, double* r, double* g, double* b);
 
 const char* scale_name_set(scale*, const char*);
 int         scale_set_by_binary_string(scale*, const char*);

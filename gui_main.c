@@ -21,7 +21,6 @@ static GtkWidget*   rew_button =    0;
 static GtkWidget*   rew_img =       0;
 static GtkWidget*   play_img =      0;
 static GtkWidget*   stop_img =      0;
-static GtkWidget*   drawing_area =  0;
 
 static GtkWidget*   test_button =   0;
 
@@ -107,13 +106,13 @@ static gboolean gui_transport_play(     GtkWidget *widget,
 }
 
 
-void gui_do_pattern_show(void)
+static void gui_do_pattern_show(void)
 {
     gui_pattern_show(&gui_pattern_edit, 0);
 }
 
 
-void gui_do_grid_show(void)
+static void gui_do_grid_show(void)
 {
     gui_grid_show(&gui_grid_edit, 0, _bs);
 }

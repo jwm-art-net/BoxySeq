@@ -1,3 +1,14 @@
+2010-08-11  James Morris  <james@jwm-art.net>
+
+    * real_time_data.c (rtdata_update): rt->ptr_free zeroed out
+      zeroing out of rt->ptr_free prevents duplicate freeing of
+      memory in rtdata_free.
+
+    * real_time_data.c (struct real_time_data): data now const.
+
+    * grid_boundary.c (grbound_rtdata_get_cb): now returns data!
+
+
 2010-08-10  James Morris  <james@jwm-art.net>
 
     * grid_boundary.c (grbound_*): boundary now using the real_time_data

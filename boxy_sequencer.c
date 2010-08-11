@@ -1,5 +1,6 @@
 #include "boxy_sequencer.h"
 
+#include "box_grid.h"
 #include "debug.h"
 #include "event_port.h"
 #include "midi_out_port.h"
@@ -11,32 +12,11 @@
 #include <time.h>
 
 
-struct boxy_sequencer
-{
-    char* basename;
+#include "include/boxy_sequencer_data.h"
 
-    pattern*    pattern_slot[MAX_PATTERN_SLOTS];
-    grbound*    grbound_slot[MAX_GRBOUND_SLOTS];
-    moport*     moport_slot[MAX_MOPORT_SLOTS];
 
-    evport_manager* ports_pattern;
-    evport_manager* ports_midi_out;
-
-    grid*       gr;
-
-    evbuf*      ui_note_on_buf;
-    evbuf*      ui_note_off_buf;
-    evbuf*      ui_unplace_buf;
-
-    evbuf*      ui_input_buf;
-
-    evlist*     ui_eventlist; /* stores collect events from buffers */
-
-    jack_client_t*  client;
-    jackdata*       jd;
-
-    _Bool quitting;
-};
+static void*    boxyseq_rtdata_get_cb(const void* bs);
+static void     boxyseq_rtdata_free_cb(void* bs);
 
 
 boxyseq* boxyseq_new(int argc, char** argv)
@@ -86,15 +66,18 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->ui_eventlist = evlist_new()))
         goto fail9;
 
+    bs->rt = rtdata_new(bs, boxyseq_rtdata_get_cb,
+                            boxyseq_rtdata_free_cb );
+    if (!bs->rt)
+        goto fail10;
+
     grid_set_ui_note_on_buf(bs->gr,     bs->ui_note_on_buf);
     grid_set_ui_note_off_buf(bs->gr,    bs->ui_note_off_buf);
     grid_set_ui_unplace_buf(bs->gr,     bs->ui_unplace_buf);
 
-    bs->quitting = 0;
-
     return bs;
 
-
+fail10: evlist_free(bs->ui_eventlist);
 fail9:  evbuf_free(bs->ui_input_buf);
 fail8:  evbuf_free(bs->ui_unplace_buf);
 fail7:  evbuf_free(bs->ui_note_off_buf);
@@ -117,6 +100,8 @@ void boxyseq_free(boxyseq* bs)
 
     if (!bs)
         return;
+
+    rtdata_free(bs->rt);
 
     evlist_free(bs->ui_eventlist);
 
@@ -144,22 +129,72 @@ void boxyseq_free(boxyseq* bs)
 }
 
 
+static rt_boxyseq* rt_boxyseq_new()
+{
+    int i;
+    rt_boxyseq* rtbs = malloc(sizeof(*rtbs));
+
+    if (!rtbs)
+        goto fail0;
+
+    rtbs->quitting = 0;
+
+    return rtbs;
+
+fail0:  WARNING("out of memory for boxyseq real time data\n");
+    return 0;
+}
+
+
+static void rt_boxyseq_free(rt_boxyseq* rtbs)
+{
+    free(rtbs);
+}
+
+
+static void* boxyseq_rtdata_get_cb(const void* data)
+{
+    int i;
+    boxyseq* bs = data;
+    rt_boxyseq* rtbs = rt_boxyseq_new();
+
+    if (!rtbs)
+        return 0;
+
+    for (i = 0; i < MAX_PATTERN_SLOTS; ++i)
+        rtbs->pattern_slot[i] = bs->pattern_slot[i];
+
+    for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
+        rtbs->grbound_slot[i] = bs->grbound_slot[i];
+
+    for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
+        rtbs->moport_slot[i] = bs->moport_slot[i];
+
+    return rtbs;
+}
+
+
+static void boxyseq_rtdata_free_cb(void* data)
+{
+    rt_boxyseq_free(data);
+}
+
+
 const char* boxyseq_basename(const boxyseq* bs)
 {
     return bs->basename;
 }
 
 
-void boxyseq_set_jackdata(boxyseq* bs, jackdata* jd)
-{
-    bs->jd = jd;
-    bs->client = jackdata_client(jd);
-}
-
-
 jackdata* boxyseq_jackdata(boxyseq* bs)
 {
     return bs->jd;
+}
+
+
+void boxyseq_set_jackdata(boxyseq* bs, jackdata* jd)
+{
+    bs->jd = jd;
 }
 
 
@@ -299,7 +334,8 @@ int boxyseq_moport_new(boxyseq* bs)
         return -1;
     }
 
-    bs->moport_slot[slot] = moport_new(bs->client, bs->ports_midi_out);
+    bs->moport_slot[slot] = moport_new( jackdata_client(bs->jd),
+                                        bs->ports_midi_out);
 
     if (!bs->moport_slot[slot])
         return -1;
@@ -343,13 +379,23 @@ evbuf* boxyseq_ui_unplace_buf(const boxyseq* bs)
 }
 
 
+void boxyseq_update_rt_data(const boxyseq* bs)
+{
+    rtdata_update(bs->rt);
+}
+
+
 void boxyseq_rt_init_jack_cycle(boxyseq* bs, jack_nframes_t nframes)
 {
     int i;
+    rt_boxyseq* rtbs = rtdata_data(bs->rt);
+
+    if (!rtbs)
+        return;
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
-        if (bs->moport_slot[i])
-            moport_rt_init_jack_cycle(bs->moport_slot[i], nframes);
+        if (rtbs->moport_slot[i])
+            moport_rt_init_jack_cycle(rtbs->moport_slot[i], nframes);
 }
 
 
@@ -361,15 +407,19 @@ void boxyseq_rt_play(boxyseq* bs,
     int i;
     event ev;
     evport* grid_port;
+    rt_boxyseq* rtbs = rtdata_data(bs->rt);
 
-    if (bs->quitting)
+    if (!rtbs)
+        return;
+
+    if (rtbs->quitting)
         return;
 
     while(evbuf_read(bs->ui_input_buf, &ev))
     {
         if (EVENT_IS_TYPE_SHUTDOWN( &ev ))
         {
-            bs->quitting = 1;
+            rtbs->quitting = 1;
             boxyseq_rt_clear(bs, nframes);
             return;
         }
@@ -377,18 +427,19 @@ void boxyseq_rt_play(boxyseq* bs,
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
-        if (bs->moport_slot[i])
-            moport_rt_play_old(bs->moport_slot[i], ph, nph, bs->gr);
+        if (rtbs->moport_slot[i])
+            moport_rt_play_old(rtbs->moport_slot[i], ph, nph, bs->gr);
     }
 
     grid_rt_unplace(bs->gr, ph, nph);
 
+    /* FIXME: rt update on evport manager (ports stored in llist) */
     evport_manager_all_evport_clear_data(bs->ports_pattern);
 
     for (i = 0; i < MAX_PATTERN_SLOTS; ++i)
     {
         if (bs->pattern_slot[i])
-            pattern_rt_play(bs->pattern_slot[i], repositioned, ph, nph);
+            pattern_rt_play(rtbs->pattern_slot[i], repositioned, ph, nph);
     }
 
     grid_port = grid_global_input_port(bs->gr);
@@ -396,20 +447,20 @@ void boxyseq_rt_play(boxyseq* bs,
     for (i = 0; i < MAX_GRBOUND_SLOTS; ++i)
     {
         if (bs->grbound_slot[i])
-            grbound_rt_sort(bs->grbound_slot[i], grid_port);
+            grbound_rt_sort(rtbs->grbound_slot[i], grid_port);
     }
 
     grid_rt_place(bs->gr, ph, nph);
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
     {
-        if (bs->moport_slot[i])
+        if (rtbs->moport_slot[i])
         {
-            moport_rt_play_new(bs->moport_slot[i], ph, nph);
+            moport_rt_play_new(rtbs->moport_slot[i], ph, nph);
 
             moport_rt_output_jack_midi
                 (
-                    bs->moport_slot[i],
+                    rtbs->moport_slot[i],
                     nframes,
                     #ifdef NO_REAL_TIME
                     0
@@ -427,13 +478,17 @@ void boxyseq_rt_play(boxyseq* bs,
 void boxyseq_rt_clear(boxyseq* bs, jack_nframes_t nframes)
 {
     int i = 0;
+    rt_boxyseq* rtbs = rtdata_data(bs->rt);
+
+    if (!rtbs)
+        goto clear_grid;
 
     for (i = 0; i < MAX_MOPORT_SLOTS; ++i)
-        if (bs->moport_slot[i])
-            moport_empty(bs->moport_slot[i], bs->gr, nframes);
+        if (rtbs->moport_slot[i])
+            moport_empty(rtbs->moport_slot[i], bs->gr, nframes);
 
+clear_grid:
     grid_remove_events(bs->gr);
-
 }
 
 

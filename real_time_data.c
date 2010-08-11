@@ -10,7 +10,7 @@
 
 struct real_time_data
 {
-    void* data;
+    const void* data;
 
     datacb_rtdata   cb_rtdata_get;
     datacb_free     cb_rtdata_free;
@@ -66,22 +66,27 @@ void* rtdata_update(rtdata* rt)
     void* ret_free = rt->ptr_free;
     void* ptr_new = rt->cb_rtdata_get(rt->data);
 
-    MESSAGE("updating rtdata...\n");
-
+    #ifdef RTDATA_DEBUG
+    MESSAGE("rtdata data:%p\n", rt->data);
     MESSAGE("ptr_new:%p\n", ptr_new);
+    #endif
 
     if (!ptr_new)
         return 0;
 
+    #ifdef RTDATA_DEBUG
     MESSAGE("rt->ptr_free:%p rt->ptr_old:%p...\n",
             rt->ptr_free, rt->ptr_old);
     MESSAGE("Updating...\n");
+    #endif
 
     rt->ptr_free =  rt->ptr_old;
     rt->ptr_old =   g_atomic_pointer_get(&rt->ptr);
 
+    #ifdef RTDATA_DEBUG
     MESSAGE("rt->ptr_free:%p rt->ptr_old:%p\n",
             rt->ptr_free, rt->ptr_old);
+    #endif
 
     if (rt->ptr_free)
     {
@@ -91,7 +96,12 @@ void* rtdata_update(rtdata* rt)
         while(g_atomic_pointer_get(&rt->ptr_in_use) == rt->ptr_free)
             nanosleep(&req, &rem);
 
+        #ifdef RTDATA_DEBUG
+        WARNING("rtdata free rt->ptr_free:%p\n", rt->ptr_free);
+        #endif
+
         rt->cb_rtdata_free(rt->ptr_free);
+        rt->ptr_free = 0; /* important to zero-out! */
     }
 
     g_atomic_pointer_set(&rt->ptr, ptr_new);
