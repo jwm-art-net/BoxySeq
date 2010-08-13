@@ -5,11 +5,12 @@
 #include "boxyseq.h"
 #include "common.h"
 #include "event_buffer.h"
-#include "event_port.h"
+#include "event_port_manager.h"
 #include "freespace_state.h"
-#include "grid_boundary.h"
+#include "grbound_manager.h"
 #include "jack_process.h"
-#include "pattern.h"
+#include "moport_manager.h"
+#include "pattern_manager.h"
 #include "real_time_data.h"
 
 
@@ -31,39 +32,10 @@ void        boxyseq_set_jackdata(boxyseq*, jackdata*);
 jackdata*   boxyseq_jackdata(boxyseq*);
 
 
-/*  patterns ---------------->
-*/
-
-int             boxyseq_pattern_new(boxyseq*,
-                                float beats_per_bar,
-                                float beat_type    );
-
-void            boxyseq_pattern_free(boxyseq*,  int slot);
-pattern*        boxyseq_pattern_dup(boxyseq*,   int dest_slot,
-                                                int src_slot);
-pattern*        boxyseq_pattern(boxyseq*,       int slot);
-evport_manager* boxyseq_pattern_ports(boxyseq*);
-
-/*
-_Bool       boxyseq_pattern_set_grbound(boxyseq*,   int pattern_slot,
-                                                    int grbound_slot  );
-*/
-
-/*  grbounds ---------------->
-*/
-
-int             boxyseq_grbound_new(boxyseq*,   int x, int y,
-                                                int w, int h  );
-void            boxyseq_grbound_free(boxyseq*,  int slot);
-grbound*        boxyseq_grbound(boxyseq*,       int slot);
-
-
-/*  midi out ports ---------->
-*/
-
-int             boxyseq_moport_new(boxyseq*);
-void            boxyseq_moport_free(boxyseq*,  int slot);
-moport*         boxyseq_moport(boxyseq*,       int slot);
+pattern_manager*    boxyseq_pattern_manager(boxyseq*);
+grbound_manager*    boxyseq_grbound_manager(boxyseq*);
+moport_manager*     boxyseq_moport_manager(boxyseq*);
+evport_manager*     boxyseq_pattern_port_manager(boxyseq*);
 
 
 evbuf*          boxyseq_ui_note_on_buf(const boxyseq*);

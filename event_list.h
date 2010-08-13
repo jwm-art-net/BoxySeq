@@ -53,11 +53,4 @@ void    evlist_dump_events(const evlist*);
 event*  evlist_to_array(const evlist*);
 
 
-/* ????
-void    evlist_set_default_duration(bbt_t);
-void    evlist_set_default_width(signed char);
-void    evlist_set_default_height(signed char);
-*/
-
-
 #endif

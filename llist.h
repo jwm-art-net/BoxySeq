@@ -192,6 +192,8 @@ void    llist_data_flags_get(   const llist*,
 
 void*   llist_to_array(const llist*, const void* terminator);
 
+void*   llist_to_pointer_array(const llist*);
+
 /*  llist_select_to_array preserves any existing selection
     made with the other llist_select functions. datacb_sel_cb
     and crit must not be null.
@@ -200,6 +202,10 @@ void*   llist_select_to_array(  llist*,
                                 datacb_sel,
                                 const void* crit,
                                 const void* terminator);
+
+void*   llist_select_to_pointer_array(  llist*,
+                                        datacb_sel,
+                                        const void* crit );
 
 void    llist_dump(const llist*, datacb_dump);
 

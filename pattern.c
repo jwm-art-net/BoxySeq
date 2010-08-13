@@ -16,21 +16,21 @@
 #include "include/event_pattern_data.h"
 
 
-static int pattern_id = 0;
-
-
 static void*    pattern_rtdata_get_cb(const void* pat);
 static void     pattern_rtdata_free_cb(void* pat);
 
 
-pattern* pattern_new(void)
+pattern* pattern_new(int id)
 {
     pattern* pat = malloc(sizeof(*pat));
 
     if (!pat)
         goto fail0;
 
-    pat->name = name_and_number("pattern", ++pattern_id);
+    if (id < 0)
+        pat->name = name_and_number("pattern duplicate", -id);
+    else
+        pat->name = name_and_number("pattern", id);
 
     if (!(pat->name))
         goto fail1;
@@ -48,8 +48,8 @@ pattern* pattern_new(void)
     pattern_set_loop_length_bbt(pat, 1, 0 ,0);
 
     pattern_set_meter(pat, 4, 4);
-    pattern_set_event_width_range(pat, 2, 8);
-    pattern_set_event_height_range(pat, 2, 8);
+    pattern_set_event_width_range(pat, 4, 5);
+    pattern_set_event_height_range(pat, 4, 5);
     pattern_set_random_seed_type(pat, SEED_TIME_SYS);
 
     pat->evout = 0;
@@ -66,7 +66,8 @@ fail0:  WARNING("out of memory for new pattern\n");
 
 pattern* pattern_dup(const pattern* pat)
 {
-    pattern* dest = pattern_new();
+    static int dup_id = 0;
+    pattern* dest = pattern_new(--dup_id);
 
     if (!dest)
         goto fail0;

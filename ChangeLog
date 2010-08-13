@@ -1,3 +1,32 @@
+2010-08-13  James Morris  <james@jwm-art.net>
+
+    * Spent the morning being driven around by my Dad trying to find a 
+      second hand wheel, tyre, and wheel nuts for my car. Some son of a 
+      bitch stole a wheel off my car last night. Thanks Dad for coming
+      to the rescue. Now I can get to work... Hurray :| (So most of 
+      the changes listed today were done yesterday/last night.
+
+    * boxy_sequencer*.*: replaced array based storage of patterns,
+      grid boundaries, and midi out ports with llist implementations.
+
+    * boxy_sequencer (boxyseq_rt_play): this function is cleaned up
+      by removal or arrays.
+
+    * grbound_manager.*
+      moport_manager.*
+      pattern_manager.*: these modules are used to replace the array
+      storage mentioned in connection with boxy_sequencer. they handle
+      creation/destruction of the data and store data in a llist. they
+      also convert the llist to a pointer array.
+      finally, they provide functions to perform operations in 
+      connection with the RT thread (ie play/output etc).
+
+    * various other changes and tweaks as a result of above, and other
+      stuff i've forgotten and don't have time to remember because i
+      must forget all about this and go to work where i will be bored
+      shitless packing plastic punnets/trays/etc for eight hours.
+      
+
 2010-08-11  James Morris  <james@jwm-art.net>
 
     * real_time_data.c (rtdata_update): rt->ptr_free zeroed out

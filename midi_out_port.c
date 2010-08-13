@@ -11,18 +11,7 @@
 #include <stdlib.h>
 
 
-struct midi_out_port
-{
-    event start[16][128];
-    event  play[16][128];
-
-    evport* intersort;
-
-    jack_port_t*    jack_out_port;
-    void*           jport_buf;
-
-};
-
+#include "include/midi_out_port_data.h"
 
 
 moport* moport_new(jack_client_t* client, evport_manager* portman)
@@ -273,7 +262,7 @@ void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
 }
 
 
-void moport_empty(moport* midiport, grid* gr, jack_nframes_t nframes)
+void moport_rt_empty(moport* midiport, grid* gr, jack_nframes_t nframes)
 {
     int channel;
     int pitch;

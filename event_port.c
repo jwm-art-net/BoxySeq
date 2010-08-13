@@ -74,16 +74,11 @@
 */
 
 
-struct event_port
-{
-    char* name;
-    int id;
-    rt_evlist*  data;
-};
+#include "include/event_port_data.h"
 
 
-static evport* evport_private_new(  evpool* pool,   const char* name,
-                                    int id, int rt_evlist_sort_flags  )
+evport* evport_new( evpool* pool,   const char* name,
+                    int id,         int rt_evlist_sort_flags  )
 {
     char* tmp;
     evport* port = malloc(sizeof(*port));
@@ -108,8 +103,6 @@ static evport* evport_private_new(  evpool* pool,   const char* name,
     if (!port->data)
         goto fail2;
 
-    port->id = id;
-
     return port;
 
 fail2:
@@ -130,7 +123,7 @@ const char* evport_name(evport* ev)
 }
 
 
-static void evport_free(evport* port)
+void evport_free(evport* port)
 {
     if (!port)
         return;
@@ -221,180 +214,3 @@ void evport_dump(evport* port)
 }
 #endif
 
-/*  event_port_manager
-
-    purpose:    manages event_ports, users of event_ports request
-                an evport from the manager, the manager grants the
-                request.
-
-    why?
-
-    firstly, as shown in comment at top of file, the distribution of
-    events via 'connections' requires a list data structure capable
-    of a) sorting the data upon insertion, but also b) distribution
-    to multiple readers. the ring buffer was going to be used for this
-    but fails to meet either of those requirements.
-
-    secondly, because events being passed around (via 'connections')
-    happens in real time, the list cannot dynamically manage the memory
-    required to do so. the list must use a memory pool.
-
-    the event_port_manager provides a memory pool which all event_ports
-    shall share amongst themselves.
-
-
-*/
-
-
-
-
-
-struct event_port_manager
-{
-    llist*  portlist;
-    lnode*  cur;
-
-    evpool* event_pool;
-    int     next_port_id;
-    char*   groupname;
-};
-
-
-static void evport_free_cb(void* data)
-{
-    evport_free(data);
-}
-
-
-evport_manager* evport_manager_new(const char* groupname)
-{
-    evport_manager* portman = malloc(sizeof(*portman));
-
-    if (!portman)
-        goto fail0;
-
-    portman->event_pool = evpool_new(DEFAULT_EVPOOL_SIZE * 16);
-
-    if (!portman->event_pool)
-        goto fail1;
-
-#ifdef EVPOOL_DEBUG
-    char* tmp = jwm_strcat_alloc(groupname, "-portman");
-    if (tmp)
-    {
-        evpool_set_origin_string(portman->event_pool, tmp);
-        free(tmp);
-    }
-    else
-        evpool_set_origin_string(portman->event_pool, groupname);
-#endif
-
-    portman->portlist = llist_new(  sizeof(evport),
-                                    evport_free_cb,
-                                    0, /* no evport duplication */
-                                    0, /* no evport copy */
-                                    0, /* no evport compare */
-                                    0  /* no string representation */
-                                     );
-    if (!portman->portlist)
-        goto fail2;
-
-    if (!(portman->groupname = strdup(groupname)))
-        goto fail3;
-
-    portman->cur = 0;
-    portman->next_port_id = 1;
-
-    return portman;
-
-fail3:
-    llist_free(portman->portlist);
-fail2:
-    evpool_free(portman->event_pool);
-fail1:
-    free(portman);
-
-fail0:
-    WARNING("out of memory for new event port manager\n");
-    return 0;
-}
-
-
-void evport_manager_free(evport_manager* portman)
-{
-    if (!portman)
-        return;
-
-    llist_free(portman->portlist);
-    evpool_free(portman->event_pool);
-    free(portman->groupname);
-    free(portman);
-}
-
-
-evport* evport_manager_evport_new(  evport_manager* portman,
-                                    int rt_evlist_sort_flags )
-{
-    evport* port = evport_private_new(  portman->event_pool,
-                                        portman->groupname,
-                                        portman->next_port_id++,
-                                        rt_evlist_sort_flags   );
-
-    if (!port)
-        return 0;
-
-    lnode* ln = llist_add_data(portman->portlist, port);
-
-    if (!ln)
-    {
-        evport_free(port);
-        return 0;
-    }
-
-    return port;
-}
-
-
-evport* evport_manager_evport_first(evport_manager* portman)
-{
-    return lnode_data(portman->cur = llist_head(portman->portlist));
-}
-
-
-evport* evport_manager_evport_next(evport_manager* portman)
-{
-    if (!portman->cur)
-        return 0;
-
-    return lnode_data(portman->cur = lnode_next(portman->cur));
-}
-
-
-evport* evport_manager_evport_by_id(evport_manager* portman, int id)
-{
-    portman->cur = llist_head(portman->portlist);
-    while (portman->cur)
-    {
-        evport* port = lnode_data(portman->cur);
-
-        if (port->id == id)
-            return port;
-
-        portman->cur = lnode_next(portman->cur);
-    }
-
-    return 0;
-}
-
-
-
-void evport_manager_all_evport_clear_data(evport_manager* portman)
-{
-    lnode* ln = llist_head(portman->portlist);
-
-    while (ln)
-    {
-        evport_clear_data(lnode_data(ln));
-        ln = lnode_next(ln);
-    }
-}

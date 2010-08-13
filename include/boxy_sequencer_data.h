@@ -14,14 +14,12 @@ struct boxy_sequencer
 {
     char* basename;
 
-    pattern*    pattern_slot[MAX_PATTERN_SLOTS];
-    grbound*    grbound_slot[MAX_GRBOUND_SLOTS];
-    moport*     moport_slot[MAX_MOPORT_SLOTS];
+    pattern_manager*    patterns;
+    grbound_manager*    grbounds;
+    moport_manager*     moports;
 
     evport_manager* ports_pattern;
     evport_manager* ports_midi_out;
-
-    rtdata*     rt;
 
     grid*       gr;
 
@@ -33,19 +31,10 @@ struct boxy_sequencer
 
     evlist*     ui_eventlist; /* stores collect events from buffers */
 
-    jackdata*       jd;
+    jackdata*   jd;
+
+    _Bool rt_quitting;
 };
-
-
-typedef struct rt_boxy_sequencer
-{
-    pattern*    pattern_slot[MAX_PATTERN_SLOTS];
-    grbound*    grbound_slot[MAX_GRBOUND_SLOTS];
-    moport*     moport_slot[MAX_MOPORT_SLOTS];
-
-    _Bool quitting;
-
-} rt_boxyseq;
 
 
 #endif

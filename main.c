@@ -15,9 +15,27 @@ int main(int argc, char** argv)
     boxyseq*    bs;
     jackdata*   jd;
 
-    int patslot;
-    int grboundslot;
+    pattern_manager*    patman;
+    grbound_manager*    grbman;
+    moport_manager*     mopman;
+    evport_manager*     patportman;
 
+    sclist* scales;
+    scale*  sc;
+
+    pattern*    pat1;
+    grbound*    grb1;
+    moport*     mop1;
+    evport*     patport1;
+
+    evlist* el;
+    event* ev;
+
+    int count, steps, i;
+
+    double r, g, b;
+
+    bbt_t st, dur, rel, t;
     _Bool err = -1;
 
     if (!(bs = boxyseq_new(argc, argv)))
@@ -29,23 +47,16 @@ int main(int argc, char** argv)
     if (!jackdata_startup(jd, bs))
         goto quit;
 
-    pattern* pat1;
+    patman = boxyseq_pattern_manager(bs);
+    grbman = boxyseq_grbound_manager(bs);
+    mopman = boxyseq_moport_manager(bs);
+    patportman = boxyseq_pattern_port_manager(bs);
 
-    evlist* el;
-    event* ev;
-
-    int count, steps, i;
-
-    bbt_t st, dur, rel, t;
-
-
-    patslot = boxyseq_pattern_new(bs, 4, 4);
-    pat1 = boxyseq_pattern(bs, patslot);
-
+    pat1 = pattern_manager_pattern_new(patman);
+    pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-
-    pattern_set_event_width_range(pat1, 2,4);
-    pattern_set_event_height_range(pat1, 2,12);
+    pattern_set_event_width_range(pat1, 2, 3);
+    pattern_set_event_height_range(pat1, 2, 3);
 
     el = pattern_event_list(pat1);
 
@@ -70,47 +81,28 @@ int main(int argc, char** argv)
             ev->note_dur = st + rand() % dur;
             ev->box_release = st + rand() % rel;
         }
-
-
     }
 
-    grbound* grb1;
+    grb1 = grbound_manager_grbound_new(grbman);
+    grbound_fsbound_set(grb1, 50, 50, 32, 32);
 
-    grboundslot = boxyseq_grbound_new(bs, 50, 50, 32, 32);
-    grb1 = boxyseq_grbound(bs, grboundslot);
+    patport1 = evport_manager_evport_new(patportman, RT_EVLIST_SORT_POS);
 
+    pattern_set_output_port(pat1, patport1);
+    grbound_set_input_port(grb1, patport1);
 
-    evport_manager* pat_ports = boxyseq_pattern_ports(bs);
-
-    evport* port1;
-
-
-    port1 = evport_manager_evport_new(pat_ports, RT_EVLIST_SORT_POS);
+    mop1 = moport_manager_moport_new(mopman);
+    grbound_midi_out_port_set(grb1, mop1);
 
 
-    pattern_set_output_port(pat1, port1);
-
-
-    grbound_set_input_port(grb1, port1);
-
-
-    int moslot = boxyseq_moport_new(bs);
-    moport* mo = boxyseq_moport(bs, moslot);
-
-    grbound_midi_out_port_set(grb1, mo);
-
-
-
-    sclist* scales = sclist_new();
+    scales = sclist_new();
 
     sclist_add_default_scales(scales);
 
-    scale* sc = sclist_scale_by_name(scales, "Major");
+    sc = sclist_scale_by_name(scales, "Major");
 
     grbound_scale_binary_set(grb1, scale_as_int(sc));
     grbound_scale_key_set(grb1, note_number("C"));
-
-    double r,g,b;
 
     scale_as_rgb(sc, &r, &g, &b);
 
@@ -121,17 +113,21 @@ int main(int argc, char** argv)
     MESSAGE("**************************************************\n");
     MESSAGE("EVERYTHING IS SETUP BUT THE REAL TIME THREAD HAS\n");
     MESSAGE("NOT BEEN GIVEN ANY DATA YET. I AM GOING TO SLEEP\n");
-    MESSAGE("FOR TEN SECONDS AND THEN I WILL GIVE THE REAL TIME\n");
+    MESSAGE("FOR 5 SECONDS AND THEN I WILL GIVE THE REAL TIME\n");
     MESSAGE("THE DATA IT SO LONGS FOR...\n");
     MESSAGE("TRY AND CONNECT BOXYSEQ'S MIDI PORT TO A SOFT SYNTH\n");
     MESSAGE("WHILE I SLEEP...\n");
     MESSAGE("**************************************************\n");
 
-    sleep(10);
+    sleep(5);
 
-    boxyseq_update_rt_data(bs);
     pattern_update_rt_data(pat1);
     grbound_update_rt_data(grb1);
+
+    grbound_manager_update_rt_data(grbman);
+    pattern_manager_update_rt_data(patman);
+    moport_manager_update_rt_data(mopman);
+    evport_manager_update_rt_data(patportman);
 
     MESSAGE("**************************************************\n");
     MESSAGE("THE REAL TIME THREAD HAS IT'S DATA NOW. THANKYOU!\n");
@@ -190,6 +186,8 @@ printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
 
     if (!gui_init(&argc, &argv, bs))
         goto quit;
+
+    sclist_free(scales);
 
     boxyseq_shutdown(bs);
 

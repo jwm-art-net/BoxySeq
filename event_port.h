@@ -46,6 +46,12 @@ typedef struct event_port evport;
     positive id: ("port %d", id);
 */
 
+evport*     evport_new( evpool* pool,   const char* name,
+                                        int id,
+                                        int rt_evlist_sort_flags);
+
+void        evport_free(evport* port);
+
 const char* evport_name(evport*);
 
 int         evport_write_event(evport*, const event*);
@@ -62,21 +68,6 @@ int         evport_count(evport*);
 #ifdef EVPORT_DEBUG
 void        evport_dump(evport*);
 #endif
-
-typedef struct event_port_manager evport_manager;
-
-evport_manager* evport_manager_new(const char* groupname);
-void            evport_manager_free(evport_manager*);
-
-evport*         evport_manager_evport_new(evport_manager*,
-                                          int rt_evlist_sort_flags );
-
-evport*         evport_manager_evport_first(evport_manager*);
-evport*         evport_manager_evport_next(evport_manager*);
-
-evport*         evport_manager_evport_by_id(evport_manager*, int id);
-
-void            evport_manager_all_evport_clear_data(evport_manager*);
 
 
 #endif

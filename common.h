@@ -50,6 +50,7 @@ void    bbtpos_copy(bbtpos* dest, const bbtpos* src);
 
 const char* string_set(char** str_ptr, const char* new_str);
 char*       name_and_number(const char* name, int number);
+char*       name_copy_of(const char* name);
 
 char*   jwm_strcat_alloc(const char* str1, const char* str2);
 

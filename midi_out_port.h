@@ -3,7 +3,7 @@
 
 
 #include "boxyseq.h"
-#include "event_port.h"
+#include "event_port_manager.h"
 
 
 #include <jack/jack.h>
@@ -45,15 +45,15 @@ int         moport_start_event(moport*, const event* ev,
                                         int scale_bin,
                                         int scale_key  );
 
+void        moport_rt_init_jack_cycle(moport*,  jack_nframes_t nframes);
+
 void        moport_rt_play_old(moport*, bbt_t ph, bbt_t nph, grid*);
 void        moport_rt_play_new(moport*, bbt_t ph, bbt_t nph);
 
-
-void        moport_rt_init_jack_cycle(moport*,  jack_nframes_t nframes);
 void        moport_rt_output_jack_midi(moport*, jack_nframes_t nframes,
                                                 double frames_per_tick );
 
-void        moport_empty(moport*, grid*, jack_nframes_t nframes);
+void        moport_rt_empty(moport*, grid*, jack_nframes_t nframes);
 
 
 #ifdef GRID_DEBUG

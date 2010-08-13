@@ -17,3 +17,28 @@ and varied) data structures in the program.
 see also: grep FIXME *.c
 
 
+FIXME: RT & UI thread data coupling. 12th August 2010.
+
+Until recently, and in ignorance of how I might handle exchange of data
+between the real-time thread and the ui thread, I thought my module
+design was quite clean and had good seperation between the two threads.
+
+As I said, in ignorance.
+
+However despite thinking otherwise, I was confused about what should go
+where and had been writing what I thought were data structures for the
+RT thread in the style of data structures for the UI thread. I did realise
+there were problems, but did not know how I'd go about resolving the
+problems - half of which I am only beginning to identify.
+
+So at the moment, I am working my way through all the data structures and,
+using the rtdata update mechanism, giving the data structures the capability
+of sharing data between two threads via edit/copy/update mechanism.
+
+At this stage I have started and realized the coupling could be a problem.
+However, I'm going to continue in this manner because it is easy to implement
+and will help identify what goes where so that when/if i decide to seperate
+all this stuff out properly, I'll know exactly what is needed already and it
+will just be (more or less) a matter of moving code around.
+
+[[[ i'm still unsure about all this data coupling business ]]]

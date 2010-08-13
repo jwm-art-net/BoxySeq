@@ -1,0 +1,147 @@
+#include "grbound_manager.h"
+
+
+#include "debug.h"
+#include "llist.h"
+#include "real_time_data.h"
+
+
+#include <glib.h>   /* mersene twister RNG */
+#include <stdlib.h>
+#include <string.h>
+
+
+#include "include/grid_boundary_data.h" /* to take sizeof */
+
+
+struct grbound_manager
+{
+    llist*  grblist;
+    lnode*  cur;
+
+    int next_grbound_id;
+
+    rtdata*     rt;
+
+};
+
+
+static void* grbound_manager_rtdata_get_cb(const void* grbman);
+static void  grbound_manager_rtdata_free_cb(void* grbman);
+
+
+static void grbound_free_cb(void* data)
+{
+    grbound_free(data);
+}
+
+
+grbound_manager* grbound_manager_new(void)
+{
+    grbound_manager* grbman = malloc(sizeof(*grbman));
+
+    if (!grbman)
+        goto fail0;
+
+    grbman->grblist = llist_new(    sizeof(grbound),
+                                    grbound_free_cb,
+                                    0, /* no duplication */
+                                    0, /* no copy */
+                                    0, /* no compare */
+                                    0  /* no string representation */
+                               );
+    if (!grbman->grblist)
+        goto fail1;
+
+    grbman->rt = rtdata_new(grbman, grbound_manager_rtdata_get_cb,
+                                    grbound_manager_rtdata_free_cb);
+
+    if (!grbman->rt)
+        goto fail2;
+
+    grbman->cur = 0;
+    grbman->next_grbound_id = 1;
+
+    return grbman;
+
+fail2:  llist_free(grbman->grblist);
+fail1:  free(grbman);
+fail0:  WARNING("out of memory for new grid boundary manager\n");
+    return 0;
+}
+
+
+void grbound_manager_free(grbound_manager* grbman)
+{
+    if (!grbman)
+        return;
+
+    rtdata_free(grbman->rt);
+    llist_free(grbman->grblist);
+    free(grbman);
+}
+
+
+grbound* grbound_manager_grbound_new(grbound_manager* grbman)
+{
+    grbound* grb = grbound_new();
+
+    grbman->next_grbound_id++;
+
+    if (!grb)
+        return 0;
+
+    if (!llist_add_data(grbman->grblist, grb))
+    {
+        grbound_free(grb);
+        return 0;
+    }
+
+    return grb;
+}
+
+
+grbound* grbound_manager_grbound_first(grbound_manager* grbman)
+{
+    return lnode_data(grbman->cur = llist_head(grbman->grblist));
+}
+
+
+grbound* grbound_manager_grbound_next(grbound_manager* grbman)
+{
+    if (!grbman->cur)
+        return 0;
+
+    return lnode_data(grbman->cur = lnode_next(grbman->cur));
+}
+
+
+static void* grbound_manager_rtdata_get_cb(const void* data)
+{
+    const grbound_manager* grbman = data;
+    return llist_to_pointer_array(grbman->grblist);
+}
+
+
+static void  grbound_manager_rtdata_free_cb(void* data)
+{
+    free(data); /* we're freeing the pointer array not the ports! */
+}
+
+
+void grbound_manager_update_rt_data(const grbound_manager* grbman)
+{
+    rtdata_update(grbman->rt);
+}
+
+
+void grbound_manager_rt_sort(grbound_manager* grbman, evport* grid_port)
+{
+    grbound** grb = rtdata_data(grbman->rt);
+
+    if (!grb)
+        return;
+
+    while(*grb)
+        grbound_rt_sort(*grb++, grid_port);
+}

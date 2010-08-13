@@ -11,7 +11,7 @@
 typedef struct event_pattern pattern;
 
 
-pattern*    pattern_new(void);
+pattern*    pattern_new(int id);
 pattern*    pattern_dup(const pattern*);
 
 void        pattern_free(pattern*);

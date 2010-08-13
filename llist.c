@@ -362,6 +362,47 @@ llist_pri_to_array( const llist* ll,
     return arr;
 }
 
+static void*
+llist_pri_to_pointer_array( size_t count,
+                            lnflags lnf,
+                            const lnode* first)
+{
+    size_t arr_size;
+    void** i;
+    void** iend;
+    const lnode* ln;
+    void** ptr_arr;
+
+    arr_size = sizeof(void**) * (count + 1);
+    ptr_arr = malloc(arr_size);
+
+    if (!ptr_arr)
+    {
+        WARNING("out of memory for making pointer array of llist\n");
+        return 0;
+    }
+
+    i = ptr_arr;
+    iend = ptr_arr + arr_size;
+
+    ln = first;
+
+    while(ln && i < iend)
+    {
+        if (!lnf || (ln->flags & lnf))
+        {
+            *i = ln->data;
+            i = (void**)((char*)i + sizeof(void*));
+        }
+        ln = ln->next;
+    }
+
+    *i = 0;
+
+    return ptr_arr;
+}
+
+
 /************************************************************************
     llist public implementation
  ************************************************************************/
@@ -1130,6 +1171,30 @@ llist_select_to_array(  llist* ll,
                                 LNF_ASELECTED,
                                 first,
                                 terminator );
+}
+
+
+void*
+llist_to_pointer_array(const llist* ll)
+{
+    return llist_pri_to_pointer_array(  ll->lnode_count,
+                                        0, /* no selection */
+                                        ll->head );
+}
+
+void*
+llist_select_to_pointer_array(  llist* ll,
+                                datacb_sel sel_cb,
+                                const void* crit )
+{
+    lnode* first = llist_pri_select_flags(  ll,
+                                            LNF_ASELECTED,
+                                            sel_cb,
+                                            crit    );
+
+    return llist_pri_to_pointer_array(  ll->asel_count,
+                                        LNF_ASELECTED,
+                                        first   );
 }
 
 
