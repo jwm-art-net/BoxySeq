@@ -1,3 +1,17 @@
+2010-08-15  James Morris  <james@jwm-art.net>
+
+    * grid_boundary.c (grbound_private_new): channel no. innitialized.
+    * grid_boundary.c (grbound_private_dup): channel no copied to dest
+      these fixed the sudden-silence bug. that this bug did not occurr
+      more often was down to luck.
+
+    * real_time_data.c (rtdata_update): changed sleep loop to single.
+      this fixed a nasty infinite-loop bug.
+
+    * gui_grid.c (*): various GUI improvements. added boundary resize
+      capability via right-mouse click/release.
+
+
 2010-08-14  James Morris  <james@jwm-art.net>
 
     * freespace_state.c (fs_find_row_smart_l2r): cornercase bug fixed.

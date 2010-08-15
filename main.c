@@ -55,15 +55,15 @@ int main(int argc, char** argv)
     pat1 = pattern_manager_pattern_new(patman);
     pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 6, 18);
-    pattern_set_event_height_range(pat1, 6, 18);
+    pattern_set_event_width_range(pat1, 2, 18);
+    pattern_set_event_height_range(pat1, 2, 18);
 
     el = pattern_event_list(pat1);
 
-    count = steps = 4;
+    count = steps = 8;
     st = (internal_ppqn * 4) / steps;
-    dur = st * 4;
-    rel = st * 4;
+    dur = st * 8;
+    rel = st * 8;
     t = 0;
 
     for (i = 0; i < count; ++i, t += st)
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
         ev->note_dur = st + rand() % dur;
         ev->box_release = st + rand() % rel;
 
-        if (!((i + 1) % 4))
+        if (!((i + 1) % 12))
             EVENT_SET_TYPE_BLOCK( ev );
         else
         {

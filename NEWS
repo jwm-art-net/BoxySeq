@@ -1,5 +1,9 @@
 * Sunday 15th August 2010
 
+    * The boundaries are now resizable via right-mouse click
+
+* Sunday 15th August 2010
+
     * Something which I shall name as a 'fix' 'fixes' the
       problem with the l2r placement where the right edge
       of a box would often extend past the right edge of

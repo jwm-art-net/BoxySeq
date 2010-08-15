@@ -17,62 +17,95 @@
 #include "include/gui_grid_editor.h"
 
 
-static void gui_grid_note_on(cairo_t* cr, int x, int y, int w, int h, double alpha)
+static void gui_grid_note_on(cairo_t* cr, int x, int y, int w, int h, double a)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, alpha);
+    cairo_set_source_rgb(cr, 0.0, 1.0 * a, 0.0);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.5, 0.0, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.5 * a, 0.0);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 
 }
 
-static void gui_grid_note_off(cairo_t* cr, int x, int y, int w, int h, double alpha)
+static void gui_grid_note_off(cairo_t* cr, int x, int y, int w, int h, double a)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 0.5, 0.0, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.5 * a, 0.0);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.2, 0.0, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.2 * a, 0.0);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 }
 
 
-static void gui_grid_block(cairo_t* cr, int x, int y, int w, int h, double alpha)
+static void gui_grid_block(cairo_t* cr, int x, int y, int w, int h, double a)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.0, 1.0 * a);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.0, 0.5, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.0, 0.5 * a);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 }
 
 
-static void gui_grid_block_on(cairo_t* cr, int x, int y, int w, int h, double alpha)
+static void gui_grid_block_on(cairo_t* cr, int x, int y, int w, int h, double a)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 1.0, 1.0, alpha);
+    cairo_set_source_rgb(cr, 0.0, 1.0 * a, 1.0 * a);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.5, 0.5, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.5 * a, 0.5 * a);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke (cr);
 }
 
 
-static void gui_grid_block_off(cairo_t* cr, int x, int y, int w, int h, double alpha)
+static void gui_grid_block_off(cairo_t* cr, int x, int y, int w, int h, double a)
 {
     cairo_rectangle(cr, x, y, w, h);
 
-    cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.0, 1.0 * a);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.0, 0.5, alpha);
+    cairo_set_source_rgb(cr, 0.0, 0.0, 0.5 * a);
     cairo_set_line_width(cr, 1.0);
+    cairo_stroke (cr);
+}
+
+static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
+{
+    int bx, by, bw, bh;
+
+    double lw = ggr->scale / 2;
+
+    if (lw < 1)
+        lw = 1;
+
+    grbound_fsbound_get(grb, &bx, &by, &bw, &bh);
+
+    bx = (int)(bx * ggr->scale);
+    by = (int)(by * ggr->scale);
+    bw = (int)(bw * ggr->scale);
+    bh = (int)(bh * ggr->scale);
+
+    cairo_rectangle(cr, bx, by, bw, bh);
+
+    if (ggr->action_grb == grb)
+    {
+        cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 0.5);
+        cairo_fill_preserve(cr);
+    }
+
+    if (ggr->action == ACT_GRB_MOVE)
+        cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 1.0);
+    else
+        cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 1.0);
+
+    cairo_set_line_width(cr, lw);
     cairo_stroke (cr);
 }
 
@@ -91,43 +124,29 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
                                         GdkEventExpose *gdkevent,
                                         gpointer data)
 {
-    int bx, by, bw, bh;
     gui_grid* ggr = (gui_grid*)data;
 
-    cairo_t* cr = gdk_cairo_create(ggr->drawing_area->window);
+    grbound_manager* grbman = 0;
+    grbound* grb = 0;
+    event* ev = 0;
+    lnode* ln = 0;
 
-    event* ev;
-    lnode* ln;
+    cairo_t*            cr;
+    cairo_pattern_t*    pat;
 
-    cairo_pattern_t *pat;
+    int bx, by, bw, bh;
 
-    pat = cairo_pattern_create_linear (0.0, 0.0,  ggr->maxsz, ggr->maxsz);
-    cairo_pattern_add_color_stop_rgba (pat, 0, 0.0, 0.0, 0.0, 1);
-    cairo_pattern_add_color_stop_rgba (pat, 1, 0.2, 0.2, 0.2, 1);
+    cr = gdk_cairo_create(ggr->drawing_area->window);
+    pat = cairo_pattern_create_linear (0.0, 0.0, ggr->maxsz, ggr->maxsz);
+
+    cairo_pattern_add_color_stop_rgb(pat, 0, 0.0, 0.0, 0.0);
+    cairo_pattern_add_color_stop_rgb(pat, 1, 0.1, 0.1, 0.1);
     cairo_rectangle (cr, 0, 0, ggr->maxsz, ggr->maxsz);
     cairo_set_source (cr, pat);
     cairo_fill (cr);
     cairo_pattern_destroy (pat);
 
-
-    grbound_manager* grbman = boxyseq_grbound_manager(ggr->bs);
-    grbound* grb = grbound_manager_grbound_first(grbman);
-
-    while(grb)
-    {
-        fsbound_get_coords(grbound_fsbound(grb), &bx, &by, &bw, &bh);
-
-        bx = (int)(bx * ggr->scale);
-        by = (int)(by * ggr->scale);
-        bw = (int)(bw * ggr->scale);
-        bh = (int)(bh * ggr->scale);
-
-        gui_grid_block(cr, bx, by, bw, bh, 1);
-        grb = grbound_manager_grbound_next(grbman);
-    }
-
     ln = evlist_head(boxyseq_ui_event_list(ggr->bs));
-
 
     while(ln)
     {
@@ -158,15 +177,13 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         ln = lnode_next(ln);
     }
 
-    if (ggr->ptr_in_grid)
-    {
-        cairo_rectangle(cr, ggr->ptr_gx * ggr->scale,
-                            ggr->ptr_gy * ggr->scale,
-                            ggr->scale, ggr->scale);
+    grbman = boxyseq_grbound_manager(ggr->bs);
+    grb = grbound_manager_grbound_first(grbman);
 
-        cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.25);
-        cairo_set_line_width(cr, 1.0);
-        cairo_stroke (cr);
+    while(grb)
+    {
+        gui_grid_boundary(cr, grb, ggr);
+        grb = grbound_manager_grbound_next(grbman);
     }
 
     cairo_destroy(cr);
@@ -175,10 +192,9 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
 }
 
 static gboolean gui_grid_button_press_event(GtkWidget* widget,
-                                            GdkEvent *gdkevent,
+                                            GdkEventButton *gdkevent,
                                             gpointer data)
 {
-    int bx, by, bw, bh;
     grbound_manager* grbman;
     grbound* grb;
     gui_grid* ggr = (gui_grid*)data;
@@ -186,37 +202,59 @@ static gboolean gui_grid_button_press_event(GtkWidget* widget,
     grbman = boxyseq_grbound_manager(ggr->bs);
     grb = grbound_manager_grbound_first(grbman);
 
-    while(grb)
+    if (ggr->action == ACT_GRB_HOVER && ggr->action_grb)
     {
-        fsbound_get_coords(grbound_fsbound(grb), &bx, &by, &bw, &bh);
+        int bx, by, bw, bh;
 
-        if (ggr->ptr_gx >= bx && ggr->ptr_gx <= bx + bw
-         && ggr->ptr_gy >= by && ggr->ptr_gy <= by + bh)
+        grbound_fsbound_get(grb, &bx, &by, &bw, &bh);
+
+        ggr->action = ACT_GRB_MOVE;
+
+        switch(gdkevent->button)
         {
-            ggr->action_grb_move = TRUE;
-            ggr->action_grb = grb;
-            ggr->ptr_offx = bx - ggr->ptr_gx;
-            ggr->ptr_offy = by - ggr->ptr_gy;
+            case 1:
+                ggr->action = ACT_GRB_MOVE;
+                ggr->ptr_offx = bx - ggr->ptr_gx;
+                ggr->ptr_offy = by - ggr->ptr_gy;
+                break;
 
-            return TRUE;
+            case 3:
+                ggr->action = ACT_GRB_RESIZE;
+                ggr->ptr_offx = ggr->ptr_gx;
+                ggr->ptr_offy = ggr->ptr_gy;
+
+                ggr->xrszdir = (ggr->ptr_gx < bx + bw / 2) ? -1 : 1;
+                ggr->yrszdir = (ggr->ptr_gy < by + bh / 2) ? -1 : 1;
+                break;
+
+            default:
+                ggr->action = ACT_GRB;
+                break;
         }
-        grb = grbound_manager_grbound_next(grbman);
     }
 
     return TRUE;
 }
 
 static gboolean gui_grid_button_release_event(  GtkWidget* widget,
-                                                GdkEvent *gdkevent,
+                                                GdkEventButton *gdkevent,
                                                 gpointer data)
 {
     gui_grid* ggr = (gui_grid*)data;
 
-    if (ggr->action_grb_move)
+    switch(ggr->action)
     {
-        ggr->action_grb_move = FALSE;
+    case ACT_GRB_MOVE:
+    case ACT_GRB_RESIZE:
+
+        ggr->action = ACT_GRB_HOVER;
         grbound_update_rt_data(ggr->action_grb);
-        ggr->action_grb = 0;
+
+        break;
+
+    default:
+
+        break;
     }
 
     return TRUE;
@@ -228,6 +266,9 @@ static gboolean gui_grid_motion_event(  GtkWidget* widget,
                                         gpointer data)
 {
     gui_grid* ggr = (gui_grid*)data;
+    grbound_manager* grbman;
+    grbound* grb;
+    int bx, by, bw, bh;
 
     ggr->ptr_x = (int)gdkevent->x;
     ggr->ptr_y = (int)gdkevent->y;
@@ -238,26 +279,120 @@ static gboolean gui_grid_motion_event(  GtkWidget* widget,
     ggr->ptr_in_grid = (ggr->ptr_gx > 0 && ggr->ptr_gx < 128
                      && ggr->ptr_gy > 0 && ggr->ptr_gy < 128);
 
-    if (ggr->action_grb_move && ggr->action_grb && ggr->ptr_in_grid)
+    grbman = boxyseq_grbound_manager(ggr->bs);
+    grb = grbound_manager_grbound_first(grbman);
+
+    switch(ggr->action)
     {
-        int bx, by, bw, bh;
+    case ACT_GRB:
+    case ACT_GRB_HOVER:
 
-        bx = ggr->ptr_gx + ggr->ptr_offx;
-        by = ggr->ptr_gy + ggr->ptr_offy;
+        while(grb)
+        {
+            ggr->action_grb = 0;
+            grbound_fsbound_get(grb, &bx, &by, &bw, &bh);
 
-        grbound_fsbound_get(ggr->action_grb, 0, 0, &bw, &bh);
+            if (ggr->ptr_gx >= bx && ggr->ptr_gx <= bx + bw
+             && ggr->ptr_gy >= by && ggr->ptr_gy <= by + bh)
+            {
+                ggr->action = ACT_GRB_HOVER;
+                ggr->action_grb = grb;
+                break;
+            }
+            grb = grbound_manager_grbound_next(grbman);
+        }
 
-        if (bx < 0)
-            bx = 0;
-        else if (bx + bw > 128)
-            bx = 128 - bw;
+        if (!ggr->action_grb)
+            ggr->action = ACT_GRB;
 
-        if (by < 0)
-            by = 0;
-        else if (by + bh > 128)
-            by = 128 - bh;
+        break;
 
-        grbound_fsbound_set(ggr->action_grb, bx, by, -1, -1);
+    case ACT_GRB_MOVE:
+
+        if (ggr->ptr_in_grid)
+        {
+            bx = ggr->ptr_gx + ggr->ptr_offx;
+            by = ggr->ptr_gy + ggr->ptr_offy;
+
+            grbound_fsbound_get(ggr->action_grb, 0, 0, &bw, &bh);
+
+            if (bx < 0)
+                bx = 0;
+            else if (bx + bw > 128)
+                bx = 128 - bw;
+
+            if (by < 0)
+                by = 0;
+            else if (by + bh > 128)
+                by = 128 - bh;
+
+            grbound_fsbound_set(ggr->action_grb, bx, by, -1, -1);
+        }
+
+        break;
+
+    case ACT_GRB_RESIZE:
+
+        if (ggr->ptr_in_grid)
+        {
+            int pdx, pdy;
+            int obx, oby, obw, obh;
+
+            grbound_fsbound_get(ggr->action_grb, &bx, &by, &bw, &bh);
+
+            obx = bx;
+            oby = by;
+            obw = bw;
+            obh = bh;
+
+            pdx = ggr->ptr_offx - ggr->ptr_gx;
+            pdy = ggr->ptr_offy - ggr->ptr_gy;
+
+            if (ggr->xrszdir > 0)
+            {
+                bw -= pdx;
+
+                if (bw < 2 || bx + bw > 128)
+                    bw = obw;
+            }
+            else
+            {
+                bw += pdx;
+                bx -= pdx;
+
+                if (bw < 2 || bx < 0)
+                {
+                    bx = obx;
+                    bw = obw;
+                }
+            }
+
+            if (ggr->yrszdir > 0)
+            {
+                bh -= pdy;
+
+                if (bh < 2 || by + bh > 128)
+                    bh = obh;
+            }
+            else
+            {
+                bh += pdy;
+                by -= pdy;
+
+                if (bh < 2 || by < 0)
+                {
+                    by = oby;
+                    bh = obh;
+                }
+            }
+
+            ggr->ptr_offx = ggr->ptr_gx;
+            ggr->ptr_offy = ggr->ptr_gy;
+
+            grbound_fsbound_set(ggr->action_grb, bx, by, bw, bh);
+        }
+
+        break;
     }
 
     return TRUE;
@@ -319,7 +454,7 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
 
     ggr->maxsz = (int)(128 * ggr->scale);
 
-    ggr->action_grb_move = FALSE;
+    ggr->action = ACT_GRB;
     ggr->action_grb = 0;
 
     ggr->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);

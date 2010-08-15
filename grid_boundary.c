@@ -207,9 +207,10 @@ static grbound* grbound_private_new(_Bool with_rtdata)
                | FSPLACE_LEFT_TO_RIGHT
                | FSPLACE_TOP_TO_BOTTOM
                | GRBOUND_BLOCK_ON_NOTE_FAIL;
-
+    grb->channel = 0;
     grb->scale_bin = binary_string_to_int("111111111111");
     grb->scale_key = 0;
+
     grb->evinput = 0;
     grb->midiout = 0;
 
@@ -235,6 +236,7 @@ static grbound* grbound_private_dup(const void* data, _Bool with_rtdata)
         return 0;
 
     dest->flags =       grb->flags;
+    dest->channel =     grb->channel;
     dest->scale_bin =   grb->scale_bin;
     dest->scale_key =   grb->scale_key;
     dest->evinput =     grb->evinput;

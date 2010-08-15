@@ -45,6 +45,7 @@ will just be (more or less) a matter of moving code around.
 
 ------------
 
-Starting to witness occasional strange behaviour with dragging the
-grid boundary around in the GUI, and crashes :-(
-
+-Starting to witness occasional strange behaviour with dragging the
+-grid boundary around in the GUI, and crashes :-(
++I'm attributing that behaviour to certain bugs which have since been
+squashed :>

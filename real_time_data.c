@@ -90,10 +90,10 @@ void* rtdata_update(rtdata* rt)
 
     if (rt->ptr_free)
     {
-        struct timespec req = { .tv_sec = 0, .tv_nsec = 500 };
+        struct timespec req = { .tv_sec = 0, .tv_nsec = 50000 };
         struct timespec rem = { 0, 0 };
 
-        while(g_atomic_pointer_get(&rt->ptr_in_use) == rt->ptr_free)
+        if (g_atomic_pointer_get(&rt->ptr_in_use) == rt->ptr_free)
             nanosleep(&req, &rem);
 
         #ifdef RTDATA_DEBUG

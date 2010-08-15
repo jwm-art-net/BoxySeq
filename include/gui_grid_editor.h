@@ -10,6 +10,16 @@
 */
 
 
+typedef enum GRID_ACTION
+{
+    ACT_GRB = 1,
+    ACT_GRB_HOVER,
+    ACT_GRB_MOVE,
+    ACT_GRB_RESIZE
+
+} gridact;
+
+
 struct gui_grid_editor
 {
     grid*       gr;
@@ -24,7 +34,7 @@ struct gui_grid_editor
 
     guint timeout_id;
 
-    _Bool action_grb_move;
+    gridact     action;
 
     grbound*    action_grb;
 
@@ -42,6 +52,9 @@ struct gui_grid_editor
 
     int ptr_offx;
     int ptr_offy;
+
+    int xrszdir;
+    int yrszdir;
 };
 
 
