@@ -288,7 +288,6 @@ void pattern_rt_play(pattern* pat,  _Bool repositioned,
     else
         ev = rtpat->evlast;
 
-
     while (ev->pos > -1)
     {
         play_event = 0;

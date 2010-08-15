@@ -112,7 +112,9 @@ grbound* grbound_manager_grbound_next(grbound_manager* grbman)
     if (!grbman->cur)
         return 0;
 
-    return lnode_data(grbman->cur = lnode_next(grbman->cur));
+    grbman->cur = lnode_next(grbman->cur);
+
+    return (grbman->cur) ? lnode_data(grbman->cur) : 0;
 }
 
 

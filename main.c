@@ -55,12 +55,12 @@ int main(int argc, char** argv)
     pat1 = pattern_manager_pattern_new(patman);
     pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 2, 3);
-    pattern_set_event_height_range(pat1, 2, 3);
+    pattern_set_event_width_range(pat1, 6, 18);
+    pattern_set_event_height_range(pat1, 6, 18);
 
     el = pattern_event_list(pat1);
 
-    count = steps = 16;
+    count = steps = 4;
     st = (internal_ppqn * 4) / steps;
     dur = st * 4;
     rel = st * 4;
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
         else
         {
             ev = lnode_data(evlist_add_event_new(el,
-                                (i % 5 == 0) ? t + st / 2 : t));
+                                (i % 2 == 0) ? t + st / 2 : t));
             ev->note_dur = st + rand() % dur;
             ev->box_release = st + rand() % rel;
         }
@@ -110,17 +110,6 @@ int main(int argc, char** argv)
         scale_name(sc), scale_as_binary_string(sc),
         r, g, b);
 
-    MESSAGE("**************************************************\n");
-    MESSAGE("EVERYTHING IS SETUP BUT THE REAL TIME THREAD HAS\n");
-    MESSAGE("NOT BEEN GIVEN ANY DATA YET. I AM GOING TO SLEEP\n");
-    MESSAGE("FOR 5 SECONDS AND THEN I WILL GIVE THE REAL TIME\n");
-    MESSAGE("THE DATA IT SO LONGS FOR...\n");
-    MESSAGE("TRY AND CONNECT BOXYSEQ'S MIDI PORT TO A SOFT SYNTH\n");
-    MESSAGE("WHILE I SLEEP...\n");
-    MESSAGE("**************************************************\n");
-
-    sleep(5);
-
     pattern_update_rt_data(pat1);
     grbound_update_rt_data(grb1);
 
@@ -128,25 +117,6 @@ int main(int argc, char** argv)
     pattern_manager_update_rt_data(patman);
     moport_manager_update_rt_data(mopman);
     evport_manager_update_rt_data(patportman);
-
-    MESSAGE("**************************************************\n");
-    MESSAGE("THE REAL TIME THREAD HAS IT'S DATA NOW. THANKYOU!\n");
-    MESSAGE("**************************************************\n");
-
-    sc = sclist_scale_by_name(scales, "Natural Minor");
-    grbound_scale_binary_set(grb1, scale_as_int(sc));
-    grbound_fsbound_set(grb1, 48, 50, 32, 32);
-    grbound_scale_key_set(grb1, note_number("F#"));
-
-
-    MESSAGE("**************************************************\n");
-    MESSAGE("RESIST PRESSING THE GRID BUTTON UNTIL YOU'VE CONNECTED\n");
-    MESSAGE("BOXYSEQ AND PRESSED PLAY. TAKE NOTE OF THE SCALE AND KEY\n");
-    MESSAGE("BOXYSEQ IS PLAYING. ONCE YOU'RE ACCUSTOMED TO THIS\n");
-    MESSAGE("PRESS THE GRID BUTTON AND THE SCALE AND KEY DATA WILL BE\n");
-    MESSAGE("UPDATED TO A NEW SCALE AND KEY (which was actually set\n");
-    MESSAGE("immediately before the display of this message).\n");
-    MESSAGE("**************************************************\n");
 
 
 /*******************************************
@@ -183,9 +153,10 @@ for (i = 0; i <  looplen * 8; i += st)
 
 
 printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
-
+#ifndef NO_GUI
     if (!gui_init(&argc, &argv, bs))
         goto quit;
+#endif
 
     sclist_free(scales);
 

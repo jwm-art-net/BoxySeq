@@ -10,6 +10,7 @@
 
 
 #include "include/grid_boundary_data.h"
+#include "include/freespace_boundary_data.h"
 
 
 static grbound* grbound_private_new(_Bool with_rtdata);
@@ -130,6 +131,15 @@ void grbound_fsbound_set(grbound* grb, int x, int y, int w, int h)
                 x, y, w, h);
         WARNING("default size will be used\n");
     }
+}
+
+
+void grbound_fsbound_get(grbound* grb, int* x, int* y, int* w, int* h)
+{
+    if (x) *x = grb->bound->x;
+    if (y) *y = grb->bound->y;
+    if (w) *w = grb->bound->w;
+    if (h) *h = grb->bound->h;
 }
 
 

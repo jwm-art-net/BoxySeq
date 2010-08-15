@@ -1,5 +1,9 @@
 #include "freespace_state.h"
 
+
+#include "include/freespace_boundary_data.h"
+
+
 #include "debug.h"
 
 #include <stddef.h>
@@ -134,29 +138,50 @@ static inline int fs_x_to_offset_index(int x, int* d)
 
 
 static _Bool fs_find_row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
-                                        fsbound* bound,
+                                        fsbound* fsb,
                                         int flags,
                                         int width,      int height,
                                         int* resultx,   int* resulty    )
 {
-    int bx, by, bw, bh;
-
-    fsbound_get_coords(bound, &bx, &by, &bw, &bh);
-
-    if (width > bw || height > bh)
+    if (width > fsb->w || height > fsb->h)
         return false;
 
     _Bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
 
-    const int starty =  t2b ? by : by + bh - 1;
-    const int endy =    t2b ? by + bh - height : by + height - 1;
-    const int diry =    t2b ? 1 : -1;
+    const int starty = t2b ? fsb->y : fsb->y + fsb->h - 1;
+    const int endy = t2b ? fsb->y + fsb->h - height : fsb->y + height - 1;
+    const int diry = t2b ? 1 : -1;
 
     int startx;
-    int startxoffset = fs_x_to_offset_index(bx, &startx);
+    int startxoffset = fs_x_to_offset_index(fsb->x, &startx);
 
     int endx;
-    int endxoffset  = fs_x_to_offset_index(bx + bw, &endx);
+
+/*  FIXME: endxoffset and boundary right-edge overlaps.
+
+ a) int endxoffset = fs_x_to_offset_index(fsb->x + fsb->w - width, &endx);
+
+ b) int endxoffset = fs_x_to_offset_index(fsb->x + fsb->w, &endx);
+
+    The 'b' method of calculating endxoffset has been in use for several
+    months of development. Having finally come to a stage where the
+    boundary was shown in the GUI as well as the boxes, I noticed the
+    right-edge of the boxes were overlapping the right-edge of the
+    boundary.
+
+    Strangely though, apart from a few cosmetic differences, this code
+    is exactly the same as the freespace code developed outside of
+    boxyseq.
+
+    In that code, the 'a' method was commented out and labelled 'original
+    method'. I seem to recall that it strangely stopped working...
+    perhaps it did?
+
+    Anyway, the 'a' method seems to prevent the right side edge of boxes
+    extended out past the right side edge of the boundary.
+*/
+
+    int endxoffset = fs_x_to_offset_index(fsb->x + fsb->w - width, &endx);
 
     int x, x1, y;
     int w, h;
@@ -239,29 +264,26 @@ retry:
 
 
 static _Bool fs_find_row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
-                                        fsbound* bound,
+                                        fsbound* fsb,
                                         int flags,
                                         int width,      int height,
                                         int* resultx,   int* resulty    )
 {
-    int bx, by, bw, bh;
-
-    fsbound_get_coords(bound, &bx, &by, &bw, &bh);
-
-    if (width > bw || height > bh)
+    if (width > fsb->w || height > fsb->h)
         return false;
 
     _Bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
 
-    const int starty =  t2b ? by : by + bh - 1;
-    const int endy =    t2b ? by + bh - height : by + height - 1;
-    const int diry =    t2b ? 1 : -1;
+    const int starty = t2b ? fsb->y : fsb->y + fsb->h - 1;
+    const int endy = t2b ? fsb->y + fsb->h - height : fsb->y + height - 1;
+    const int diry = t2b ? 1 : -1;
 
     int startx;
-    int startxoffset = fs_x_to_offset_index(bx + bw - 1, &startx) -1;
+    int startxoffset =
+        fs_x_to_offset_index(fsb->x + fsb->w - 1, &startx) -1;
 
     int endx;
-    int endxoffset = fs_x_to_offset_index(bx + width, &endx);
+    int endxoffset = fs_x_to_offset_index(fsb->x + width, &endx);
 
     int x, y;
     int w, h;
@@ -346,35 +368,31 @@ retry:
 
 
 static _Bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
-                                    fsbound* bound,
+                                    fsbound* fsb,
                                     int flags,
                                     int width,      int height,
                                     int* resultx,   int* resulty    )
 {
-    int bx, by, bw, bh;
-
-    fsbound_get_coords(bound, &bx, &by, &bw, &bh);
-
-    if (width > bw || height > bh)
+    if (width > fsb->w || height > fsb->h)
         return false;
 
     _Bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
 
-    const int starty =  t2b ? by : by + bh - 1;
-    const int endy =    t2b ? by + bh : by;
-    const int diry =    t2b ? 1 : -1;
+    const int starty = t2b ? fsb->y : fsb->y + fsb->h - 1;
+    const int endy = t2b ? fsb->y + fsb->h : fsb->y;
+    const int diry = t2b ? 1 : -1;
 
     _Bool l2r = !!(flags & FSPLACE_LEFT_TO_RIGHT);
 
     int startx;
     int startxoffset = (l2r)
-                        ? fs_x_to_offset_index(bx, &startx)
-                        : fs_x_to_offset_index(bx + bw - width, &startx);
+                ? fs_x_to_offset_index(fsb->x, &startx)
+                : fs_x_to_offset_index(fsb->x + fsb->w - width, &startx);
 
     int endx;
     int endxoffset = (l2r)
-                        ? fs_x_to_offset_index(bx + bw - width, &endx)
-                        : fs_x_to_offset_index(bx, &endx);
+                ? fs_x_to_offset_index(fsb->x + fsb->w - width, &endx)
+                : fs_x_to_offset_index(fsb->x, &endx);
 
     int x, y, y1;
     int w, h;
@@ -482,31 +500,32 @@ static _Bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
 }
 
 
-_Bool freespace_find( freespace* fs,  fsbound* bound,
+_Bool freespace_find( freespace* fs,  fsbound* fsb,
                         int flags,
                         int width,      int height,
                         int* resultx,   int* resulty    )
 {
     *resultx = *resulty = -1;
+    _Bool r;
 
     if (flags & FSPLACE_ROW_SMART)
     {
         if (flags & FSPLACE_LEFT_TO_RIGHT)
         {
-            return fs_find_row_smart_l2r(   fs->buf, bound, flags,
+            return fs_find_row_smart_l2r(   fs->buf, fsb, flags,
                                             width,   height,
                                             resultx, resulty );
         }
         else
         {
-            return fs_find_row_smart_r2l(   fs->buf, bound, flags,
+            return fs_find_row_smart_r2l(   fs->buf, fsb, flags,
                                             width,   height,
                                             resultx, resulty );
         }
     }
     else
     {
-        return fs_find_col_smart(   fs->buf, bound, flags,
+        return fs_find_col_smart(   fs->buf, fsb, flags,
                                     width,   height,
                                     resultx, resulty );
     }

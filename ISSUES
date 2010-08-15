@@ -42,3 +42,9 @@ all this stuff out properly, I'll know exactly what is needed already and it
 will just be (more or less) a matter of moving code around.
 
 [[[ i'm still unsure about all this data coupling business ]]]
+
+------------
+
+Starting to witness occasional strange behaviour with dragging the
+grid boundary around in the GUI, and crashes :-(
+

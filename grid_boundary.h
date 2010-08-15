@@ -46,6 +46,7 @@ fsbound*    grbound_fsbound(grbound*);
 
 
 void        grbound_fsbound_set(grbound*, int x, int y, int w, int h);
+void        grbound_fsbound_get(grbound*, int* x, int* y, int* w, int* h);
 
 void        grbound_set_input_port(grbound*, evport*);
 

@@ -1,3 +1,16 @@
+2010-08-14  James Morris  <james@jwm-art.net>
+
+    * freespace_state.c (fs_find_row_smart_l2r): cornercase bug fixed.
+      this functions was fitting boxes whose right most edge lay beyond
+      the right most edge of the boundary. fixed by changing:
+          if (x >= endx && xoffset < endxoffset)
+      to 
+          if (x >= endx && xoffset <= endxoffset)
+      strangely, this error did not turn up in the test data setup in
+      the old isolated development version of the freespace state
+      (then called freespace_grid) outside of the boxyseq tree.
+
+
 2010-08-13  James Morris  <james@jwm-art.net>
 
     * Spent the morning being driven around by my Dad trying to find a 

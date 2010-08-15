@@ -2,16 +2,10 @@
 #include "freespace_state.h"
 
 
+#include "include/freespace_boundary_data.h"
+
+
 #include <stdlib.h>
-
-
-struct freespace_boundary
-{
-    int x;
-    int y;
-    int w;
-    int h;
-};
 
 
 fsbound* fsbound_new(void)
@@ -65,6 +59,11 @@ void fsbound_init(fsbound* b)
 
 _Bool fsbound_set_coords(fsbound* b,  int x, int y, int w, int h)
 {
+    x = (x == -1) ? b->x : x;
+    y = (y == -1) ? b->y : y;
+    w = (w == -1) ? b->w : w;
+    h = (h == -1) ? b->h : h;
+
     if (x > FSWIDTH || w > FSWIDTH)
         return false;
 
