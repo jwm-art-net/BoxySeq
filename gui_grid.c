@@ -17,70 +17,66 @@
 #include "include/gui_grid_editor.h"
 
 
-static void gui_grid_note_on(cairo_t* cr, int x, int y, int w, int h, double a)
+static void gui_gdk_grid_note_on(gui_grid* ggr, int x, int y,
+                                                int w, int h, double a)
 {
-    cairo_rectangle(cr, x, y, w, h);
+    GdkColor c = { 0, 0x0000, 0xffff * a, 0x0000 };
 
-    cairo_set_source_rgb(cr, 0.0, 1.0 * a, 0.0);
-    cairo_fill_preserve(cr);
-    cairo_set_source_rgb(cr, 0.0, 0.5 * a, 0.0);
-    cairo_set_line_width(cr, 1.0);
-    cairo_stroke (cr);
-
-}
-
-static void gui_grid_note_off(cairo_t* cr, int x, int y, int w, int h, double a)
-{
-    cairo_rectangle(cr, x, y, w, h);
-
-    cairo_set_source_rgb(cr, 0.0, 0.5 * a, 0.0);
-    cairo_fill_preserve(cr);
-    cairo_set_source_rgb(cr, 0.0, 0.2 * a, 0.0);
-    cairo_set_line_width(cr, 1.0);
-    cairo_stroke (cr);
+    gdk_gc_set_rgb_fg_color(ggr->gc, &c);
+    gdk_draw_rectangle(ggr->drawable, ggr->gc, TRUE, x, y, w, h);
 }
 
 
-static void gui_grid_block(cairo_t* cr, int x, int y, int w, int h, double a)
+static void gui_gdk_grid_note_off(gui_grid* ggr, int x, int y,
+                                                 int w, int h, double a)
 {
-    cairo_rectangle(cr, x, y, w, h);
+    GdkColor c = { 0, 0x0000, 0x7fff * a, 0x0000 };
 
-    cairo_set_source_rgb(cr, 0.0, 0.0, 1.0 * a);
-    cairo_fill_preserve(cr);
-    cairo_set_source_rgb(cr, 0.0, 0.0, 0.5 * a);
-    cairo_set_line_width(cr, 1.0);
-    cairo_stroke (cr);
+    gdk_gc_set_rgb_fg_color(ggr->gc, &c);
+    gdk_draw_rectangle(ggr->drawable, ggr->gc, TRUE, x, y, w, h);
 }
 
 
-static void gui_grid_block_on(cairo_t* cr, int x, int y, int w, int h, double a)
+static void gui_gdk_grid_block(gui_grid* ggr,    int x, int y,
+                                                 int w, int h, double a)
 {
-    cairo_rectangle(cr, x, y, w, h);
+    GdkColor c = { 0, 0x0000, 0x0000, 0xffff * a };
 
-    cairo_set_source_rgb(cr, 0.0, 1.0 * a, 1.0 * a);
-    cairo_fill_preserve(cr);
-    cairo_set_source_rgb(cr, 0.0, 0.5 * a, 0.5 * a);
-    cairo_set_line_width(cr, 1.0);
-    cairo_stroke (cr);
+    gdk_gc_set_rgb_fg_color(ggr->gc, &c);
+    gdk_draw_rectangle(ggr->drawable, ggr->gc, TRUE, x, y, w, h);
 }
 
 
-static void gui_grid_block_off(cairo_t* cr, int x, int y, int w, int h, double a)
+static void gui_gdk_grid_block_on(gui_grid* ggr, int x, int y,
+                                                 int w, int h, double a)
 {
-    cairo_rectangle(cr, x, y, w, h);
+    GdkColor c = { 0, 0x0000, 0xffff * a, 0xffff * a };
 
-    cairo_set_source_rgb(cr, 0.0, 0.0, 1.0 * a);
-    cairo_fill_preserve(cr);
-    cairo_set_source_rgb(cr, 0.0, 0.0, 0.5 * a);
-    cairo_set_line_width(cr, 1.0);
-    cairo_stroke (cr);
+    gdk_gc_set_rgb_fg_color(ggr->gc, &c);
+    gdk_draw_rectangle(ggr->drawable, ggr->gc, TRUE, x, y, w, h);
 }
 
-static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
+
+static void gui_gdk_grid_block_off(gui_grid* ggr, int x, int y,
+                                                  int w, int h, double a)
 {
+    GdkColor c = { 0, 0x0000, 0x0000, 0xffff * a };
+
+    gdk_gc_set_rgb_fg_color(ggr->gc, &c);
+    gdk_draw_rectangle(ggr->drawable, ggr->gc, TRUE, x, y, w, h);
+}
+
+
+static void gui_gdk_grid_boundary(gui_grid* ggr, grbound* grb)
+{
+    GdkColor c1 = { 0, 0x0000, 0x0000, 0xffff };
+    GdkColor c2 = { 0, 0xffff, 0x0000, 0x0000 };
+
     int bx, by, bw, bh;
 
     double lw = ggr->scale / 2;
+
+    gboolean filled = FALSE;
 
     if (lw < 1)
         lw = 1;
@@ -92,21 +88,40 @@ static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
     bw = (int)(bw * ggr->scale);
     bh = (int)(bh * ggr->scale);
 
-    cairo_rectangle(cr, bx, by, bw, bh);
-
-    if (ggr->action_grb == grb)
+    if (grb == ggr->action_grb)
     {
-        cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 0.5);
-        cairo_fill_preserve(cr);
+        filled = TRUE;
+
+        switch(ggr->action)
+        {
+        case ACT_GRB_HOVER:
+            gdk_gc_set_function(ggr->gc, GDK_XOR);
+            gdk_gc_set_rgb_fg_color(ggr->gc, &c1);
+            break;
+
+        case ACT_GRB_MOVE:
+        case ACT_GRB_RESIZE:
+            gdk_gc_set_function(ggr->gc, GDK_XOR);
+            gdk_gc_set_rgb_fg_color(ggr->gc, &c2);
+            break;
+        }
     }
-
-    if (ggr->action == ACT_GRB_MOVE)
-        cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 1.0);
     else
-        cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 1.0);
+        gdk_gc_set_rgb_fg_color(ggr->gc, &c1);
 
-    cairo_set_line_width(cr, lw);
-    cairo_stroke (cr);
+    gdk_draw_rectangle(ggr->drawable, ggr->gc, filled, bx, by, bw, bh);
+    gdk_gc_set_function(ggr->gc, GDK_COPY);
+}
+
+
+static void gui_gdk_grid_background(gui_grid* ggr)
+{
+    GdkColor c = { 0, 0x0000, 0x0000, 0x0000 };
+
+    gdk_gc_set_rgb_fg_color(ggr->gc, &c);
+
+    gdk_draw_rectangle(ggr->drawable, ggr->gc, TRUE,
+                        0, 0, ggr->maxsz, ggr->maxsz);
 }
 
 
@@ -131,22 +146,11 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
     event* ev = 0;
     lnode* ln = 0;
 
-    cairo_t*            cr;
-    cairo_pattern_t*    pat;
-
     int bx, by, bw, bh;
 
-    cr = gdk_cairo_create(ggr->drawing_area->window);
-    pat = cairo_pattern_create_linear (0.0, 0.0, ggr->maxsz, ggr->maxsz);
-
-    cairo_pattern_add_color_stop_rgb(pat, 0, 0.0, 0.0, 0.0);
-    cairo_pattern_add_color_stop_rgb(pat, 1, 0.1, 0.1, 0.1);
-    cairo_rectangle (cr, 0, 0, ggr->maxsz, ggr->maxsz);
-    cairo_set_source (cr, pat);
-    cairo_fill (cr);
-    cairo_pattern_destroy (pat);
-
     ln = evlist_head(boxyseq_ui_event_list(ggr->bs));
+
+    gui_gdk_grid_background(ggr);
 
     while(ln)
     {
@@ -162,16 +166,16 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         if (EVENT_IS_TYPE_BLOCK( ev ))
         {
             if (EVENT_IS_STATUS_ON( ev ))
-                gui_grid_block_on(cr, bx, by, bw, bh, a);
+                gui_gdk_grid_block_on(ggr, bx, by, bw, bh, a);
             else
-                gui_grid_block_on(cr, bx, by, bw, bh, a);
+                gui_gdk_grid_block_on(ggr, bx, by, bw, bh, a);
         }
         else
         {
             if (EVENT_IS_STATUS_ON( ev ))
-                gui_grid_note_on(cr, bx, by, bw, bh, a);
+                gui_gdk_grid_note_on(ggr, bx, by, bw, bh, a);
             else
-                gui_grid_note_off(cr, bx, by, bw, bh, a);
+                gui_gdk_grid_note_off(ggr, bx, by, bw, bh, a);
         }
 
         ln = lnode_next(ln);
@@ -182,14 +186,13 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
 
     while(grb)
     {
-        gui_grid_boundary(cr, grb, ggr);
+        gui_gdk_grid_boundary(ggr, grb);
         grb = grbound_manager_grbound_next(grbman);
     }
 
-    cairo_destroy(cr);
-
     return TRUE;
 }
+
 
 static gboolean gui_grid_button_press_event(GtkWidget* widget,
                                             GdkEventButton *gdkevent,
@@ -199,14 +202,11 @@ static gboolean gui_grid_button_press_event(GtkWidget* widget,
     grbound* grb;
     gui_grid* ggr = (gui_grid*)data;
 
-    grbman = boxyseq_grbound_manager(ggr->bs);
-    grb = grbound_manager_grbound_first(grbman);
-
     if (ggr->action == ACT_GRB_HOVER && ggr->action_grb)
     {
         int bx, by, bw, bh;
 
-        grbound_fsbound_get(grb, &bx, &by, &bw, &bh);
+        grbound_fsbound_get(ggr->action_grb, &bx, &by, &bw, &bh);
 
         ggr->action = ACT_GRB_MOVE;
 
@@ -412,6 +412,9 @@ static gboolean gui_grid_enter_leave_event( GtkWidget* widget,
     else
     {
         ggr->ptr_in_drawable = ggr->ptr_in_grid = FALSE;
+
+        if (ggr->action == ACT_GRB_HOVER)
+            ggr->action_grb = 0;
     }
 
     return TRUE;
@@ -504,6 +507,10 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
     ggr->drawing_area = tmp;
 
     gtk_widget_show_all(ggr->window);
+
+    ggr->drawable = ggr->drawing_area->window;
+
+    ggr->gc = gdk_gc_new(ggr->drawable);
 
     ggr->timeout_id = g_timeout_add(33,
                                     (GtkFunction)gui_grid_timed_updater,

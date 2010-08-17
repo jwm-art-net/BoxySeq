@@ -205,8 +205,9 @@ static grbound* grbound_private_new(_Bool with_rtdata)
 
     grb->flags = FSPLACE_ROW_SMART
                | FSPLACE_LEFT_TO_RIGHT
-               | FSPLACE_TOP_TO_BOTTOM
-               | GRBOUND_BLOCK_ON_NOTE_FAIL;
+               | FSPLACE_TOP_TO_BOTTOM;
+//               | GRBOUND_BLOCK_ON_NOTE_FAIL;
+
     grb->channel = 0;
     grb->scale_bin = binary_string_to_int("111111111111");
     grb->scale_key = 0;

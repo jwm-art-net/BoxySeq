@@ -25,6 +25,7 @@ int main(int argc, char** argv)
 
     pattern*    pat1;
     grbound*    grb1;
+    grbound*    grb2;
     moport*     mop1;
     evport*     patport1;
 
@@ -55,8 +56,8 @@ int main(int argc, char** argv)
     pat1 = pattern_manager_pattern_new(patman);
     pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 2, 18);
-    pattern_set_event_height_range(pat1, 2, 18);
+    pattern_set_event_width_range(pat1, 2, 10);
+    pattern_set_event_height_range(pat1, 2, 10);
 
     el = pattern_event_list(pat1);
 
@@ -77,23 +78,26 @@ int main(int argc, char** argv)
         else
         {
             ev = lnode_data(evlist_add_event_new(el,
-                                (i % 2 == 0) ? t + st / 2 : t));
+                                (i % 3 == 0) ? t + st / 2 : t));
             ev->note_dur = st + rand() % dur;
             ev->box_release = st + rand() % rel;
         }
     }
 
     grb1 = grbound_manager_grbound_new(grbman);
-    grbound_fsbound_set(grb1, 50, 50, 32, 32);
+    grb2 = grbound_manager_grbound_new(grbman);
+    grbound_fsbound_set(grb1, 40, 40, 24, 32);
+    grbound_fsbound_set(grb2, 64, 10, 24, 32);
 
     patport1 = evport_manager_evport_new(patportman, RT_EVLIST_SORT_POS);
 
     pattern_set_output_port(pat1, patport1);
     grbound_set_input_port(grb1, patport1);
+    grbound_set_input_port(grb2, patport1);
 
     mop1 = moport_manager_moport_new(mopman);
     grbound_midi_out_port_set(grb1, mop1);
-
+    grbound_midi_out_port_set(grb2, mop1);
 
     scales = sclist_new();
 
@@ -102,16 +106,13 @@ int main(int argc, char** argv)
     sc = sclist_scale_by_name(scales, "Major");
 
     grbound_scale_binary_set(grb1, scale_as_int(sc));
+    grbound_scale_binary_set(grb2, scale_as_int(sc));
     grbound_scale_key_set(grb1, note_number("C"));
-
-    scale_as_rgb(sc, &r, &g, &b);
-
-    MESSAGE("scale %s %s as R:%0.2lf G:%0.2lf B:%0.2lf\n",
-        scale_name(sc), scale_as_binary_string(sc),
-        r, g, b);
+    grbound_scale_key_set(grb2, note_number("C"));
 
     pattern_update_rt_data(pat1);
     grbound_update_rt_data(grb1);
+    grbound_update_rt_data(grb2);
 
     grbound_manager_update_rt_data(grbman);
     pattern_manager_update_rt_data(patman);
@@ -133,7 +134,7 @@ _Bool repositioned = 1;
 
 bbt_t looplen = pattern_loop_length(pat1);
 
-for (i = 0; i <  looplen * 8; i += st)
+for (i = 0; i <  looplen * 1; i += st)
 {
     if ((i % looplen ) < st)
         MESSAGE("-----------ph:%d nph:%d looplen:%d\n",

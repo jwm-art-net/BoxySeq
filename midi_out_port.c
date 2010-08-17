@@ -112,16 +112,21 @@ int moport_start_event(moport* midiport, const event* ev,
             pitchdir = -1;
         }
 
-        while( !scale_note_is_valid(scale_bin, scale_key, pitch)
-            || start[pitch].flags
-            || play[pitch].flags   )
+        while(pitch != endpitch)
         {
+            if (scale_note_is_valid(scale_bin, scale_key, pitch)
+             && !start[pitch].flags && !play[pitch].flags)
+            {
+                goto output;
+            }
+
             pitch += pitchdir;
-            if (pitch == endpitch)
-                return -1;
         }
+
+        return -1;
     }
 
+output:
     event_copy(&start[pitch], ev);
     start[pitch].note_pitch = pitch;
 

@@ -20,6 +20,7 @@ typedef enum GRID_ACTION
 } gridact;
 
 
+
 struct gui_grid_editor
 {
     grid*       gr;
@@ -35,11 +36,13 @@ struct gui_grid_editor
     guint timeout_id;
 
     gridact     action;
-
     grbound*    action_grb;
 
-    GtkWidget*   window;
-    GtkWidget*   drawing_area;
+    GtkWidget*      window;
+    GtkWidget*      drawing_area;
+    GdkDrawable*    drawable;
+
+    GdkGC*      gc;
 
     gboolean ptr_in_drawable;
     gboolean ptr_in_grid;
