@@ -1,7 +1,7 @@
 #ifndef JACK_PROCESS_H
 #define JACK_PROCESS_H
 
-#include "boxyseq.h"
+#include "boxyseq_types.h"
 #include "event.h"
 
 #include <jack/jack.h>

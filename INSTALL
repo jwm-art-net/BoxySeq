@@ -1,0 +1,19 @@
+to build boxyseq you can, but don't have to, choose the GUI you want to use:
+
+choose one of three options:
+
+1) gdk - (default) uses deprecated gdk functions for drawing - superior performance to cairo.
+2) cairo - does not use any deprecated drawing functions, performance suffers*.
+3) fltk - this is not yet implemented so do not choose this one!
+
+*in theory it should be possible to improve my code to be a lot more intelligent about what it draws.
+
+
+enter the following in a terminal to bring up the ccmake utility to change the GUI type:
+
+ccmake .
+cmake .
+make
+
+
+

@@ -1,7 +1,7 @@
 #ifndef GRID_BOUNDARY_H
 #define GRID_BOUNDARY_H
 
-#include "boxyseq.h"
+#include "boxyseq_types.h"
 #include "event_port.h"
 #include "freespace_boundary.h"
 

@@ -2,7 +2,7 @@
 #define GUI_MAIN_H
 
 
-#include "boxyseq.h"
+#include "boxyseq_types.h"
 #include "jack_process.h"
 
 

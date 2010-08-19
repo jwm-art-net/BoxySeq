@@ -2,7 +2,7 @@
 #define BOX_GRID_H
 
 
-#include "boxyseq.h"
+#include "boxyseq_types.h"
 #include "event_buffer.h"
 #include "event_port.h"
 #include "freespace_state.h"

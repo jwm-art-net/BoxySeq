@@ -1,5 +1,7 @@
 *~
-*.o
-boxyseq
+*.[oa]
 core
-
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake

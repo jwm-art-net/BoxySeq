@@ -2,7 +2,7 @@
 #define EVENT_H
 
 
-#include "boxyseq.h"
+#include "boxyseq_types.h"
 #include "common.h"
 #include "datacb.h"
 

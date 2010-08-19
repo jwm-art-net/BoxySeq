@@ -43,6 +43,7 @@ struct gui_grid_editor
     GdkDrawable*    drawable;
 
     GdkGC*      gc;
+    cairo_t*    cr;
 
     gboolean ptr_in_drawable;
     gboolean ptr_in_grid;

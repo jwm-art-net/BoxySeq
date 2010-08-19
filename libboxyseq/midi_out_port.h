@@ -2,7 +2,7 @@
 #define MIDI_OUT_PORT_H
 
 
-#include "boxyseq.h"
+#include "boxyseq_types.h"
 #include "event_port_manager.h"
 
 

@@ -2,7 +2,7 @@
 #define BOXY_SEQUENCER_H
 
 
-#include "boxyseq.h"
+#include "boxyseq_types.h"
 #include "common.h"
 #include "event_buffer.h"
 #include "event_port_manager.h"
