@@ -112,17 +112,17 @@ boxyseq/fast:
 .PHONY : boxyseq/fast
 
 #=============================================================================
-# Target rules for targets named boxyseq_gtk_cairo
+# Target rules for targets named boxyseq_gui
 
 # Build rule for target.
-boxyseq_gtk_cairo: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 boxyseq_gtk_cairo
-.PHONY : boxyseq_gtk_cairo
+boxyseq_gui: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 boxyseq_gui
+.PHONY : boxyseq_gui
 
 # fast build rule for target.
-boxyseq_gtk_cairo/fast:
-	$(MAKE) -f boxyseq_gtk_cairo/CMakeFiles/boxyseq_gtk_cairo.dir/build.make boxyseq_gtk_cairo/CMakeFiles/boxyseq_gtk_cairo.dir/build
-.PHONY : boxyseq_gtk_cairo/fast
+boxyseq_gui/fast:
+	$(MAKE) -f boxyseq_gui/CMakeFiles/boxyseq_gui.dir/build.make boxyseq_gui/CMakeFiles/boxyseq_gui.dir/build
+.PHONY : boxyseq_gui/fast
 
 # Help Target
 help:
@@ -133,7 +133,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... boxyseq"
-	@echo "... boxyseq_gtk_cairo"
+	@echo "... boxyseq_gui"
 .PHONY : help
 
 

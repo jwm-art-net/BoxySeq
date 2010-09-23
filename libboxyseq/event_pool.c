@@ -194,7 +194,7 @@ struct rt_event_list
     int flags;
 
     evpool* pool;
-    _Bool pool_managed;
+    bool pool_managed;
 
 #ifdef EVPOOL_DEBUG
     char* origin_string;
@@ -315,7 +315,7 @@ void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
 
     rev_track[rev_count] = rev;
 
-    _Bool fail = 0;
+    bool fail = 0;
 
     if (fwd_count != rev_count)
     {

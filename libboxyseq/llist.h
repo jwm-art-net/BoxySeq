@@ -53,9 +53,17 @@
 #ifndef LLIST_H
 #define LLIST_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "datacb.h"
 
+
 #include <stddef.h>
+#include <stdbool.h>
 
 
 typedef struct lnode lnode;
@@ -86,7 +94,7 @@ lnode*  lnode_next(const lnode*);
 
 void    lnode_select(lnode*);
 void    lnode_unselect(lnode*);
-_Bool   lnode_selected(const lnode*);
+bool    lnode_selected(const lnode*);
 
 /*  lnode_dump dumps contents of an lnode, prefixed by msg string
     and suffixed by the string returned by the datacb_str_cb callback.
@@ -134,18 +142,18 @@ lnode*  llist_add_data( llist*, void* data); /* sorted insertion */
 
 lnode*  llist_select(       llist*, datacb_sel, const void* crit);
 lnode*  llist_select_invert(llist*);
-lnode*  llist_select_all(   llist*, _Bool sel);
+lnode*  llist_select_all(   llist*, bool sel);
 
-llist*  llist_cut(      llist*, _Bool sel, datacb_mod, void* mod);
-llist*  llist_copy(     llist*, _Bool sel, datacb_mod, void* mod);
-void    llist_delete(   llist*, _Bool sel);
+llist*  llist_cut(      llist*, bool sel, datacb_mod, void* mod);
+llist*  llist_copy(     llist*, bool sel, datacb_mod, void* mod);
+void    llist_delete(   llist*, bool sel);
 
 void    llist_paste(llist* dest,
                     const llist* src,
                     datacb_edit,
                     const void* offset     );
 
-void    llist_edit( llist*, datacb_edit, const void* val, _Bool sel);
+void    llist_edit( llist*, datacb_edit, const void* val, bool sel);
 
 void    llist_sort( llist*); /* a poor-man's sort routine */
 
@@ -214,5 +222,11 @@ void    llist_dump(const llist*, datacb_dump);
     free, and memcpy...
 */
 void*   llist_datacb_dup(const void* src, size_t size);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

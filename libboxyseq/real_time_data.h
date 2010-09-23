@@ -2,6 +2,11 @@
 #define REAL_TIME_DATA_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "datacb.h"
 
 
@@ -30,6 +35,10 @@ void        rtdata_free(rtdata*);
 void*       rtdata_data(rtdata*);
 void*       rtdata_update(rtdata*);
 
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
 
 
 #endif

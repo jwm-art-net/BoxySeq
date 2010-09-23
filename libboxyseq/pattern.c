@@ -244,7 +244,7 @@ void pattern_trigger(prtdata* prt, bbt_t start_tick, bbt_t end_tick)
 */
 
 
-void pattern_rt_play(pattern* pat,  _Bool repositioned,
+void pattern_rt_play(pattern* pat,  bool repositioned,
                                     bbt_t ph,
                                     bbt_t nph)
 {
@@ -259,7 +259,7 @@ void pattern_rt_play(pattern* pat,  _Bool repositioned,
     int         count;
     event*      ev;
     event*      evlast;
-    _Bool       play_event;
+    bool       play_event;
 
     rtpat = rtdata_data(pat->rt);
 

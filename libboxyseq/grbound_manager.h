@@ -2,6 +2,11 @@
 #define GRBOUND_MANAGER_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "grid_boundary.h"
 
 
@@ -20,6 +25,11 @@ grbound*    grbound_manager_grbound_next(grbound_manager*);
 void    grbound_manager_update_rt_data(const grbound_manager*);
 
 void    grbound_manager_rt_sort(grbound_manager*, evport* grid_port);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
 
 
 #endif

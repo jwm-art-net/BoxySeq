@@ -171,7 +171,7 @@ void boxyseq_rt_init_jack_cycle(boxyseq* bs, jack_nframes_t nframes)
 
 void boxyseq_rt_play(boxyseq* bs,
                      jack_nframes_t nframes,
-                     _Bool repositioned,
+                     bool repositioned,
                      bbt_t ph, bbt_t nph)
 {
     event ev;

@@ -2,6 +2,14 @@
 #define PATTERN_MANAGER_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#include <stdbool.h>
+
+
 #include "pattern.h"
 
 
@@ -20,8 +28,14 @@ pattern*    pattern_manager_pattern_next(pattern_manager*);
 void    pattern_manager_update_rt_data(const pattern_manager*);
 
 void    pattern_manager_rt_play(    pattern_manager*,
-                                    _Bool repositioned,
+                                    bool repositioned,
                                     bbt_t ph,
                                     bbt_t nph );
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

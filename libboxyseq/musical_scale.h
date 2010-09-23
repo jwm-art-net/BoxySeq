@@ -2,6 +2,11 @@
 #define SCALE_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #define scale_note_is_valid( scale_binary, key, note ) \
     ( (scale_binary) & (1 << (12 - (( (note) + (key) ) % 12))))
 
@@ -24,6 +29,8 @@ const char* scale_name(const scale*);
 const char* scale_as_binary_string(const scale*);
 int         scale_as_int(const scale*);
 void        scale_as_rgb(const scale*, double* r, double* g, double* b);
+void        scale_int_as_rgb(int sc, double* r, double*g, double* b);
+
 
 const char* scale_name_set(scale*, const char*);
 int         scale_set_by_binary_string(scale*, const char*);
@@ -38,6 +45,11 @@ scale*      sclist_add(sclist*, const char* name, const char* binary);
 scale*      sclist_scale_by_binary(sclist*, int);
 scale*      sclist_scale_by_binary_string(sclist*, const char*);
 scale*      sclist_scale_by_name(sclist*, const char*);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
 
 
 #endif

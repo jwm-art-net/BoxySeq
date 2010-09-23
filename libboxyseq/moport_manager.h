@@ -2,6 +2,11 @@
 #define MOPORT_MANAGER_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "midi_out_port.h"
 
 
@@ -46,5 +51,11 @@ void    moport_manager_rt_play_new_and_output(  moport_manager*,
 void    moport_manager_rt_empty(moport_manager*,
                                 grid*,
                                 jack_nframes_t nframes);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

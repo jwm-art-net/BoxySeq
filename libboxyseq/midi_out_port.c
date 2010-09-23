@@ -322,7 +322,7 @@ void moport_rt_empty(moport* midiport, grid* gr, jack_nframes_t nframes)
 
 
 #ifdef GRID_DEBUG
-_Bool moport_event_in_start(moport* mo, event* ev)
+bool moport_event_in_start(moport* mo, event* ev)
 {
     int c, p;
     event* start;

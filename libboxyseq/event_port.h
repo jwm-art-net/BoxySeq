@@ -2,6 +2,11 @@
 #define EVENT_PORT_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "event_pool.h"
 
 /*  we want to connect a pattern to several boundary within a grid.
@@ -67,6 +72,11 @@ int         evport_count(evport*);
 
 #ifdef EVPORT_DEBUG
 void        evport_dump(evport*);
+#endif
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
 #endif
 
 

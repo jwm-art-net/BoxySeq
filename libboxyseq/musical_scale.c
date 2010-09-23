@@ -153,6 +153,16 @@ void scale_as_rgb(const scale* sc, double* r, double* g, double* b)
 }
 
 
+void scale_int_as_rgb(int scb, double* r, double*g, double* b)
+{
+    *b = (double)(scb & 0xf) / 15.0;
+    scb >>= 4;
+    *g = (double)(scb & 0xf) / 15.0;
+    scb >>= 4;
+    *r = (double)(scb & 0xf) / 15.0;
+}
+
+
 const char* scale_name_set(scale* sc, const char* name)
 {
     return string_set(&sc->name, name);

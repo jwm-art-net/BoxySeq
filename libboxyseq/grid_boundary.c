@@ -13,8 +13,8 @@
 #include "include/freespace_boundary_data.h"
 
 
-static grbound* grbound_private_new(_Bool with_rtdata);
-static grbound* grbound_private_dup(const void* grb, _Bool with_rtdata);
+static grbound* grbound_private_new(bool with_rtdata);
+static grbound* grbound_private_dup(const void* grb, bool with_rtdata);
 
 static void*    grbound_rtdata_get_cb(const void* grb);
 static void     grbound_rtdata_free_cb(void* grb);
@@ -181,7 +181,7 @@ void grbound_rt_sort(grbound* grb, evport* port)
 /*  STATIC/PRIVATE implementation:
 */
 
-static grbound* grbound_private_new(_Bool with_rtdata)
+static grbound* grbound_private_new(bool with_rtdata)
 {
     grbound* grb = malloc(sizeof(*grb));
 
@@ -205,8 +205,8 @@ static grbound* grbound_private_new(_Bool with_rtdata)
 
     grb->flags = FSPLACE_ROW_SMART
                | FSPLACE_LEFT_TO_RIGHT
-               | FSPLACE_TOP_TO_BOTTOM;
-//               | GRBOUND_BLOCK_ON_NOTE_FAIL;
+               | FSPLACE_TOP_TO_BOTTOM
+               | GRBOUND_BLOCK_ON_NOTE_FAIL;
 
     grb->channel = 0;
     grb->scale_bin = binary_string_to_int("111111111111");
@@ -228,7 +228,7 @@ fail0:  WARNING("out of memory for grid boundary\n");
 }
 
 
-static grbound* grbound_private_dup(const void* data, _Bool with_rtdata)
+static grbound* grbound_private_dup(const void* data, bool with_rtdata)
 {
     const grbound* grb = data;
     grbound* dest = grbound_private_new(with_rtdata);

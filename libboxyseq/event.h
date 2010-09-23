@@ -2,6 +2,11 @@
 #define EVENT_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "boxyseq_types.h"
 #include "common.h"
 #include "datacb.h"
@@ -196,6 +201,11 @@ datacb_mod  event_get_mod_cb(ev_type);
 datacb_str  event_get_str_cb(void);
 
 datacb_edit event_get_edit_cb(evcb_type);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
 
 
 #endif

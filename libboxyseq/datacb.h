@@ -2,7 +2,14 @@
 #define DATACB_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <stddef.h>
+#include <stdbool.h>
+
 
 #define DATACB_STR_SIZE 80
 
@@ -69,7 +76,7 @@ typedef void*   (*datacb_dup)(  const void* data,
     a callback to determe if the selected flag of an
     lnode should be true or false.
 */
-typedef _Bool   (*datacb_sel)(  const void* data,
+typedef bool    (*datacb_sel)(  const void* data,
                                 const void* crit );
 
 /*  ldatacb_edit:
@@ -125,4 +132,9 @@ typedef char*   (*datacb_str)(  const void* data, int level);
 typedef void*   (*datacb_rtdata)(const void* data);
 
 
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
 #endif
+
+
+#endif // DATACB_H

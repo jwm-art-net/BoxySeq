@@ -119,7 +119,7 @@ static int event_pri_cmp_coord_cb(const void* d1,
 }
 
 
-static _Bool event_pri_sel_time_cb(const void* data, const void* crit)
+static bool event_pri_sel_time_cb(const void* data, const void* crit)
 {
     const event* ev = data;
     const ev_sel_time* sel = crit;
@@ -127,7 +127,7 @@ static _Bool event_pri_sel_time_cb(const void* data, const void* crit)
 }
 
 
-static _Bool event_pri_sel_coord_cb(const void* data, const void* crit)
+static bool event_pri_sel_coord_cb(const void* data, const void* crit)
 {
     const event* ev = data;
     const ev_sel_coord* sel = crit;

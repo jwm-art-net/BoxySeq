@@ -1,3 +1,25 @@
+* Wednesday 23rd September 2010
+
+After an extended break from programming during which I changed
+web hosts and domain name registrars for jwm-art.net, and then
+suffered from some kind of creative i hate everything it's worthless
+crisis, I'm back programming again:
+
+    * The grid editor now has zoom control
+    * The grid itself (which does not have any grid lines ;-)
+      is now centered when it is smaller than the viewport.
+    * Space in the window which is not the grid is grey
+      rather than the black of the grid.
+
+Hmmm, well actually, I had started work on an FLTK version of Boxyseq
+during August. It stagnated when I discovered it had the potential to
+end up with the same problems as the Cairo/GTK version because FLTK
+can be compiled with Cairo.
+
+So basically, I've decided development of the BoxySeq GUI will proceed
+using Cairo and the (deprecated) GDK and the FLTK versions are abandoned.
+
+
 * Sunday 15th August 2010
 
     * The boundaries are now resizable via right-mouse click

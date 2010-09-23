@@ -12,7 +12,10 @@ set(BoxySeq_VERSION_MAJOR 0)
 set(BoxySeq_VERSION_MINOR 0)
 
 
-set(DEFAULT_GUI "gdk" CACHE STRING "Default GUI - gdk, cairo, or fltk")
+mark_as_advanced(EXECUTABLE_OUTPUT_PATH)
+mark_as_advanced(LIBRARY_OUTPUT_PATH)
+mark_as_advanced(CMAKE_BUILD_TYPE)
+mark_as_advanced(CMAKE_INSTALL_PREFIX)
 
 
 # PKG-CONFIG
@@ -41,11 +44,4 @@ endif (GLIB2_FOUND)
 
 
 ADD_SUBDIRECTORY( libboxyseq )
-
-if (DEFAULT_GUI STREQUAL "gdk")
-  ADD_SUBDIRECTORY( boxyseq_gtk )
-elseif (DEFAULT_GUI STREQUAL "cairo")
-  ADD_SUBDIRECTORY( boxyseq_gtk_cairo )
-elseif (DEFAULT_GUI STREQUAL "fltk")
-  ADD_SUBDIRECTORY( boxyseq_fltk )
-endif (DEFAULT_GUI STREQUAL "gdk")
+ADD_SUBDIRECTORY( boxyseq_gui )

@@ -2,6 +2,14 @@
 #define PATTERN_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#include <stdbool.h>
+
+
 #include "common.h"
 #include "event.h"
 #include "event_list.h"
@@ -45,7 +53,7 @@ void        pattern_dump(const pattern*);
 
 void        pattern_update_rt_data(const pattern*);
 
-void        pattern_rt_play(    pattern*,   _Bool repositioned,
+void        pattern_rt_play(    pattern*,   bool repositioned,
                                             bbt_t ph,
                                             bbt_t nph );
 
@@ -62,6 +70,11 @@ bbt_t       pattern_duration_bbt_to_ticks(const pattern*,
                                             bbt_t bar,
                                             bbt_t beat,
                                             bbt_t tick      );
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
 
 
 #endif

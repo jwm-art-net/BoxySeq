@@ -2,6 +2,11 @@
 #define BOXY_SEQUENCER_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "boxyseq_types.h"
 #include "common.h"
 #include "event_buffer.h"
@@ -14,6 +19,7 @@
 #include "real_time_data.h"
 
 
+#include <stdbool.h>
 #include <jack/jack.h>
 
 
@@ -52,7 +58,7 @@ void            boxyseq_rt_init_jack_cycle(boxyseq*, jack_nframes_t);
 
 void            boxyseq_rt_play(boxyseq*,
                                 jack_nframes_t,
-                                _Bool repositioned,
+                                bool repositioned,
                                 bbt_t ph, bbt_t nph);
 
 
@@ -65,5 +71,9 @@ void            boxyseq_ui_trigger_clear(boxyseq*);
 
 int             boxyseq_ui_collect_events(boxyseq*);
 evlist*         boxyseq_ui_event_list(boxyseq*);
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
 
 #endif

@@ -1,7 +1,14 @@
 #ifndef FREESPACE_STATE_H
 #define FREESPACE_STATE_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "freespace_boundary.h"
+
 
 #include <stdbool.h>
 
@@ -42,7 +49,7 @@ void        freespace_clear(freespace*);
                         both to -1 each.
 */
 
-_Bool       freespace_find(     freespace*,
+bool        freespace_find(     freespace*,
                                 fsbound*,
                                 int placement_flags,
                                 int width,      int height,
@@ -61,5 +68,11 @@ void        freespace_add(      freespace*,
 #ifdef FREESPACE_DEBUG
 void        freespace_dump(freespace*);
 #endif
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

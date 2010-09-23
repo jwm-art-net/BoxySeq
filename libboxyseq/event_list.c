@@ -206,7 +206,7 @@ lnode* evlist_invert_selection(const evlist* el)
 }
 
 
-lnode* evlist_select_all(const evlist* el, _Bool sel)
+lnode* evlist_select_all(const evlist* el, bool sel)
 {
     #ifdef EVLIST_DEBUG
     MESSAGE("select all within evlist:%p\n", (const void*)el);
@@ -216,7 +216,7 @@ lnode* evlist_select_all(const evlist* el, _Bool sel)
 }
 
 
-evlist* evlist_cut(evlist* el, _Bool sel)
+evlist* evlist_cut(evlist* el, bool sel)
 {
     #ifdef EVLIST_DEBUG
     MESSAGE("cutting from evlist:%p select:%d\n", (const void*)el, sel);
@@ -245,7 +245,7 @@ evlist* evlist_cut(evlist* el, _Bool sel)
 }
 
 
-evlist* evlist_copy(const evlist* el, _Bool sel)
+evlist* evlist_copy(const evlist* el, bool sel)
 {
     bbt_t mod = -1;
 
@@ -275,7 +275,7 @@ evlist* evlist_copy(const evlist* el, _Bool sel)
 }
 
 
-void evlist_delete(evlist* el, _Bool sel)
+void evlist_delete(evlist* el, bool sel)
 {
     #ifdef EVLIST_DEBUG
     MESSAGE("deleting within evlist:%p select:%d\n", (const void*)el, sel);
@@ -299,7 +299,7 @@ void evlist_paste(evlist* dest, float offset, const evlist* src)
 }
 
 
-void evlist_edit(evlist* el, evcb_type ecb, float val, _Bool sel)
+void evlist_edit(evlist* el, evcb_type ecb, float val, bool sel)
 {
     #ifdef EVLIST_DEBUG
     MESSAGE("editing evlist:%p cb_type:%d val:%f sel:%d\n",

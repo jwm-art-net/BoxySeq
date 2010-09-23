@@ -107,7 +107,7 @@ inline void lnode_unselect(lnode* ln)
 }
 
 
-inline _Bool lnode_selected(const lnode* ln)
+inline bool lnode_selected(const lnode* ln)
 {
     return ln->flags & LNF_SELECTED;
 }
@@ -292,7 +292,7 @@ llist_pri_select_flags_invert(llist* ll, lnflags lnf)
 
 
 static lnode*
-llist_pri_select_flags_all(llist* ll, lnflags lnf, _Bool sel)
+llist_pri_select_flags_all(llist* ll, lnflags lnf, bool sel)
 {
     lnode* ln = ll->head;
 
@@ -627,14 +627,14 @@ llist_select_invert(llist* ll)
 
 
 inline lnode*
-llist_select_all(llist* ll, _Bool sel)
+llist_select_all(llist* ll, bool sel)
 {
     return llist_pri_select_flags_all(ll, LNF_SELECTED, sel);
 }
 
 
 llist*
-llist_cut(llist* ll, _Bool sel, datacb_mod cb_mod, void* mod)
+llist_cut(llist* ll, bool sel, datacb_mod cb_mod, void* mod)
 {
     llist* newll = llist_new(   ll->data_size,
                                 ll->cb_free,
@@ -680,7 +680,7 @@ llist_cut(llist* ll, _Bool sel, datacb_mod cb_mod, void* mod)
 
 
 llist*
-llist_copy(llist* ll, _Bool sel, datacb_mod cb_mod, void* mod)
+llist_copy(llist* ll, bool sel, datacb_mod cb_mod, void* mod)
 {
     if (!ll->cb_dup)
         return 0;
@@ -733,7 +733,7 @@ llist_copy(llist* ll, _Bool sel, datacb_mod cb_mod, void* mod)
 
 
 void
-llist_delete(llist* ll, _Bool sel)
+llist_delete(llist* ll, bool sel)
 {
     if (!ll->cb_free)
         return;
@@ -833,7 +833,7 @@ bail:
 
 
 void
-llist_edit(llist* ll, datacb_edit cb_edit, const void* val, _Bool sel)
+llist_edit(llist* ll, datacb_edit cb_edit, const void* val, bool sel)
 {
     lnode* ln = ll->head;
 
@@ -854,7 +854,7 @@ llist_dump(const llist* ll, datacb_dump cb_dump)
 
     lnode* ln = ll->head;
 
-    _Bool showflags = (ll->cb_flags && ll->flags_str);
+    bool showflags = (ll->cb_flags && ll->flags_str);
 
     char*   fbuf = 0;
 
@@ -1028,7 +1028,7 @@ llist_sort(llist* ll)
 }
 
 
-static _Bool llist_pri_has_flags_cb(llist* ll)
+static bool llist_pri_has_flags_cb(llist* ll)
 {
     if (!ll->cb_flags)
     {

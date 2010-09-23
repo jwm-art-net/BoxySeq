@@ -2,6 +2,11 @@
 #define MIDI_OUT_PORT_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "boxyseq_types.h"
 #include "event_port_manager.h"
 
@@ -57,7 +62,14 @@ void        moport_rt_empty(moport*, grid*, jack_nframes_t nframes);
 
 
 #ifdef GRID_DEBUG
-_Bool       moport_event_in_start(moport*, event*);
+#include <stdbool.h>
+bool       moport_event_in_start(moport*, event*);
 #endif
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

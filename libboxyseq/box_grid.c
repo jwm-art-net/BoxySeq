@@ -254,7 +254,7 @@ void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
 
     evport_read_reset(gr->unplace_port);
 
-    _Bool done = 0;
+    bool done = 0;
 
     while(evport_read_event(gr->unplace_port, &ev))
     {

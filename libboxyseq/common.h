@@ -1,6 +1,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 #include <stdint.h>
 
@@ -63,5 +67,9 @@ char*   int_to_binary_string(int, int sigbits);
 extern const int internal_ppqn;
 
 
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
 #endif
 
+
+#endif // COMMON_H

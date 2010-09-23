@@ -137,7 +137,7 @@ static inline int fs_x_to_offset_index(int x, int* d)
 }
 
 
-static _Bool fs_find_row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
+static bool fs_find_row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
                                         fsbound* fsb,
                                         int flags,
                                         int width,      int height,
@@ -146,7 +146,7 @@ static _Bool fs_find_row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
     if (width > fsb->w || height > fsb->h)
         return false;
 
-    _Bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
+    bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
 
     const int starty = t2b ? fsb->y : fsb->y + fsb->h - 1;
     const int endy = t2b ? fsb->y + fsb->h - height : fsb->y + height - 1;
@@ -191,7 +191,7 @@ static _Bool fs_find_row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
     fsbuf_type mask =   0;
     fsbuf_type v;
 
-    _Bool scanning = false;
+    bool scanning = false;
 
     for (y = starty; t2b ? y <= endy : y >= endy; y += diry)
     {
@@ -263,7 +263,7 @@ retry:
 }
 
 
-static _Bool fs_find_row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
+static bool fs_find_row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
                                         fsbound* fsb,
                                         int flags,
                                         int width,      int height,
@@ -272,7 +272,7 @@ static _Bool fs_find_row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
     if (width > fsb->w || height > fsb->h)
         return false;
 
-    _Bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
+    bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
 
     const int starty = t2b ? fsb->y : fsb->y + fsb->h - 1;
     const int endy = t2b ? fsb->y + fsb->h - height : fsb->y + height - 1;
@@ -293,7 +293,7 @@ static _Bool fs_find_row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
     fsbuf_type mask =   0;
     fsbuf_type v;
 
-    _Bool scanning = false;
+    bool scanning = false;
 
     for (y = starty; t2b ? y <= endy : y >= endy; y += diry)
     {
@@ -367,7 +367,7 @@ retry:
 }
 
 
-static _Bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
+static bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
                                     fsbound* fsb,
                                     int flags,
                                     int width,      int height,
@@ -376,13 +376,13 @@ static _Bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
     if (width > fsb->w || height > fsb->h)
         return false;
 
-    _Bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
+    bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
 
     const int starty = t2b ? fsb->y : fsb->y + fsb->h - 1;
     const int endy = t2b ? fsb->y + fsb->h : fsb->y;
     const int diry = t2b ? 1 : -1;
 
-    _Bool l2r = !!(flags & FSPLACE_LEFT_TO_RIGHT);
+    bool l2r = !!(flags & FSPLACE_LEFT_TO_RIGHT);
 
     int startx;
     int startxoffset = (l2r)
@@ -401,7 +401,7 @@ static _Bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
 
     fsbuf_type mask[FSBUFWIDTH];
 
-    _Bool scanning = false;
+    bool scanning = false;
 
     *resultx = -1;
     *resulty = -1;
@@ -500,13 +500,13 @@ static _Bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
 }
 
 
-_Bool freespace_find( freespace* fs,  fsbound* fsb,
+bool freespace_find( freespace* fs,  fsbound* fsb,
                         int flags,
                         int width,      int height,
                         int* resultx,   int* resulty    )
 {
     *resultx = *resulty = -1;
-    _Bool r;
+    bool r;
 
     if (flags & FSPLACE_ROW_SMART)
     {

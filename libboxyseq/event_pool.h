@@ -2,6 +2,11 @@
 #define EVENT_POOL_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "event.h"
 
 
@@ -67,5 +72,11 @@ event*      rt_evlist_read_and_remove_event(rt_evlist* rtevl,
                                                 event* dest   );
 
 void        rt_evlist_and_remove_event(rt_evlist* rtevl);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

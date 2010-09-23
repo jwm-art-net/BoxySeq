@@ -8,6 +8,12 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <stddef.h>
 #include <stdio.h>
 
@@ -49,5 +55,11 @@ warnf ( warning_t level,
 
 #define WARNING( fmt, args... ) \
     warnf( W_WARNING,__FILE__, __FUNCTION__, __LINE__, fmt, ## args )
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

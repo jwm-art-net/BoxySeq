@@ -2,6 +2,11 @@
 #define EVENT_PORT_MANAGER_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "event_port.h"
 
 
@@ -24,5 +29,11 @@ evport*         evport_manager_evport_next(evport_manager*);
 
 void            evport_manager_update_rt_data(const evport_manager*);
 void            evport_manager_rt_clear_all(evport_manager*);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif

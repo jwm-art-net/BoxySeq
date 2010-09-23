@@ -2,6 +2,11 @@
 #define EVENT_LIST_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "event.h"
 #include "llist.h"
 
@@ -35,15 +40,15 @@ lnode*  evlist_select(    const evlist*,
 
 
 lnode*  evlist_invert_selection(  const evlist*);
-lnode*  evlist_select_all(        const evlist*, _Bool sel);
+lnode*  evlist_select_all(        const evlist*, bool sel);
 
 
-evlist* evlist_cut(         evlist*,       _Bool sel);
-evlist* evlist_copy(  const evlist*, _Bool sel);
-void    evlist_delete(      evlist*,       _Bool sel);
+evlist* evlist_cut(         evlist*,    bool sel);
+evlist* evlist_copy(  const evlist*,    bool sel);
+void    evlist_delete(      evlist*,    bool sel);
 
 void    evlist_paste(   evlist* dest, float offset, const evlist* src);
-void    evlist_edit(    evlist*, evcb_type, float n, _Bool sel);
+void    evlist_edit(    evlist*, evcb_type, float n, bool sel);
 
 
 void    evlist_dump_list(const evlist*);
@@ -51,6 +56,11 @@ void    evlist_dump_events(const evlist*);
 
 
 event*  evlist_to_array(const evlist*);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
 
 
 #endif

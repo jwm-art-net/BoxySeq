@@ -103,7 +103,7 @@ void jackdata_free(jackdata* jd)
 }
 
 
-_Bool jackdata_startup(jackdata* jd, boxyseq* bs)
+bool jackdata_startup(jackdata* jd, boxyseq* bs)
 {
     #ifdef NO_REAL_TIME
     jd->client = 0;
@@ -320,7 +320,7 @@ static void jd_rt_poll(jackdata* jd, jack_nframes_t nframes)
     jack_position_t         pos;
     jack_transport_state_t  jstate;
 
-    _Bool meter_change, bpm_change, frame_rate_change;
+    bool meter_change, bpm_change, frame_rate_change;
 
     jstate = jack_transport_query(jd->client, &pos);
 
@@ -402,7 +402,7 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
 {
     bbt_t ph;
     bbt_t nph;
-    _Bool repositioned = 0;
+    bool repositioned = 0;
     jackdata* jd = (jackdata*)arg;
 
     jd_rt_poll(jd, nframes);

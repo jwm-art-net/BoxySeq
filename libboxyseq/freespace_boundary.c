@@ -57,7 +57,7 @@ void fsbound_init(fsbound* b)
 }
 
 
-_Bool fsbound_set_coords(fsbound* b,  int x, int y, int w, int h)
+bool fsbound_set_coords(fsbound* b,  int x, int y, int w, int h)
 {
     x = (x == -1) ? b->x : x;
     y = (y == -1) ? b->y : y;

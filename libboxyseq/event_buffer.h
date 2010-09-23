@@ -1,6 +1,12 @@
 #ifndef EVENT_BUFFER_H
 #define EVENT_BUFFER_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "event.h"
 
 #include <stddef.h>
@@ -33,5 +39,11 @@ size_t  evbuf_read_count(const evbuf*);
 
 
 void    evbuf_dump(const evbuf*);
+
+
+#ifdef __cplusplus
+} /* closing brace for extern "C" */
+#endif
+
 
 #endif
