@@ -56,12 +56,12 @@ int main(int argc, char** argv)
     pat1 = pattern_manager_pattern_new(patman);
     pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 12, 32);
-    pattern_set_event_height_range(pat1, 12, 32);
+    pattern_set_event_width_range(pat1, 2, 4);
+    pattern_set_event_height_range(pat1, 2, 4);
 
     el = pattern_event_list(pat1);
 
-    count = steps = 8;
+    count = steps = 16;
     st = (internal_ppqn * 4) / steps;
     dur = st * 4;
     rel = st * 4;
@@ -86,8 +86,8 @@ int main(int argc, char** argv)
 
     grb1 = grbound_manager_grbound_new(grbman);
     grb2 = grbound_manager_grbound_new(grbman);
-    grbound_fsbound_set(grb1, 4, 4, 60, 124);
-    grbound_fsbound_set(grb2, 68, 4, 60, 124);
+    grbound_fsbound_set(grb1, 44, 44, 54, 10);
+    grbound_fsbound_set(grb2, 58, 110, 38, 10);
 
     patport1 = evport_manager_evport_new(patportman, RT_EVLIST_SORT_POS);
 

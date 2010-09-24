@@ -23,11 +23,12 @@ typedef enum GRID_ACTION
 
 struct gui_grid_editor
 {
-    grid*       gr;
     boxyseq*    bs;
     jackdata*   jd;
 
     evlist*     events;
+
+    int scale_factor;
 
     double scale;
 
@@ -38,7 +39,6 @@ struct gui_grid_editor
     gridact     action;
     grbound*    action_grb;
 
-    GtkWidget*      window;
     GtkWidget*      scrolled_window;
     GtkWidget*      viewport;
     GtkWidget*      drawing_area;

@@ -1,3 +1,16 @@
+2010-09-24  James Morris  <james@jwm-art.net>
+
+    * gui_grid.c: modifications to enable the grid as part of the
+      main window instead of as a seperate window as before.
+
+    * gui_grid.c: modified so that gui_grid deals only with the display
+      of the grid such that creation of buttons (ie zoom buttons)
+      happens elsewhere. introduced two functions to connect the
+      zoom buttons to the zoom callbacks.
+
+    * gui_main.c: static globals moved into struct...
+      struct defined in boxyseq_gui/include/gui_main_editor.h
+
 2010-09-23  James Morris  <james@jwm-art.net>
 
     * gui_grid.c: using cairo_scale instead of performing scaling

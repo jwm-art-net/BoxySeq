@@ -4,35 +4,15 @@
 #include "debug.h"
 #include "event_buffer.h"
 #include "gui_grid.h"
-#include "gui_pattern.h"
 
+#include "include/gui_main_editor.h"
 
 
 #include <stdlib.h>
 #include <time.h>
 
 
-static boxyseq* _bs = 0;
-
-static GtkWidget*   window =        0;
-static GtkWidget*   timelabel =     0;
-static GtkWidget*   play_button =   0;
-static GtkWidget*   rew_button =    0;
-static GtkWidget*   rew_img =       0;
-static GtkWidget*   play_img =      0;
-static GtkWidget*   stop_img =      0;
-
-static GtkWidget*   test_button =   0;
-
-
-static guint    pos_timeout_id = 0;
-static guint    bs_timeout_id = 0;
-
-static int      gui_jack_rolling = 0;
-
-
-static gui_pattern* gui_pattern_edit = 0;
-static gui_grid*    gui_grid_edit = 0;
+static gui_main* _gui;
 
 
 static void gui_quit(void)
@@ -46,15 +26,17 @@ static gboolean idle_update_position(jackdata* jd)
     jack_position_t pos;
     jack_transport_state_t jstate = jackdata_transport_state(jd, &pos);
 
-    if (jstate == JackTransportStopped && gui_jack_rolling)
+    if (jstate == JackTransportStopped && _gui->jack_rolling)
     {
-        gtk_button_set_image(GTK_BUTTON(play_button), play_img);
-        gui_jack_rolling = 0;
+        gtk_button_set_image(GTK_BUTTON(_gui->play_button),
+                                        _gui->play_img);
+        _gui->jack_rolling = 0;
     }
-    else if (jstate == JackTransportRolling && !gui_jack_rolling)
+    else if (jstate == JackTransportRolling && !_gui->jack_rolling)
     {
-        gtk_button_set_image(GTK_BUTTON(play_button), stop_img);
-        gui_jack_rolling = 1;
+        gtk_button_set_image(GTK_BUTTON(_gui->play_button),
+                                        _gui->stop_img);
+        _gui->jack_rolling = 1;
     }
 
     char buf[40] = "BBT ----:--.----";
@@ -63,7 +45,7 @@ static gboolean idle_update_position(jackdata* jd)
         snprintf(buf, 40, "BBT %4d:%2d.%04d",
                             pos.bar, pos.beat, pos.tick);
 
-    gtk_label_set_text(GTK_LABEL(timelabel), buf);
+    gtk_label_set_text(GTK_LABEL(_gui->timelabel), buf);
 
     return TRUE;
 }
@@ -106,18 +88,6 @@ static gboolean gui_transport_play(     GtkWidget *widget,
 }
 
 
-static void gui_do_pattern_show(void)
-{
-    gui_pattern_show(&gui_pattern_edit, 0);
-}
-
-
-static void gui_do_grid_show(void)
-{
-    gui_grid_show(&gui_grid_edit, 0, _bs);
-}
-
-
 int gui_init(int* argc, char*** argv, boxyseq* bs)
 {
 
@@ -132,19 +102,30 @@ int gui_init(int* argc, char*** argv, boxyseq* bs)
         return FALSE;
     }
 
-    _bs = bs;
+    _gui = malloc(sizeof(*_gui));
+
+    if (!_gui)
+    {
+        WARNING("Failed to create main gui\n");
+        return FALSE;
+    }
+
+    _gui->bs = bs;
     jackdata* jd = boxyseq_jackdata(bs);
+
+
+    _gui->jack_rolling = 0;
 
     /* main window */
 
-    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
+    _gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_resizable(GTK_WINDOW(_gui->window), TRUE);
 
     vbox = gtk_vbox_new(FALSE, 0);
-    gtk_container_add(GTK_CONTAINER(window), vbox);
+    gtk_container_add(GTK_CONTAINER(_gui->window), vbox);
     gtk_widget_show(vbox);
 
-    g_signal_connect(   GTK_OBJECT(window),
+    g_signal_connect(   GTK_OBJECT(_gui->window),
                         "destroy",
                         G_CALLBACK(gui_quit),
                         NULL                );
@@ -158,54 +139,52 @@ int gui_init(int* argc, char*** argv, boxyseq* bs)
 
     /* transport buttons */
 
-    rew_img = gtk_image_new_from_stock( GTK_STOCK_MEDIA_PREVIOUS,
-                                        GTK_ICON_SIZE_SMALL_TOOLBAR );
-    play_img = gtk_image_new_from_stock(GTK_STOCK_MEDIA_PLAY,
-                                        GTK_ICON_SIZE_SMALL_TOOLBAR );
-    stop_img = gtk_image_new_from_stock(GTK_STOCK_MEDIA_STOP,
-                                        GTK_ICON_SIZE_SMALL_TOOLBAR );
+    _gui->rewind_img =
+        gtk_image_new_from_stock(   GTK_STOCK_MEDIA_PREVIOUS,
+                                    GTK_ICON_SIZE_SMALL_TOOLBAR );
+    _gui->play_img =
+        gtk_image_new_from_stock(   GTK_STOCK_MEDIA_PLAY,
+                                    GTK_ICON_SIZE_SMALL_TOOLBAR );
+    _gui->stop_img =
+        gtk_image_new_from_stock(   GTK_STOCK_MEDIA_STOP,
+                                    GTK_ICON_SIZE_SMALL_TOOLBAR );
 
     /*  convert play_img and stop_img from floating references which
         are deleted when no longer in use, to a normal reference.
         this prevents either of the images being deleted when we
         swap the play/stop button images. unref'd after gtk_main.
     */
-    g_object_ref_sink(play_img);
-    g_object_ref_sink(stop_img);
+    g_object_ref_sink(_gui->play_img);
+    g_object_ref_sink(_gui->stop_img);
 
-    rew_button = gtk_button_new();
-    gtk_button_set_focus_on_click(GTK_BUTTON(rew_button), FALSE);
-    gtk_button_set_relief(GTK_BUTTON(rew_button), GTK_RELIEF_NONE);
-    gtk_button_set_image(GTK_BUTTON(rew_button), rew_img);
-    gtk_box_pack_start(GTK_BOX(hbox), rew_button, FALSE, FALSE, 0);
-    gtk_widget_show(rew_button);
-    g_signal_connect(   GTK_OBJECT(rew_button),
+    _gui->rewind_button = gtk_button_new();
+    gtk_button_set_focus_on_click(  GTK_BUTTON(_gui->rewind_button),
+                                                        FALSE);
+    gtk_button_set_relief(          GTK_BUTTON(_gui->rewind_button),
+                                                        GTK_RELIEF_NONE);
+    gtk_button_set_image(           GTK_BUTTON(_gui->rewind_button),
+                                                        _gui->rewind_img);
+    gtk_box_pack_start(GTK_BOX(hbox), _gui->rewind_button,
+                                                        FALSE, FALSE, 0);
+    gtk_widget_show(_gui->rewind_button);
+    g_signal_connect(   GTK_OBJECT(_gui->rewind_button),
                         "clicked",
                         G_CALLBACK(gui_transport_rewind),
                         jd                        );
 
-    play_button = gtk_button_new();
-    gtk_button_set_focus_on_click(GTK_BUTTON(play_button), FALSE);
-    gtk_button_set_relief(GTK_BUTTON(play_button), GTK_RELIEF_NONE);
-    gtk_button_set_image(GTK_BUTTON(play_button), play_img);
-    gtk_box_pack_start(GTK_BOX(hbox), play_button, FALSE, FALSE, 0);
-    gtk_widget_show(play_button);
-    g_signal_connect(   GTK_OBJECT(play_button),
+    _gui->play_button = gtk_button_new();
+    gtk_button_set_focus_on_click(  GTK_BUTTON(_gui->play_button),
+                                                        FALSE);
+    gtk_button_set_relief(          GTK_BUTTON(_gui->play_button),
+                                                        GTK_RELIEF_NONE);
+    gtk_button_set_image(           GTK_BUTTON(_gui->play_button),
+                                                        _gui->play_img);
+    gtk_box_pack_start(GTK_BOX(hbox), _gui->play_button, FALSE, FALSE, 0);
+    gtk_widget_show(_gui->play_button);
+    g_signal_connect(   GTK_OBJECT(_gui->play_button),
                         "clicked",
                         G_CALLBACK(gui_transport_play),
                         jd                        );
-
-
-    test_button = gtk_button_new_with_label("grid");
-    gtk_button_set_focus_on_click(GTK_BUTTON(test_button), FALSE);
-    gtk_button_set_relief(GTK_BUTTON(test_button), GTK_RELIEF_NONE);
-    gtk_box_pack_start(GTK_BOX(hbox), test_button, FALSE, FALSE, 0);
-    gtk_widget_show(test_button);
-    g_signal_connect(   GTK_OBJECT(test_button),
-                        "clicked",
-                        G_CALLBACK(gui_do_grid_show),
-                        jd                        );
-
 
     tmp = gtk_vseparator_new();
     gtk_widget_show(tmp);
@@ -218,32 +197,58 @@ int gui_init(int* argc, char*** argv, boxyseq* bs)
     gtk_box_pack_start(GTK_BOX(hbox), evbox, TRUE, FALSE, 0);
 
     GdkColor colfg = {0,0,0xffff,0};
-    timelabel = tmp = gtk_label_new("--:--.----");
+    _gui->timelabel = tmp = gtk_label_new("--:--.----");
     gtk_misc_set_padding(GTK_MISC(tmp), 4, 0);
     gtk_widget_modify_fg(tmp, GTK_STATE_NORMAL, &colfg);
     gtk_widget_show(tmp);
     gtk_container_add(GTK_CONTAINER(evbox), tmp);
 
+    tmp = gtk_button_new();
+    gtk_button_set_focus_on_click(GTK_BUTTON(tmp), FALSE);
+    gtk_button_set_relief(GTK_BUTTON(tmp), GTK_RELIEF_NONE);
+    gtk_button_set_image(GTK_BUTTON(tmp), 
+                gtk_image_new_from_stock(GTK_STOCK_ZOOM_OUT,
+                                        GTK_ICON_SIZE_SMALL_TOOLBAR));
+    gtk_box_pack_start(GTK_BOX(hbox), tmp, FALSE, FALSE, 0);
+    gtk_widget_show(tmp);
+    _gui->zoom_out_button = tmp;
+
+    tmp = gtk_button_new();
+    gtk_button_set_focus_on_click(GTK_BUTTON(tmp), FALSE);
+    gtk_button_set_relief(GTK_BUTTON(tmp), GTK_RELIEF_NONE);
+    gtk_button_set_image(GTK_BUTTON(tmp), 
+                gtk_image_new_from_stock(GTK_STOCK_ZOOM_IN,
+                                        GTK_ICON_SIZE_SMALL_TOOLBAR));
+    gtk_box_pack_start(GTK_BOX(hbox), tmp, FALSE, FALSE, 0);
+    gtk_widget_show(tmp);
+    _gui->zoom_in_button = tmp;
+
     tmp = gtk_hseparator_new();
     gtk_widget_show(tmp);
     gtk_box_pack_start(GTK_BOX(vbox), tmp, FALSE, FALSE, 0);
 
-    pos_timeout_id = g_timeout_add(100,
+    _gui->pos_timeout_id = g_timeout_add(100,
                                 (GtkFunction)idle_update_position,
                                 jd);
 
-    bs_timeout_id = g_timeout_add(10,
+    _gui->bs_timeout_id = g_timeout_add(10,
                                     (GtkFunction)gui_boxyseq_update,
                                     bs);
 
-    gtk_widget_show(window);
+    _gui->ggr = gui_grid_create(vbox, bs);
 
+    gui_grid_connect_zoom_in_button(_gui->ggr, _gui->zoom_in_button);
+    gui_grid_connect_zoom_out_button(_gui->ggr, _gui->zoom_out_button);
+
+    gtk_widget_show(_gui->window);
 
     gtk_main();
 
+    gui_grid_destroy(_gui->ggr);
+
     /* free the play & stop images */
-    g_object_unref(stop_img);
-    g_object_unref(play_img);
+    g_object_unref(_gui->stop_img);
+    g_object_unref(_gui->play_img);
 
     return TRUE;
 }

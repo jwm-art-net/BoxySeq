@@ -8,15 +8,13 @@
 #include "jack_process.h"
 
 
-#include <gtk/gtk.h>
-
-
 #include <stdlib.h>
 
 
 #include "include/gui_grid_editor.h"
 
-
+#define SCALE_RATIO( integer_0_to_10 ) \
+    (2.0 + ((double)(integer_0_to_10) / 10.0) * 6.0)
 
 
 static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
@@ -52,7 +50,7 @@ static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
     }
     else
     {
-        cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 0.5);
+        cairo_set_source_rgb(cr, 0.0, 0.0, 1.0);
         cairo_set_line_width(cr, 2);
         cairo_stroke (cr);
     }
@@ -62,7 +60,7 @@ static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
 static gboolean gui_grid_timed_updater(gpointer data)
 {
     gui_grid* ggr = (gui_grid*)data;
-    gtk_widget_queue_draw(ggr->window);
+/*    gtk_widget_queue_draw(ggr->window);*/
     gtk_widget_queue_draw(ggr->drawing_area);
 
     return TRUE;
@@ -227,7 +225,7 @@ static gboolean gui_grid_motion_event(  GtkWidget* widget,
     int bx, by, bw, bh;
 
     ggr->ptr_x = (int)gdkevent->x - ggr->draw_offx;
-    ggr->ptr_y = (int)gdkevent->y - ggr->draw_offx;
+    ggr->ptr_y = (int)gdkevent->y - ggr->draw_offy;
 
     ggr->ptr_gx = (int)(ggr->ptr_x / ggr->scale);
     ggr->ptr_gy = (int)(ggr->ptr_y / ggr->scale);
@@ -392,13 +390,10 @@ static void gui_grid_window_v_changed(GtkAdjustment* adj, gpointer data)
 }
 
 
-static void gui_grid_free(GtkWidget* widget, gui_grid* ggr)
+void gui_grid_destroy(gui_grid* ggr)
 {
     if (!ggr)
-    {
-        WARNING("can't free nothing\n");
         return;
-    }
 
     if (ggr->timeout_id)
         g_source_remove(ggr->timeout_id);
@@ -407,78 +402,70 @@ static void gui_grid_free(GtkWidget* widget, gui_grid* ggr)
 }
 
 
-static gboolean gui_grid_zoom_in(   GtkWidget* widget,
-                                    gpointer data       )
+static void gui_grid_zoom_in(GtkWidget* widget, gpointer data)
 {
     gui_grid* ggr = (gui_grid*)data;
 
-    if (ggr->scale > 7.0)
-        return TRUE;
-
-    if (ggr->scale < 2.0)
-        gtk_widget_set_sensitive(ggr->zoom_out_button, TRUE);
-
-    ggr->scale *= 2.0;
-    ggr->maxsz = (int)(128 * ggr->scale);
-
-    gtk_widget_set_size_request(ggr->drawing_area,
-                                ggr->maxsz + 1,
-                                ggr->maxsz + 1);
-
-    if (ggr->scale > 7.0)
-        gtk_widget_set_sensitive(ggr->zoom_in_button, FALSE);
-
-    return TRUE;
-}
-
-
-static gboolean gui_grid_zoom_out(   GtkWidget* widget,
-                                    gpointer data       )
-{
-    gui_grid* ggr = (gui_grid*)data;
-
-    if (ggr->scale < 2.0)
-        return TRUE;
-
-    if (ggr->scale > 7.0)
-        gtk_widget_set_sensitive(ggr->zoom_in_button, TRUE);
-
-    ggr->scale *= 0.5;
-    ggr->maxsz = (int)(128 * ggr->scale);
-
-    gtk_widget_set_size_request(ggr->drawing_area,
-                                ggr->maxsz + 1,
-                                ggr->maxsz + 1);
-
-    if (ggr->scale < 2.0)
-        gtk_widget_set_sensitive(ggr->zoom_out_button, FALSE);
-
-    return TRUE;
-}
-
-
-void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
-{
-    gui_grid* ggr;
-
-    GtkWidget* tmp;
-    GtkWidget* main;
-    GtkWidget* toolbar;
-
-    GtkAdjustment* adj;
-
-    if (*ggr_ptr)
+    if (ggr->scale_factor == 10)
         return;
 
-    ggr= malloc(sizeof(*ggr));
+    if (ggr->scale_factor == 0)
+        gtk_widget_set_sensitive(ggr->zoom_out_button, TRUE);
+
+    ggr->scale_factor++;
+    ggr->scale = SCALE_RATIO(ggr->scale_factor);
+    ggr->maxsz = (int)(128 * ggr->scale);
+
+    gtk_widget_set_size_request(ggr->drawing_area,
+                                ggr->maxsz + 1,
+                                ggr->maxsz + 1);
+    if (ggr->scale_factor == 10)
+        gtk_widget_set_sensitive(ggr->zoom_in_button, FALSE);
+}
+
+
+static void gui_grid_zoom_out(GtkWidget* widget, gpointer data)
+{
+    gui_grid* ggr = (gui_grid*)data;
+
+    if (ggr->scale_factor == 0)
+        return;
+
+    if (ggr->scale_factor == 10)
+        gtk_widget_set_sensitive(ggr->zoom_in_button, TRUE);
+
+    ggr->scale_factor--;
+    ggr->scale = SCALE_RATIO(ggr->scale_factor);
+    ggr->maxsz = (int)(128 * ggr->scale);
+
+    gtk_widget_set_size_request(ggr->drawing_area,
+                                ggr->maxsz + 1,
+                                ggr->maxsz + 1);
+    if (ggr->scale_factor == 0)
+        gtk_widget_set_sensitive(ggr->zoom_out_button, FALSE);
+}
+
+
+gui_grid* gui_grid_create(GtkWidget* grid_container, boxyseq* bs)
+{
+    gui_grid* ggr;
+    GtkWidget* tmp;
+    GtkAdjustment* adj;
+
+    ggr = malloc(sizeof(*ggr));
 
     if (!ggr)
-        goto fail0;
+    {
+        WARNING("failed to allocate memory for gui grid editor\n");
+        return 0;
+    }
 
-    ggr->gr = gr;
     ggr->bs = bs;
     ggr->jd = boxyseq_jackdata(bs);
-    ggr->scale = 2.0;
+
+    ggr->scale_factor = 1;
+
+    ggr->scale = SCALE_RATIO(ggr->scale_factor);
 
     ggr->maxsz = (int)(128 * ggr->scale);
     ggr->draw_offx = 0;
@@ -486,53 +473,6 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
 
     ggr->action = ACT_GRB;
     ggr->action_grb = 0;
-
-    ggr->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(ggr->window), "grid Editor");
-    gtk_window_set_resizable(GTK_WINDOW(ggr->window), TRUE);
-
-    g_signal_connect(GTK_OBJECT(ggr->window), "destroy",
-                     G_CALLBACK(gui_grid_free), ggr);
-
-    g_signal_connect(GTK_OBJECT(ggr->window), "destroy",
-                     G_CALLBACK(gtk_widget_destroyed), ggr_ptr);
-
-    main = gtk_hbox_new(FALSE, 0);
-    gtk_container_add(GTK_CONTAINER(ggr->window), main);
-    gtk_widget_show(main);
-
-    toolbar = gtk_vbox_new(FALSE, 0);
-    gtk_widget_show(toolbar);
-    gtk_container_set_border_width(GTK_CONTAINER(toolbar), 4);
-    gtk_box_pack_start(GTK_BOX(main), toolbar, FALSE, TRUE, 0);
-
-    tmp = gtk_button_new();
-    gtk_button_set_focus_on_click(GTK_BUTTON(tmp), FALSE);
-    gtk_button_set_relief(GTK_BUTTON(tmp), GTK_RELIEF_NONE);
-    gtk_button_set_image(GTK_BUTTON(tmp), 
-                gtk_image_new_from_stock(GTK_STOCK_ZOOM_OUT,
-                                        GTK_ICON_SIZE_SMALL_TOOLBAR));
-    gtk_box_pack_start(GTK_BOX(toolbar), tmp, FALSE, FALSE, 0);
-    gtk_widget_show(tmp);
-    g_signal_connect(   GTK_OBJECT(tmp),
-                        "clicked",
-                        G_CALLBACK(gui_grid_zoom_out),
-                        ggr);
-    ggr->zoom_out_button = tmp;
-
-    tmp = gtk_button_new();
-    gtk_button_set_focus_on_click(GTK_BUTTON(tmp), FALSE);
-    gtk_button_set_relief(GTK_BUTTON(tmp), GTK_RELIEF_NONE);
-    gtk_button_set_image(GTK_BUTTON(tmp), 
-                gtk_image_new_from_stock(GTK_STOCK_ZOOM_IN,
-                                        GTK_ICON_SIZE_SMALL_TOOLBAR));
-    gtk_box_pack_start(GTK_BOX(toolbar), tmp, FALSE, FALSE, 0);
-    gtk_widget_show(tmp);
-    g_signal_connect(   GTK_OBJECT(tmp),
-                        "clicked",
-                        G_CALLBACK(gui_grid_zoom_in),
-                        ggr);
-    ggr->zoom_in_button = tmp;
 
     tmp = gtk_drawing_area_new();
     gtk_widget_set_size_request(tmp, ggr->maxsz + 1, ggr->maxsz + 1);
@@ -566,15 +506,14 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
 
     tmp = gtk_viewport_new(NULL, NULL);
     gtk_container_add(GTK_CONTAINER(tmp), ggr->drawing_area);
-    gtk_widget_set_size_request(tmp, 200, 200);
+    gtk_widget_set_size_request(tmp, 400, 400);
     gtk_widget_show(tmp);
     ggr->viewport = tmp;
 
     tmp = gtk_scrolled_window_new(NULL, NULL);
     gtk_container_add(GTK_CONTAINER(tmp), ggr->viewport);
-    gtk_box_pack_start(GTK_BOX(main), tmp, TRUE, TRUE, 0);
     gtk_widget_show(tmp);
-    gtk_widget_show(ggr->window);
+    gtk_container_add(GTK_CONTAINER(grid_container), tmp);
     ggr->scrolled_window = tmp;
 
     adj = gtk_scrolled_window_get_hadjustment(
@@ -592,12 +531,25 @@ void gui_grid_show(gui_grid** ggr_ptr, grid* gr, boxyseq* bs)
     ggr->timeout_id = g_timeout_add(33,
                                     (GtkFunction)gui_grid_timed_updater,
                                     ggr);
-
-    *ggr_ptr = ggr;
-    return;
-
-fail0:
-    WARNING("failed to allocate memory for gui grid editor\n");
-    return;
+    return ggr;
 }
 
+
+void gui_grid_connect_zoom_in_button(gui_grid* ggr, GtkWidget* button)
+{
+    ggr->zoom_in_button = button;
+    g_signal_connect(   GTK_OBJECT(button),
+                        "clicked",
+                        G_CALLBACK(gui_grid_zoom_in),
+                        ggr);
+}
+
+
+void gui_grid_connect_zoom_out_button(gui_grid* ggr, GtkWidget* button)
+{
+    ggr->zoom_out_button = button;
+    g_signal_connect(   GTK_OBJECT(button),
+                        "clicked",
+                        G_CALLBACK(gui_grid_zoom_out),
+                        ggr);
+}
