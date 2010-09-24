@@ -12,6 +12,9 @@
 #include <time.h>
 
 
+#include <gdk/gdkkeysyms.h>
+
+
 static gui_main* _gui;
 
 
@@ -88,6 +91,29 @@ static gboolean gui_transport_play(     GtkWidget *widget,
 }
 
 
+static gboolean gui_key_press_event(GtkWidget *widget,
+                                    GdkEventKey *keyevent,
+                                    gpointer data)
+{
+    switch (keyevent->keyval) {
+    case GDK_P:
+    case GDK_p:
+        gui_grid_boundary_event_play(_gui->ggr);
+        break;
+    case GDK_B:
+    case GDK_b:
+        gui_grid_boundary_event_block(_gui->ggr);
+        break;
+    case GDK_I:
+    case GDK_i:
+        gui_grid_boundary_event_ignore(_gui->ggr);
+        break;
+    }
+    
+    return TRUE;
+}
+
+
 int gui_init(int* argc, char*** argv, boxyseq* bs)
 {
 
@@ -120,6 +146,9 @@ int gui_init(int* argc, char*** argv, boxyseq* bs)
 
     _gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_resizable(GTK_WINDOW(_gui->window), TRUE);
+
+    g_signal_connect(GTK_OBJECT(_gui->window), "key_press_event",
+                       G_CALLBACK(gui_key_press_event), NULL);
 
     vbox = gtk_vbox_new(FALSE, 0);
     gtk_container_add(GTK_CONTAINER(_gui->window), vbox);

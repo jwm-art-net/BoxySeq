@@ -1,13 +1,19 @@
 Next phase of development should focus on:
 
+* allow re-ordering of grbound_manager list of grid boundaries.
+  in the GUI it can be very noticible when two boundaries overlap
+  each other that one is processed before the other.
+  
 * grid boundary lines should not be so clunky looking.
 * add a ruler to the grid editor view showing pitch/velocity information.
 * implement keyboard shortcuts (for zooming especially)
-* implement mute/unmute flag of grid_boundary
-* allow mute/unmute of grid boundary through GUI
 * add menu to main application window (with very little in it)
 * boundary dialog boxes for control/informational purposes
 
+
+24th September 2010 *** DONE ***:
+* implement mute/unmute flag of grid_boundary
+* allow mute/unmute of grid boundary through GUI
 
 24th September 2010 *** DONE ***:
 * use the 'grid editor' window as the main application window

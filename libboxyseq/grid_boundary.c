@@ -67,6 +67,29 @@ void grbound_flags_unset(grbound* grb, int flags)
 }
 
 
+void grbound_event_play(grbound* grb)
+{
+    grb->flags |= GRBOUND_EVENT_PLAY;
+    grb->flags &= ~(GRBOUND_EVENT_BLOCK | GRBOUND_EVENT_IGNORE);
+}
+
+void grbound_event_block(grbound* grb)
+{
+    grb->flags |= GRBOUND_EVENT_BLOCK;
+    grb->flags &= ~(GRBOUND_EVENT_PLAY | GRBOUND_EVENT_IGNORE);
+}
+
+void grbound_event_ignore(grbound* grb)
+{
+    grb->flags |= GRBOUND_EVENT_IGNORE;
+    grb->flags &= ~(GRBOUND_EVENT_PLAY | GRBOUND_EVENT_BLOCK);
+}
+
+int grbound_event_type(grbound* grb)
+{
+    return grb->flags & GRBOUND_EVENT_TYPE_MASK;
+}
+
 int grbound_scale_key_set(grbound* grb, int scale_key)
 {
     return (grb->scale_key = scale_key);
@@ -168,12 +191,33 @@ void grbound_rt_sort(grbound* grb, evport* port)
 
     evport_read_reset(rtgrb->evinput);
 
-    while (evport_read_event(rtgrb->evinput, &ev))
+    switch (grb->flags & GRBOUND_EVENT_TYPE_MASK)
     {
-        ev.grb = grb;
-        EVENT_CHANNEL_SET(&ev, rtgrb->channel);
-        if (!evport_write_event(port, &ev))
-            WARNING("failed to write sort to port\n");
+    case GRBOUND_EVENT_PLAY:
+        while (evport_read_event(rtgrb->evinput, &ev))
+        {
+            ev.grb = grb;
+            EVENT_CHANNEL_SET(&ev, rtgrb->channel);
+            if (!evport_write_event(port, &ev))
+                WARNING("failed to write sort to port\n");
+        }
+        return;
+
+    case GRBOUND_EVENT_BLOCK:
+        while (evport_read_event(rtgrb->evinput, &ev))
+        {
+            ev.grb = grb;
+            EVENT_SET_TYPE_BLOCK( &ev );
+            EVENT_CHANNEL_SET(&ev, rtgrb->channel);
+            if (!evport_write_event(port, &ev))
+                WARNING("failed to write sort to port\n");
+        }
+        return;
+
+    case GRBOUND_EVENT_IGNORE:
+    default:
+        while(evport_read_event(rtgrb->evinput, &ev));
+            /* do nothing */
     }
 }
 
@@ -206,7 +250,8 @@ static grbound* grbound_private_new(bool with_rtdata)
     grb->flags = FSPLACE_ROW_SMART
                | FSPLACE_LEFT_TO_RIGHT
                | FSPLACE_TOP_TO_BOTTOM
-               | GRBOUND_BLOCK_ON_NOTE_FAIL;
+               | GRBOUND_BLOCK_ON_NOTE_FAIL
+               | GRBOUND_EVENT_PLAY;
 
     grb->channel = 0;
     grb->scale_bin = binary_string_to_int("111111111111");

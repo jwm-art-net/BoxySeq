@@ -70,18 +70,8 @@ int main(int argc, char** argv)
     for (i = 0; i < count; ++i, t += st)
     {
         ev = lnode_data(evlist_add_event_new(el, t));
-        ev->note_dur = st + rand() % dur;
-        ev->box_release = st + rand() % rel;
-
-        if (!(rand() % 3))
-            EVENT_SET_TYPE_BLOCK( ev );
-        if (rand()%2)
-        {
-            ev = lnode_data(evlist_add_event_new(el,
-                                (i % 3 == 0) ? t + st / 2 : t));
-            ev->note_dur = st + rand() % dur;
-            ev->box_release = st + rel;
-        }
+        ev->note_dur = dur;
+        ev->box_release = rel;
     }
 
     grb1 = grbound_manager_grbound_new(grbman);
@@ -103,12 +93,12 @@ int main(int argc, char** argv)
 
     sclist_add_default_scales(scales);
 
-    sc = sclist_scale_by_name(scales, "Major");
+    sc = sclist_scale_by_name(scales, "Major Pentatonic");
 
     grbound_scale_binary_set(grb1, scale_as_int(sc));
     grbound_scale_binary_set(grb2, scale_as_int(sc));
-    grbound_scale_key_set(grb1, note_number("C"));
-    grbound_scale_key_set(grb2, note_number("C"));
+    grbound_scale_key_set(grb1, note_number("E"));
+    grbound_scale_key_set(grb2, note_number("E"));
 
     pattern_update_rt_data(pat1);
     grbound_update_rt_data(grb1);

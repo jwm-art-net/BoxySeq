@@ -18,5 +18,8 @@ void        gui_grid_destroy(gui_grid*);
 void    gui_grid_connect_zoom_in_button(gui_grid*, GtkWidget* button);
 void    gui_grid_connect_zoom_out_button(gui_grid*, GtkWidget* button);
 
+void    gui_grid_boundary_play(gui_grid*);
+void    gui_grid_boundary_block(gui_grid*);
+void    gui_grid_boundary_ignore(gui_grid*);
 
 #endif

@@ -1,5 +1,18 @@
 2010-09-24  James Morris  <james@jwm-art.net>
 
+    * grid_boundary.c/h: threee new boundary 'states'
+      to play as normal, to treat all events as blocks, and
+      to ignore all events.
+
+    * gui_grid.c: modified colouring of events - blocks are
+      now always coloured grey. boundary outlines are grey when
+      in the block state and bright red when in the ignore state.
+
+    * gui_main.c: added keyboard shortcuts to handle changing
+      boundary states.
+
+2010-09-24  James Morris  <james@jwm-art.net>
+
     * gui_grid.c: modifications to enable the grid as part of the
       main window instead of as a seperate window as before.
 

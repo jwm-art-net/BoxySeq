@@ -1,3 +1,21 @@
+Friday 24th September 2010
+
+    * grid boundaries now have three states:
+	play, block, and ignore.
+      the play state is the normal state. in the block state,
+      all events are treated as blocks. the ignore state ignores
+      all events.
+
+    * three keyboard shortcuts for controlling the boundary
+      states:
+          p or P to play events as normal
+          b or B to turn all events into blocks
+          i or I to ignore all events
+
+       only effects the boundary the mouse is currently hovering
+       over.
+
+
 Friday 24th September 2010 (01:35am)
 
     * Oops, yesterday was Thursday and not Wednesday.

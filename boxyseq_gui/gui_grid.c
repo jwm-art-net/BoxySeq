@@ -10,7 +10,6 @@
 
 #include <stdlib.h>
 
-
 #include "include/gui_grid_editor.h"
 
 #define SCALE_RATIO( integer_0_to_10 ) \
@@ -50,8 +49,23 @@ static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
     }
     else
     {
-        cairo_set_source_rgb(cr, 0.0, 0.0, 1.0);
-        cairo_set_line_width(cr, 2);
+        double r, g, b;
+
+        switch(grbound_event_type(grb))
+        {
+            case GRBOUND_EVENT_PLAY:
+                scale_int_as_rgb(grbound_scale_binary(grb), &r, &g, &b);
+                cairo_set_source_rgb(cr, r, g, b);
+                break;
+            case GRBOUND_EVENT_BLOCK:
+                cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
+                break;
+            case GRBOUND_EVENT_IGNORE:
+            default:
+                cairo_set_source_rgb(cr, 0.5, 0.0, 0.0);
+                break;
+        }
+        cairo_set_line_width(cr, 0.5);
         cairo_stroke (cr);
     }
 }
@@ -106,29 +120,28 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         bw = ev->box_width;
         bh = ev->box_height;
 
-        double r, g, b;
-        scale_int_as_rgb(grbound_scale_binary(ev->grb), &r, &g, &b);
-
         if (EVENT_IS_TYPE_BLOCK( ev ))
         {
             cairo_rectangle(cr, bx, by, bw, bh);
-            cairo_set_source_rgb(cr, 1.0 - r, 1.0 - g, 1.0 - b);
+            cairo_set_source_rgb(cr, 0.3, 0.3, 0.3);
             cairo_fill(cr);
         }
         else
         {
-            if (EVENT_IS_STATUS_ON( ev ))
+            double r, g, b;
+
+            scale_int_as_rgb(grbound_scale_binary(ev->grb), &r, &g, &b);
+
+            if (EVENT_IS_STATUS_OFF( ev ))
             {
-                cairo_rectangle(cr, bx, by, bw, bh);
-                cairo_set_source_rgb(cr, r, g, b);
-                cairo_fill(cr);
+                r *= 0.5;
+                g *= 0.5;
+                b *= 0.5;
             }
-            else
-            {
-                cairo_rectangle(cr, bx, by, bw, bh);
-                cairo_set_source_rgb(cr, 0.5 * r, 0.5 * g, 0.5 * b);
-                cairo_fill(cr);
-            }
+
+            cairo_rectangle(cr, bx, by, bw, bh);
+            cairo_set_source_rgb(cr, r, g, b);
+            cairo_fill(cr);
         }
 
         ln = lnode_next(ln);
@@ -481,6 +494,7 @@ gui_grid* gui_grid_create(GtkWidget* grid_container, boxyseq* bs)
                               | GDK_POINTER_MOTION_MASK
                               | GDK_ENTER_NOTIFY_MASK
                               | GDK_LEAVE_NOTIFY_MASK
+                              | GDK_KEY_PRESS_MASK
                               | GDK_EXPOSURE_MASK);
 
     g_signal_connect(GTK_OBJECT(tmp), "expose_event",
@@ -553,3 +567,34 @@ void gui_grid_connect_zoom_out_button(gui_grid* ggr, GtkWidget* button)
                         G_CALLBACK(gui_grid_zoom_out),
                         ggr);
 }
+
+
+void gui_grid_boundary_event_play(gui_grid* ggr)
+{
+    if (ggr->action != ACT_GRB_HOVER && !ggr->action_grb)
+        return;
+
+    grbound_event_play(ggr->action_grb);
+    grbound_update_rt_data(ggr->action_grb);
+}
+
+
+void gui_grid_boundary_event_block(gui_grid* ggr)
+{
+    if (ggr->action != ACT_GRB_HOVER && !ggr->action_grb)
+        return;
+
+    grbound_event_block(ggr->action_grb);
+    grbound_update_rt_data(ggr->action_grb);
+}
+
+
+void gui_grid_boundary_event_ignore(gui_grid* ggr)
+{
+    if (ggr->action != ACT_GRB_HOVER && !ggr->action_grb)
+        return;
+
+    grbound_event_ignore(ggr->action_grb);
+    grbound_update_rt_data(ggr->action_grb);
+}
+
