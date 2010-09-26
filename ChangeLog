@@ -1,3 +1,23 @@
+2010-09-26  James Morris  <james@jwm-art.net>
+
+    * gui_grid.c (gui_grid_motion_event): boundary detection fix.
+
+    * gui_grid.c (gui_grid_direction): called by gui_main when
+      arrow keys are pressed. currently moves a boundary.
+
+    * gui_grid.c (gui_grid_order_boundary): moves a boundary
+      forward or backward in the boundary list.
+
+    * gui_main.c (gui_key_press_event): *new* key processing.
+      will need attention in future when more key shortcuts
+      will be required.
+
+    * grbound_manager.c (grbound_manager_grbound_order): orders
+      a bounder backward or forward in the boundary list.
+
+    * llist.c (llist_order_node): swaps the data of the specified
+      node with the data of the previous node if it exists.
+
 2010-09-24  James Morris  <james@jwm-art.net>
 
     * grid_boundary.c/h: threee new boundary 'states'

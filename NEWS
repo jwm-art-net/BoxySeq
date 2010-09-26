@@ -1,3 +1,14 @@
+Sunday 26th September 2010
+
+    * grid boundaries can be re-ordered.
+      with a boundary selected, press the - or + key
+      to bring it forward or backward in the boundary list
+      respectively. it is however not at all clear.
+
+    * arrow keys will move the selected boundary 1 grid location
+      in the specified direction at a time.
+
+
 Friday 24th September 2010
 
     * grid boundaries now have three states:
