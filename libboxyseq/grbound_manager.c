@@ -116,6 +116,20 @@ grbound* grbound_manager_grbound_next(grbound_manager* grbman)
 
     return (grbman->cur) ? lnode_data(grbman->cur) : 0;
 }
+void grbound_manager_grbound_order(grbound_manager* grbman,
+                                                grbound* grb,
+                                                int dir)
+{
+    lnode* ln = llist_head(grbman->grblist);
+
+    while (ln && lnode_data(ln) != grb)
+        ln = lnode_next(ln);
+
+    if (!ln)
+        return;
+
+    llist_order_node(grbman->grblist, ln, dir);
+}
 
 
 static void* grbound_manager_rtdata_get_cb(const void* data)

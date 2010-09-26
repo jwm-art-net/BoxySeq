@@ -599,6 +599,7 @@ void freespace_add( freespace* fs,  int x,
     }
 }
 
+
 #ifdef FREESPACE_DEBUG
 void freespace_dump(freespace* fs)
 {

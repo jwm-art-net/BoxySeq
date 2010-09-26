@@ -1,5 +1,23 @@
 Next phase of development should focus on:
 
+* user-defined block box placement (user-block).
+  a box drawn by the user which blocks an area
+  from being occupied by anything else.
+
+* bool freespace_test(freespace*, int x, int y, int width, int height)
+  needs to be implemented for probable use by user-block placement.
+
+* figure out how user-block placement will actually work with regard
+  to overlap. a userblock can be placed which overlaps event boxes
+  and other userblocks. how dealing with this overlap with regard
+  to adding freespace back to the grid requires considerable attention
+  (by my standards at least ;-).
+
+* selection/grouping of multiple boundaries so that
+  transposition can occur on multiple boundaries and
+  to allow key and scale modulation, as well as increment
+  or decrement velocity.
+
 * allow re-ordering of grbound_manager list of grid boundaries.
   in the GUI it can be very noticible when two boundaries overlap
   each other that one is processed before the other.

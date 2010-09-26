@@ -22,6 +22,10 @@ void        grbound_manager_grbound_free(grbound_manager*, grbound*);
 grbound*    grbound_manager_grbound_first(grbound_manager*);
 grbound*    grbound_manager_grbound_next(grbound_manager*);
 
+void        grbound_manager_grbound_order(grbound_manager*,
+                                            grbound*,
+                                            int dir);
+
 void    grbound_manager_update_rt_data(const grbound_manager*);
 
 void    grbound_manager_rt_sort(grbound_manager*, evport* grid_port);

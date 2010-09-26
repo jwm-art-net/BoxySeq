@@ -5,8 +5,6 @@
 #include "event_port.h"
 #include "grid_boundary.h"
 #include "midi_out_port.h"
-#include "real_time_data.h"
-
 
 #include <stdlib.h>
 

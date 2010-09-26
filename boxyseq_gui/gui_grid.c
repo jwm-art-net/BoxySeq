@@ -259,8 +259,8 @@ static gboolean gui_grid_motion_event(  GtkWidget* widget,
             ggr->action_grb = 0;
             grbound_fsbound_get(grb, &bx, &by, &bw, &bh);
 
-            if (ggr->ptr_gx >= bx && ggr->ptr_gx <= bx + bw
-             && ggr->ptr_gy >= by && ggr->ptr_gy <= by + bh)
+            if (ggr->ptr_gx >= bx && ggr->ptr_gx < bx + bw
+             && ggr->ptr_gy >= by && ggr->ptr_gy < by + bh)
             {
                 ggr->action = ACT_GRB_HOVER;
                 ggr->action_grb = grb;
@@ -598,3 +598,38 @@ void gui_grid_boundary_event_ignore(gui_grid* ggr)
     grbound_update_rt_data(ggr->action_grb);
 }
 
+
+void gui_grid_direction(gui_grid* ggr, int dir)
+{
+    if (ggr->action == ACT_GRB_HOVER && ggr->action_grb)
+    {
+        int bx, by, bw, bh;
+
+        grbound_fsbound_get(ggr->action_grb, &bx, &by, &bw, &bh);
+
+        switch(dir)
+        {
+            case LEFT:  bx--; break;
+            case RIGHT: bx++; break;
+            case UP:    by--; break;
+            case DOWN:  by++; break;
+
+            default:
+                return;
+        }
+
+        grbound_fsbound_set(ggr->action_grb, bx, by, bw, bh);
+        grbound_update_rt_data(ggr->action_grb);
+    }
+}
+
+void gui_grid_order_boundary(gui_grid* ggr, int dir)
+{
+    if (ggr->action == ACT_GRB_HOVER && ggr->action_grb)
+    {
+        grbound_manager* grbman;
+        grbman = boxyseq_grbound_manager(ggr->bs);
+        grbound_manager_grbound_order(grbman, ggr->action_grb, dir);
+        grbound_manager_update_rt_data(grbman);
+    }
+}

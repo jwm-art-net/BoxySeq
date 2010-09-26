@@ -35,7 +35,7 @@ void        freespace_free(freespace*);
 void        freespace_clear(freespace*);
 
 
-/*  freespace_remove -  locates an area within the freespace state grid
+/*  freespace_find:     locates an area within the freespace state grid
                         where an area 'width' x 'height' of unused space
                         can be satisfied. the algorithm uses placement
                         options as found in the fsbound, and the area
@@ -55,10 +55,21 @@ bool        freespace_find(     freespace*,
                                 int width,      int height,
                                 int* resultx,   int* resulty    );
 
+/*  freespace_remove:   removes free space. meaning, the area at x, y
+                        of width, height is no longer available as free
+                        unused space. in 99% of situations the area of
+                        freespace to be removed should have been 
+                        previously located by freespace_find.
+*/
 
 void        freespace_remove(   freespace*,
                                 int x,      int y,
                                 int width,  int height );
+
+/*  freespace_add:      returns the area at x,y of width, height to
+                        the state of being free unsused space once more
+                        available for use by the placement algorithm.
+*/
 
 void        freespace_add(      freespace*,
                                 int x,      int y,

@@ -159,6 +159,7 @@ void    llist_sort( llist*); /* a poor-man's sort routine */
 
 void    llist_set_cmp_cb(llist*, datacb_cmp);
 
+void    llist_order_node(llist*, lnode*, int dir); /* +/- */
 
 /*  -------- FLAGS --------
 */

@@ -24,8 +24,7 @@ int main(int argc, char** argv)
     scale*  sc;
 
     pattern*    pat1;
-    grbound*    grb1;
-    grbound*    grb2;
+    grbound*    grb;
     moport*     mop1;
     evport*     patport1;
 
@@ -63,46 +62,68 @@ int main(int argc, char** argv)
 
     count = steps = 16;
     st = (internal_ppqn * 4) / steps;
-    dur = st * 4;
-    rel = st * 4;
+    dur = st * 1;
+    rel = st * 1;
     t = 0;
 
     for (i = 0; i < count; ++i, t += st)
     {
+        if (i % 2 == 0 && i % 4 == 0)
+            continue;
         ev = lnode_data(evlist_add_event_new(el, t));
         ev->note_dur = dur;
         ev->box_release = rel;
     }
 
-    grb1 = grbound_manager_grbound_new(grbman);
-    grb2 = grbound_manager_grbound_new(grbman);
-    grbound_fsbound_set(grb1, 44, 44, 54, 10);
-    grbound_fsbound_set(grb2, 58, 110, 38, 10);
-
     patport1 = evport_manager_evport_new(patportman, RT_EVLIST_SORT_POS);
-
     pattern_set_output_port(pat1, patport1);
-    grbound_set_input_port(grb1, patport1);
-    grbound_set_input_port(grb2, patport1);
 
     mop1 = moport_manager_moport_new(mopman);
-    grbound_midi_out_port_set(grb1, mop1);
-    grbound_midi_out_port_set(grb2, mop1);
 
     scales = sclist_new();
 
     sclist_add_default_scales(scales);
 
-    sc = sclist_scale_by_name(scales, "Major Pentatonic");
+    sc = sclist_scale_by_name(scales, "Dorian");
 
-    grbound_scale_binary_set(grb1, scale_as_int(sc));
-    grbound_scale_binary_set(grb2, scale_as_int(sc));
-    grbound_scale_key_set(grb1, note_number("E"));
-    grbound_scale_key_set(grb2, note_number("E"));
+    int scint = scale_as_int(sc);
+    int keyint = note_number("F#");
 
     pattern_update_rt_data(pat1);
-    grbound_update_rt_data(grb1);
-    grbound_update_rt_data(grb2);
+
+    srand(time(0));
+
+    for (i = 0; i < 8; ++i)
+    {
+        int x, y, w, h;
+
+        x = rand() % 70 + 20;
+        y = rand() % 70 + 20;
+        w = rand() % 10 + 10;
+        h = rand() % 10 + 10;
+
+        if (x + w > 127)
+            w = 127 - x;
+
+        if (y + h > 127)
+            h = 127 - y;
+
+        grb = grbound_manager_grbound_new(grbman);
+        grbound_fsbound_set(grb, x, y, w, h);
+        grbound_set_input_port(grb, patport1);
+
+        if ((x + w + y + h) % 2)
+            grbound_event_block(grb);
+
+        grbound_midi_out_port_set(grb, mop1);
+
+        grbound_scale_binary_set(grb, scint);
+        grbound_scale_key_set(grb, keyint);
+
+        grbound_update_rt_data(grb);
+    }
+
+
 
     grbound_manager_update_rt_data(grbman);
     pattern_manager_update_rt_data(patman);

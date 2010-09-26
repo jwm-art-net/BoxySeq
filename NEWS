@@ -1,7 +1,7 @@
 Friday 24th September 2010
 
     * grid boundaries now have three states:
-	play, block, and ignore.
+            play, block, and ignore.
       the play state is the normal state. in the block state,
       all events are treated as blocks. the ignore state ignores
       all events.

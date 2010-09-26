@@ -4,7 +4,7 @@
 
 #include "boxyseq_types.h"
 #include "jack_process.h"
-
+#include "gui_misc.h"
 
 #include <gtk/gtk.h>
 

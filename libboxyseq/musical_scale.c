@@ -340,6 +340,8 @@ scale* sclist_scale_by_name(sclist* scl, const char* name)
         ln = lnode_next(ln);
     }
 
+    WARNING("Unknown scale: '%s'\n", name);
+
     return 0;
 }
 

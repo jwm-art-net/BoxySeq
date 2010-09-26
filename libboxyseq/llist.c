@@ -906,6 +906,29 @@ llist_set_cmp_cb(llist* ll, datacb_cmp cb_cmp)
 }
 
 
+void llist_order_node(llist* ll, lnode* ln, int dir)
+{
+    void* tmp = ln->data;
+
+    if (dir > 0)
+    {
+        if (!ln->next)
+            return;
+
+        ln->data = ln->next->data;
+        ln->next->data = tmp;
+    }
+    else if (dir < 0)
+    {
+        if (!ln->prev)
+            return;
+
+        ln->data = ln->prev->data;
+        ln->prev->data = tmp;
+    }
+}
+
+
 void
 llist_sort(llist* ll)
 {
