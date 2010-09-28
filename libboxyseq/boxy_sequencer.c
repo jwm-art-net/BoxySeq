@@ -163,6 +163,28 @@ evbuf* boxyseq_ui_unplace_buf(const boxyseq* bs)
 }
 
 
+void boxyseq_ui_place_user_block(   const boxyseq* bs,
+                                    int x,      int y,
+                                    int width,  int height)
+{
+    event ev;
+
+    event_init(&ev);
+
+    ev.box_x = x;
+    ev.box_y = y;
+    ev.box_width = width;
+    ev.box_height = height;
+
+    EVENT_SET_TYPE_BLOCK( &ev );
+    EVENT_SET_STATUS_ON( &ev );
+    EVENT_SET_STATUS_USER( &ev );
+
+    if (!evbuf_write(bs->ui_input_buf, &ev))
+        WARNING("unable to create user block\n");
+}
+
+
 void boxyseq_rt_init_jack_cycle(boxyseq* bs, jack_nframes_t nframes)
 {
     moport_manager_rt_init_jack_cycle(bs->moports, nframes);
@@ -182,11 +204,19 @@ void boxyseq_rt_play(boxyseq* bs,
 
     while(evbuf_read(bs->ui_input_buf, &ev))
     {
-        if (EVENT_IS_TYPE_SHUTDOWN( &ev ))
+        switch(EVENT_TYPE( &ev ))
         {
+        case EV_TYPE_SHUTDOWN:
             bs->rt_quitting = 1;
             boxyseq_rt_clear(bs, nframes);
             return;
+
+        case EV_TYPE_BLOCK:
+            MESSAGE("user-block placement on it's way\n");
+            break;
+
+        default:
+            WARNING("unknown user event\n");
         }
     }
 

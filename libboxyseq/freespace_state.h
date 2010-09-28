@@ -55,6 +55,7 @@ bool        freespace_find(     freespace*,
                                 int width,      int height,
                                 int* resultx,   int* resulty    );
 
+
 /*  freespace_remove:   removes free space. meaning, the area at x, y
                         of width, height is no longer available as free
                         unused space. in 99% of situations the area of
@@ -72,6 +73,16 @@ void        freespace_remove(   freespace*,
 */
 
 void        freespace_add(      freespace*,
+                                int x,      int y,
+                                int width,  int height );
+
+/*  freespace_test:     tests the area at x,y of width, height for
+                        complete conformity with the specified state
+                        (unused state 0, used state 1).
+*/
+
+bool        freespace_test(     freespace*,
+                                int state,
                                 int x,      int y,
                                 int width,  int height );
 

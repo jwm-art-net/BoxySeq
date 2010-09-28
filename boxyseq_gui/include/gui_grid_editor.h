@@ -10,14 +10,12 @@
 */
 
 
-typedef enum GRID_ACTION
+typedef enum GRID_OBJECT
 {
-    ACT_GRB = 1,
-    ACT_GRB_HOVER,
-    ACT_GRB_MOVE,
-    ACT_GRB_RESIZE
+    GRID_OBJECT_BOUNDARY =  0x0001,
+    GRID_OBJECT_USERBLOCK = 0x0002,
 
-} gridact;
+} gridobj;
 
 
 
@@ -28,44 +26,18 @@ struct gui_grid_editor
 
     evlist*     events;
 
-    int scale_factor;
-
-    double scale;
-
-    int maxsz;
+    guibox* gb;
 
     guint timeout_id;
 
-    gridact     action;
+    int         action;
+    int         object;
     grbound*    action_grb;
+    event*      action_ev;
 
-    GtkWidget*      scrolled_window;
-    GtkWidget*      viewport;
     GtkWidget*      drawing_area;
-    GdkDrawable*    drawable;
-
-    GtkWidget*      zoom_in_button;
-    GtkWidget*      zoom_out_button;
 
     cairo_t*    cr;
-
-    gboolean ptr_in_drawable;
-    gboolean ptr_in_grid;
-
-    int ptr_x;
-    int ptr_y;
-
-    int ptr_gx;
-    int ptr_gy;
-
-    int ptr_offx;
-    int ptr_offy;
-
-    int draw_offx;
-    int draw_offy;
-
-    int xrszdir;
-    int yrszdir;
 };
 
 

@@ -48,6 +48,9 @@ evbuf*          boxyseq_ui_note_on_buf(const boxyseq*);
 evbuf*          boxyseq_ui_note_off_buf(const boxyseq*);
 evbuf*          boxyseq_ui_unplace_buf(const boxyseq*);
 
+void            boxyseq_ui_place_user_block(const boxyseq*,
+                                            int x,      int y,
+                                            int width,  int height);
 
 void            boxyseq_update_rt_data(const boxyseq*);
 

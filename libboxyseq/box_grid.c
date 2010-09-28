@@ -5,6 +5,8 @@
 #include "event_port.h"
 #include "grid_boundary.h"
 #include "midi_out_port.h"
+#include "real_time_data.h"
+
 
 #include <stdlib.h>
 
@@ -167,7 +169,10 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
                     if (!(rtgrb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
                         continue;
 
+/* why the special case i wonder?
                     EVENT_SET_TYPE_BLOCKED_NOTE( &ev );
+*/
+                    EVENT_SET_TYPE_BLOCK( &ev );
                 }
             }
 
@@ -175,7 +180,7 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
             */
             EVENT_SET_STATUS_ON( &ev );
 
-            if (EVENT_IS_BLOCK( &ev ))
+            if (EVENT_IS_TYPE_BLOCK( &ev ))
                 evport_write_event(gr->block_port, &ev);
 
             freespace_remove(gr->fs,    ev.box_x,

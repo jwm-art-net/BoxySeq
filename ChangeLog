@@ -1,3 +1,41 @@
+2010-09-28  James Morris  <james@jwm-art.net>
+
+    * gui_grid.c (various/all): box refactoring.
+      the creation of the scrollable, viewport, and drawing area
+      has been removed from the grid and made generic so that
+      other windows may use it (quite likely). the generic
+      code for handling the moving and resizing of boxes
+      has gone along with it.
+
+    * gui_box.c (new file): contains elements previously in
+      gui_grid.c - creates a scrollable drawing area,
+      handles resizing of it, handles motion, button
+      presses etc, related to box-objects within the drawing area.
+
+    * note: gui_box.c DOES NOT handle any drawing.
+
+2010-09-27  James Morris  <james@jwm-art.net>
+
+    * gui_grid.c (various functions): generic handling
+      the boundary-specifc code that was in the event
+      handling callbacks (ie button presses, motion events)
+      has been split out and placed into boundary specific
+      functions for each of the event types.
+
+    * gui_grid.c (various functions): generic handling
+      the event callbacks now switch on an object type
+      chosen and call the specific object types handling
+      function for that type of event
+      (ie gui_grid_motion_boundary)
+
+    * gui_grid.c (various functions): generic handling
+      the code performing the calculations to move and resize
+      boundaries has been genericised into functions to
+      handle any box with coordinates + dimensions as parameters.
+
+    * gui_grid.c (various again): resize calculation improvements.
+
+
 2010-09-26  James Morris  <james@jwm-art.net>
 
     * gui_grid.c (gui_grid_motion_event): boundary detection fix.

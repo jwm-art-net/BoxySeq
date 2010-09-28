@@ -1,3 +1,11 @@
+Tuesday 28th September 2010
+
+    * improvements to box movement and resizing calculations.
+
+    * much refactoring of gui code to allow reusability -
+      see ChangeLog for full details.
+
+
 Sunday 26th September 2010
 
     * grid boundaries can be re-ordered.

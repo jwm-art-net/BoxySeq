@@ -20,7 +20,10 @@ typedef enum EVENT_FLAGS
 {
     EV_TYPE_NOTE =          0x0001,
     EV_TYPE_BLOCK =         0x0002,
+
+/*
     EV_TYPE_BLOCKED_NOTE =  0x0003,
+*/
 
     EV_TYPE_CLEAR =         0x000d, /* from RT thread to clear GUI */
     EV_TYPE_SHUTDOWN =      0x000e, /* from GUI thread to clear RT */
@@ -28,6 +31,7 @@ typedef enum EVENT_FLAGS
     EV_TYPEMASK =           0x000f,
 
     EV_STATUS_ON =      0x0010, /* or off */
+    EV_STATUS_USER =    0x0020, /* implies indefinite duration */
 
     EV_CHANNEL_MASK =   0xf000,
 
@@ -76,14 +80,22 @@ void    event_copy(event* dest, const event* src);
 #define EVENT_IS_STATUS_OFF( ev ) \
     ((( ev )->flags & EV_STATUS_ON ) != EV_STATUS_ON)
 
+#define EVENT_IS_STATUS_USER( ev ) \
+    ((( ev )->flags & EV_STATUS_USER ) == EV_STATUS_USER)
+
+#define EVENT_TYPE( ev ) \
+    (( ev )-> flags & EV_TYPEMASK)
+
 #define EVENT_IS_TYPE_NOTE( ev ) \
     ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_NOTE)
 
 #define EVENT_IS_TYPE_BLOCK( ev ) \
     ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_BLOCK)
 
+/*
 #define EVENT_IS_TYPE_BLOCKED_NOTE( ev ) \
     ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_BLOCKED_NOTE)
+*/
 
 #define EVENT_IS_TYPE_CLEAR( ev ) \
     ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_CLEAR)
@@ -91,14 +103,19 @@ void    event_copy(event* dest, const event* src);
 #define EVENT_IS_TYPE_SHUTDOWN( ev ) \
     ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_SHUTDOWN)
 
+/*
 #define EVENT_IS_BLOCK( ev ) \
     (EVENT_IS_TYPE_BLOCK( ev ) || EVENT_IS_TYPE_BLOCKED_NOTE( ev ))
+*/
 
 #define EVENT_SET_STATUS_ON( ev ) \
     ( ev )->flags |= EV_STATUS_ON
 
 #define EVENT_SET_STATUS_OFF( ev ) \
     ( ev )->flags &= ~EV_STATUS_ON
+
+#define EVENT_SET_STATUS_USER( ev ) \
+    ( ev )->flags |= EV_STATUS_USER
 
 #define EVENT_SET_TYPE_NOTE( ev ) \
     ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_NOTE

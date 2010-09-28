@@ -600,6 +600,41 @@ void freespace_add( freespace* fs,  int x,
 }
 
 
+bool freespace_test( freespace* fs, int state,
+                                    int x,      int y1,
+                                    int width,  int height )
+{
+    int xoffset = fs_x_to_offset_index(x, &x);
+
+    fsbuf_type v;
+    int y;
+
+    for (; width > 0 && x < FSBUFWIDTH; ++x)
+    {
+        if (width < xoffset)
+            v = (((fsbuf_type)1 << width) - 1) << (xoffset - width);
+        else if (xoffset < FSBUFBITS)
+            v = ((fsbuf_type)1 << xoffset) - 1;
+        else
+            v = fsbuf_max;
+
+        for (y = y1; y < y1 + height; ++y)
+        {
+            if (!!(fs->buf[y][x] & v) == state)
+                return false;
+        }
+
+        if (width < xoffset)
+            return true;
+
+        width -= xoffset;
+        xoffset = FSBUFBITS;
+    }
+
+    return true;
+}
+
+
 #ifdef FREESPACE_DEBUG
 void freespace_dump(freespace* fs)
 {
