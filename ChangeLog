@@ -1,3 +1,13 @@
+2010-09-29  James Morris  <james@jwm-art.net>
+
+    * libboxyseq/CMakeLists.txt: #define for noof freespace
+      state bits.
+
+2010-09-29  Gabriel M. Beddingfield  <gabriel@teuton.org>
+
+    * boxyseq_gui/CMakeLists.txt: fix linking for out-of-tree
+      and/or parallel builds.
+      
 2010-09-28  James Morris  <james@jwm-art.net>
 
     * gui_grid.c (various/all): box refactoring.

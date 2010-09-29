@@ -71,7 +71,6 @@ static const fsbuf_type fsbuf_max =   ~(fsbuf_type)0;
 static const fsbuf_type fsbuf_high =  (fsbuf_type)1 << (FSBUFBITS - 1);
 
 
-#ifdef FREESPACE_DEBUG000
 static void binary_dump(const char* msg, fsbuf_type val)
 {
     fsbuf_type i = FSBUFBITS;
@@ -87,7 +86,6 @@ static void binary_dump(const char* msg, fsbuf_type val)
 
     printf(" ( %lu )\n", (unsigned long)val);
 }
-#endif
 
 
 struct freespace_state
@@ -102,6 +100,10 @@ freespace* freespace_new(void)
 
     if (!fs)
         return 0;
+
+    if (FSBUFBITS == 1)
+        WARNING("bit-size of freespace state array not defined!\n"
+                "things won't work properly!\n");
 
     int y;
 
@@ -283,7 +285,7 @@ static bool fs_find_row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
         fs_x_to_offset_index(fsb->x + fsb->w - 1, &startx) -1;
 
     int endx;
-    int endxoffset = fs_x_to_offset_index(fsb->x + width, &endx);
+    int endxoffset = fs_x_to_offset_index(fsb->x, &endx);
 
     int x, y;
     int w, h;
@@ -635,7 +637,6 @@ bool freespace_test( freespace* fs, int state,
 }
 
 
-#ifdef FREESPACE_DEBUG
 void freespace_dump(freespace* fs)
 {
     int x, y;
@@ -657,4 +658,3 @@ void freespace_dump(freespace* fs)
         putchar('\n');
     }
 }
-#endif

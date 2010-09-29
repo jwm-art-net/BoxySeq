@@ -87,9 +87,7 @@ bool        freespace_test(     freespace*,
                                 int width,  int height );
 
 
-#ifdef FREESPACE_DEBUG
 void        freespace_dump(freespace*);
-#endif
 
 
 #ifdef __cplusplus

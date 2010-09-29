@@ -1,3 +1,10 @@
+    * freespace state was using a char array with one char
+      per location. this was because i forgot to #define
+      USE_nnBIT_ARRAY when i moved to the cmake build system.
+      turns out the one-char-per-location array had a bug
+      which caused placement of an event with the same width
+      as the boundary it was to be placed within to fail.
+
 Tuesday 28th September 2010
 
     * improvements to box movement and resizing calculations.

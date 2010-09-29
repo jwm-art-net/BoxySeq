@@ -15,4 +15,4 @@ file (GLOB BOXYSEQ_GUI_SOURCES *.c)
 
 add_executable(boxyseq_gui ${BOXYSEQ_GUI_SOURCES})
 
-target_link_libraries(boxyseq_gui ${BoxySeq_SOURCE_DIR}/libboxyseq/libboxyseq.a ${GTK2_LIBRARIES} ${JACK_LIBRARIES})
+target_link_libraries(boxyseq_gui boxyseq ${GTK2_LIBRARIES} ${JACK_LIBRARIES})

@@ -62,8 +62,8 @@ int main(int argc, char** argv)
 
     count = steps = 16;
     st = (internal_ppqn * 4) / steps;
-    dur = st * 1;
-    rel = st * 1;
+    dur = st * 0.5;
+    rel = st * 0.25;
     t = 0;
 
     for (i = 0; i < count; ++i, t += st)

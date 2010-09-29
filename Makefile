@@ -124,6 +124,19 @@ boxyseq_gui/fast:
 	$(MAKE) -f boxyseq_gui/CMakeFiles/boxyseq_gui.dir/build.make boxyseq_gui/CMakeFiles/boxyseq_gui.dir/build
 .PHONY : boxyseq_gui/fast
 
+#=============================================================================
+# Target rules for targets named freespace_test
+
+# Build rule for target.
+freespace_test: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 freespace_test
+.PHONY : freespace_test
+
+# fast build rule for target.
+freespace_test/fast:
+	$(MAKE) -f freespace_test/CMakeFiles/freespace_test.dir/build.make freespace_test/CMakeFiles/freespace_test.dir/build
+.PHONY : freespace_test/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -134,6 +147,7 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... boxyseq"
 	@echo "... boxyseq_gui"
+	@echo "... freespace_test"
 .PHONY : help
 
 

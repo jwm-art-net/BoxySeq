@@ -45,3 +45,4 @@ endif (GLIB2_FOUND)
 
 ADD_SUBDIRECTORY( libboxyseq )
 ADD_SUBDIRECTORY( boxyseq_gui )
+ADD_SUBDIRECTORY( freespace_test )

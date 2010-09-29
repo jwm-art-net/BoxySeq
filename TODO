@@ -1,5 +1,12 @@
 Next phase of development should focus on:
 
+******
+* row smart placement algorithm failing for area n x n
+  in boundary n x n, where n > USE_nBIT_ARRAY.
+******
+
+* keyboard shortcuts for placement options.
+
 * user-defined block box placement (user-block).
   a box drawn by the user which blocks an area
   from being occupied by anything else.
