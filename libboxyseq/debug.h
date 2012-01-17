@@ -36,16 +36,16 @@ warnf ( warning_t level,
 
 
 #ifndef NDEBUG
-#define DMESSAGE( fmt, ... ) \
+#define DMESSAGE( fmt, args... ) \
     warnf( W_MESSAGE, __FILE__, __FUNCTION__, __LINE__, fmt, ## args )
 
-#define DWARNING( fmt, ... ) \
+#define DWARNING( fmt, args... ) \
     warnf( W_WARNING, __FILE__, __FUNCTION__, __LINE__, fmt, ## args )
 
 #else
 
-#define DMESSAGE( fmt, ... )
-#define DWARNING( fmt, ... )
+#define DMESSAGE( fmt, args... )
+#define DWARNING( fmt, args... )
 
 #endif
 

@@ -17,6 +17,20 @@ mark_as_advanced(LIBRARY_OUTPUT_PATH)
 mark_as_advanced(CMAKE_BUILD_TYPE)
 mark_as_advanced(CMAKE_INSTALL_PREFIX)
 
+option (BuildForDebug "Include gdb debugging support" ON)
+set (BuildOptionsDebug "-O0 -ggdb" CACHE STRING "Debug build flags")
+
+if (BuildForDebug)
+    set (CMAKE_BUILD_TYPE "Debug")
+    set (DEBUG 1)
+    set (CMAKE_C_FLAGS_DEBUG ${BuildOptionsDebug})
+    message (STATUS "Building for ${CMAKE_BUILD_TYPE}, flags: ${CMAKE_C_FLAGS_DEBUG}")
+else (BuildForDebug)
+    set (CMAKE_BUILD_TYPE "Release")
+    set (DEBUG 0)
+    set (CMAKE_C_FLAGS_RELEASE ${BuildOptionsBasic})
+    message (STATUS "Building for ${CMAKE_BUILD_TYPE}, flags: ${CMAKE_C_FLAGS_RELEASE}")
+endif (BuildForDebug)
 
 # PKG-CONFIG
 find_package(PkgConfig REQUIRED)

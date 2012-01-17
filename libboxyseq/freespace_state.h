@@ -89,6 +89,7 @@ bool        freespace_test(     freespace*,
 
 void        freespace_dump(freespace*);
 
+char*       freespace_placement_to_str(int placement_flags);
 
 #ifdef __cplusplus
 } /* closing brace for extern "C" */

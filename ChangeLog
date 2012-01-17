@@ -1,3 +1,23 @@
+2012-01-17  James Morris  <james@jwm-art.net>
+
+    * libboxyseq/freespace_state.c: reworked fs_x_to_offset_index.
+      now is x_to_index_offset, returns index rather than offset.
+      correct offset value range.
+
+    * libboxyseq/freespace_state.c: rework row-smart search
+      routines, improve variable naming within them, enclose
+      debug messages within FSDEBUG ifdef guards.
+
+    * freespace_test/freespace_test.c: added proper testing
+      of freespace search and remove routines:-
+          1) test placement of box within a boundary of same size.
+             performed for all box sizes at all possible locations.
+          2) test placement of multiple equal-sized boxes. predict
+             expected location and compare with result.
+
+NOTE: collumn-smart routines need reworking and tests developing.
+
+
 2010-09-29  James Morris  <james@jwm-art.net>
 
     * libboxyseq/CMakeLists.txt: #define for noof freespace
