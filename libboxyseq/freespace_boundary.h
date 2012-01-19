@@ -19,8 +19,23 @@ void        fsbound_copy(fsbound* dest, const fsbound* src);
 void        fsbound_free(fsbound*);
 void        fsbound_init(fsbound*);
 
+
+/*  fsbound_set_coords
+ *----------------------
+ *  sets the coordinates of a boundary
+ *  fails on invalid values of x, y, w, h,
+ *  including invalid values of x + w, y + h
+ *  on failure, does not change any values.
+ */
 bool        fsbound_set_coords(fsbound*, int x, int y, int w, int h);
+
+/*  fsbound_get_coords
+ *----------------------
+ *  fills the pointers with values of coordinates.
+ *  pointers must be valid.
+ */
 void        fsbound_get_coords(fsbound*, int* x, int* y, int* w, int* h);
+
 int         fsbound_get_x(fsbound*);
 int         fsbound_get_y(fsbound*);
 int         fsbound_get_w(fsbound*);

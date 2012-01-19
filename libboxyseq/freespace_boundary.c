@@ -59,21 +59,25 @@ void fsbound_init(fsbound* b)
 
 bool fsbound_set_coords(fsbound* b,  int x, int y, int w, int h)
 {
-    x = (x == -1) ? b->x : x;
-    y = (y == -1) ? b->y : y;
-    w = (w == -1) ? b->w : w;
-    h = (h == -1) ? b->h : h;
+    if (x == -1)
+        x = b->x;
 
-    if (x > FSWIDTH || w > FSWIDTH)
+    if (y == -1)
+        y = b->y;
+
+    if (w == -1)
+        w = b->w;
+
+    if (h == -1)
+        h = b->h;
+
+    if (x < 0 || w < 1 || x > FSWIDTH)
         return false;
 
-    if (y > FSHEIGHT || h > FSHEIGHT)
+    if (y < 0 || h < 1 || y > FSHEIGHT)
         return false;
 
-    if (x + w > FSWIDTH)
-        return false;
-
-    if (y + h > FSHEIGHT)
+    if (x + w > FSWIDTH || y + h > FSHEIGHT)
         return false;
 
     b->x = x;

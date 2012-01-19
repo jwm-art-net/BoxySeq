@@ -1,3 +1,22 @@
+2012-01-18  James Morris  <james@jwm-art.net>
+
+    * libboxyseq/freespace_state.c: further work done in
+       row-smart routines. fixed placements jutting out of
+       boundaries. 32, 16, and 8 bit arrays work now.
+
+    * freespace_test/freespace_test.c: additional 2 tests:-
+        3) test placement and removal and replacement, 100
+           of each of w:1~25, h:1~20.
+        4) test placement within limited boundary (ie boxes
+           smaller than boundary, and boundary smaller than
+           freespace grid). boundary sizes range from 8 to
+           120. boundaries filled with boxes until no space
+           remains. box size around half of boundary. tests
+           for jutting.
+
+NOTE: collumn-smart routines still need development + testing.
+
+
 2012-01-17  James Morris  <james@jwm-art.net>
 
     * libboxyseq/freespace_state.c: reworked fs_x_to_offset_index.
