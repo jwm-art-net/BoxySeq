@@ -247,9 +247,9 @@ static grbound* grbound_private_new(bool with_rtdata)
 
     fsbound_init(grb->bound);
 
-    grb->flags = FSPLACE_ROW_SMART
+    grb->flags = /*FSPLACE_ROW_SMART
                | FSPLACE_LEFT_TO_RIGHT
-               | FSPLACE_TOP_TO_BOTTOM
+               | */FSPLACE_TOP_TO_BOTTOM
                | GRBOUND_BLOCK_ON_NOTE_FAIL
                | GRBOUND_EVENT_PLAY;
 

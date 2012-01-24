@@ -1,7 +1,7 @@
 #include "freespace_boundary.h"
 #include "freespace_state.h"
 
-
+#include "debug.h"
 #include "include/freespace_boundary_data.h"
 
 
@@ -101,4 +101,11 @@ int fsbound_get_x(fsbound* b) { return b->x; }
 int fsbound_get_y(fsbound* b) { return b->y; }
 int fsbound_get_w(fsbound* b) { return b->w; }
 int fsbound_get_h(fsbound* b) { return b->h; }
+
+
+void fsbound_dump(fsbound* b)
+{
+    MESSAGE("fsbound %p x:%d, y:%d, w:%d, h:%d\n",
+                     b, b->x, b->y, b->w, b->h);
+}
 

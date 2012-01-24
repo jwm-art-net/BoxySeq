@@ -22,26 +22,28 @@ int test_box_placement_limited_boundary(freespace* fs, int flags);
 long total_searches = 0;
 long total_removals = 0;
 
+
+
+
+
 int main(int argc, char** argv)
 {
     int bs;
-    int placement;
+    int placement = 0;
     int lastplacementtype = FSPLACE_ROW_SMART
                           | FSPLACE_LEFT_TO_RIGHT
                           | FSPLACE_TOP_TO_BOTTOM;
 
     freespace* fs = freespace_new();
 
-/*
-    goto multiple_test;
 
+    /*---------------------------------------------------*/
+
+/*
     int i;
     int resx = 0;
     int resy = 0;
 
-    placement = FSPLACE_ROW_SMART
-              | FSPLACE_TOP_TO_BOTTOM
-              | FSPLACE_LEFT_TO_RIGHT;
 
     char* pstr = freespace_placement_to_str(placement);
 
@@ -49,25 +51,68 @@ int main(int argc, char** argv)
     free(pstr);
     fsbound* fsb = fsbound_new();
 
-    fsbound_set_coords(fsb, 0, 0, 11, 11);
+    placement = 0
+                | FSPLACE_ROW_SMART
+                | FSPLACE_TOP_TO_BOTTOM
+                | FSPLACE_LEFT_TO_RIGHT
+                ;
 
-    bs = 6;
 
+    int w = 2;
+    int h = 2;
+
+    fsbound_set_coords(fsb, 0, 0, 128, 128);
+
+    if (freespace_find(fs, fsb, placement, w, h, &resx, &resy))
+    {
+        DMESSAGE("success result x:%d, y:%d\n", resx, resy);
+        freespace_remove(fs, resx, resy, w, h);
+    }
+    else
+    {
+        DWARNING("guess what? it fail\n");
+    }
+
+    freespace_dump(fs);
+
+    w = 32;
+    h = 32;
+
+    if (freespace_find(fs, fsb, placement, w, h , &resx, &resy))
+    {
+        DMESSAGE("success result x:%d, y:%d\n", resx, resy);
+        freespace_remove(fs, resx, resy, w, h);
+    }
+    else
+    {
+        DWARNING("guess what? it fail\n");
+    }
+
+    freespace_dump(fs);
+
+    goto end;
+
+*/
+
+/*
     for (i = 0; i < 2; ++i)
     {
-        if (freespace_find(fs, fsb, placement, bs, bs , &resx, &resy))
+        if (freespace_find(fs, fsb, placement, 1, 1, &resx, &resy))
         {
             DMESSAGE("success result x:%d, y:%d\n", resx, resy);
-            freespace_remove(fs, resx, resy, bs, bs);
+            freespace_remove(fs, resx, resy, 1, 1 );
         }
         else
         {
             DWARNING("guess what? it fail\n");
         }
     }
-
+    
     freespace_dump(fs);
 
+    goto end;
+*/
+/*
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
         if (!(placement & FSPLACE_ROW_SMART))
@@ -105,6 +150,9 @@ int main(int argc, char** argv)
 
     }
 */
+    /*---------------------------------------------------*/
+
+test_boundary_placement_equal_size:
 
     MESSAGE("\n"
             "testing box placement within boundary of same size\n"
@@ -112,9 +160,6 @@ int main(int argc, char** argv)
 
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
-        if (!(placement & FSPLACE_ROW_SMART))
-            continue;
-
         char* pstr = freespace_placement_to_str(placement);
         DMESSAGE("using %s placement...\n", pstr);
         free(pstr);
@@ -129,30 +174,34 @@ int main(int argc, char** argv)
     }
 
 
+test_multiples:
+
     MESSAGE("\n"
             "testing multiples of equal-sized box placement \n"
             "==============================================\n");
 
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
-        if (!(placement & FSPLACE_ROW_SMART))
-            continue;
-
         int maxbs = 64;
-
         char* pstr = freespace_placement_to_str(placement);
         DMESSAGE("using %s placement...\n", pstr);
         free(pstr);
 
+        bs = 1;
+
+
         for (bs = 1; bs < maxbs; ++bs)
         {
             if (test_box_multiple_placement(fs, placement, bs))
+            {
                 break;
+            }
         }
 
         printf("\t%s\n", (bs == maxbs) ? "pass" : "fail");
     }
 
+test_placement_and_removal:
 
     MESSAGE("\n"
             "testing placement and removal and replacement\n"
@@ -160,9 +209,6 @@ int main(int argc, char** argv)
 
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
-        if (!(placement & FSPLACE_ROW_SMART))
-            continue;
-
         char* pstr = freespace_placement_to_str(placement);
         DMESSAGE("using %s placement...\n", pstr);
         free(pstr);
@@ -173,25 +219,28 @@ int main(int argc, char** argv)
             printf("\tpass\n");
     }
 
+test_limited_boundary:
+
     MESSAGE("\n"
             "testing box placement within limited boundary\n"
             "=============================================\n");
 
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
-        if (!(placement & FSPLACE_ROW_SMART))
-            continue;
-
         char* pstr = freespace_placement_to_str(placement);
         DMESSAGE("using %s placement...\n", pstr);
         free(pstr);
 
         if (test_box_placement_limited_boundary(fs, placement))
+        {
+            freespace_dump(fs);
             printf("\tfail\n");
+        }
         else
             printf("\tpass\n");
     }
 
+    /*---------------------------------------------------*/
 end:
 
     MESSAGE("total freespace searches:%ld\n", total_searches);
@@ -251,7 +300,9 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
             if (resx != x || resy != y)
             {
                 DWARNING(   "area search for size %d returned incorrect "
-                            "result location x:%d, y:%d\n", size, x, y);
+                            "result location x:%d, y:%d\n",
+                            size, resx, resy);
+                DWARNING(   "expected x:%d, y:%d\n", x, y);
                 return -1;
             }
         }
@@ -291,22 +342,21 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
             int resx = -1;
             int resy = -1;
 
-            if (flags & FSPLACE_ROW_SMART)
-            {
-                expx = (flags & FSPLACE_LEFT_TO_RIGHT)
-                            ? x * size
-                            : FSWIDTH - x * size - size;
+            int xx = (flags & FSPLACE_ROW_SMART) ? x : y;
+            int yy = (flags & FSPLACE_ROW_SMART) ? y : x;
 
-                expy = (flags & FSPLACE_TOP_TO_BOTTOM)
-                            ? y * size
-                            : FSHEIGHT - y * size - size;
-            }
+            expx = (flags & FSPLACE_LEFT_TO_RIGHT)
+                        ? xx * size
+                        : FSWIDTH - xx * size - size;
+
+            expy = (flags & FSPLACE_TOP_TO_BOTTOM)
+                        ? yy * size
+                        : FSHEIGHT - yy * size - size;
 
             total_searches++;
 
             if (!freespace_find(fs, fsb, flags, size, size, &resx, &resy))
             {
-                freespace_dump(fs);
                 DWARNING(   "area search for size %d failed at location "
                             " x:%d, y:%d\n", size, expx, expy);
                 DWARNING(" size:%d count:%d x:%d y:%d\n",
@@ -320,7 +370,6 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
 
             if (resx != expx || resy != expy)
             {
-                freespace_dump(fs);
                 DWARNING(   "size %d area found at x:%d, y:%d "
                             "but expected x:%d, y:%d\n",
                             size, resx, resy, expx, expy);
@@ -357,7 +406,9 @@ int test_box_placement_and_removal(freespace* fs, int flags)
 
     freespace_clear(fs);
 
-    for (i = 0; i < 100; ++i)
+    int maxboxes = (flags & FSPLACE_ROW_SMART) ? 100 : 98;
+
+    for (i = 0; i < maxboxes; ++i)
     {
         w[i] = 1 + i % 25;
         h[i] = 1 + (10 + i) % 20;
@@ -366,34 +417,33 @@ int test_box_placement_and_removal(freespace* fs, int flags)
 
         if (!freespace_find(fs, fsb, flags, w[i], h[i], &x[i], &y[i]))
         {
-            freespace_dump(fs);
-            DWARNING("area search for %d x %d failed\n", w[i], h[i]);
+            DWARNING("area search %d for %d x %d failed\n", i, w[i], h[i]);
             return -1;
         }
 
         freespace_remove(fs, x[i], y[i], w[i], h[i]);
     }
 
-    for (i = 0; i < 100; ++i)
+    for (i = 0; i < maxboxes; ++i)
     {
         int tx, ty;
+
         freespace_add(fs, x[i], y[i], w[i], h[i]);
 
         total_searches++;
 
         if (!freespace_find(fs, fsb, flags, w[i], h[i], &tx, &ty))
         {
-            freespace_dump(fs);
-            DWARNING("repeat area search for %d x %d failed\n", w[i], h[i]);
+            DWARNING("repeat area search %d for %d x %d failed\n",
+                            i, w[i], h[i]);
             return -1;
         }
 
         if (tx != x[i] || ty != y[i])
         {
-            freespace_dump(fs);
-            DWARNING("repeat of area search result x:%d, y:%d "
+            DWARNING("repeat of area %d x %d search %d result x:%d, y:%d "
                      "turned up differing result x:%d, y:%d\n",
-                        x[i], y[i], tx, ty);
+                        w[i], h[i], i, x[i], y[i], tx, ty);
             return -1;
         }
 

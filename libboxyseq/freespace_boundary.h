@@ -41,6 +41,7 @@ int         fsbound_get_y(fsbound*);
 int         fsbound_get_w(fsbound*);
 int         fsbound_get_h(fsbound*);
 
+void        fsbound_dump(fsbound*);
 
 #ifdef __cplusplus
 } /* closing brace for extern "C" */

@@ -1,7 +1,16 @@
 #include "freespace_state.h"
 
+/*  #define FSDEBUG to enable debugging infomation dumps of the freespace
+    state. if a problem is found that isn't covered within ../freespace_test
+    then add a comprehensive test there for it. then, setup the freespace
+    state with as few steps as possible to recreate the problem (ie replace
+    many search-and-removals with one or two removals and then perform the
+    search/remove which fails with FSDEBUG enabled to see what is
+    happening...
 
-//#define FSDEBUG
+#define FSDEBUG
+*/
+
 
 #include "include/freespace_boundary_data.h"
 
@@ -85,7 +94,18 @@ static void binary_dump(const char* msg, fsbuf_type val)
 
 struct freespace_state
 {
-    fsbuf_type buf[FSHEIGHT][FSBUFWIDTH];
+    fsbuf_type row_buf[FSHEIGHT][FSBUFWIDTH];
+
+    /*  the row smart algorithm is heavily optimized by the use of
+        bit manipulation. however, the column smart algorithm, while still
+        (being forced into) using bit manipulation, the optimization is
+        completely lost due to vertical rather than horizontal. this can
+        be overcome by introducing a second buffer which essentially holds
+        the same freespace grid but rotated 90 degrees. this rotation allows
+        the optimized row-smart algorithm to be used in place of the
+        column smart algorithm.
+     */
+    fsbuf_type col_buf[FSHEIGHT][FSBUFWIDTH];
 };
 
 
@@ -104,9 +124,7 @@ freespace* freespace_new(void)
 
     DMESSAGE("creating freespace grid using %d %d bit integers\n",
                                       FSBUFWIDTH, FSBUFBITS);
-
-    for (y = 0; y < FSHEIGHT; ++y)
-        memset(&fs->buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
+    freespace_clear(fs);
 
     return fs;
 }
@@ -126,10 +144,14 @@ void freespace_clear(freespace* fs)
     int y;
 
     for (y = 0; y < FSHEIGHT; ++y)
-        memset(&fs->buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
+    {
+        memset(&fs->row_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
+        memset(&fs->col_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
+    }
 }
 
 
+/* in accordance with LSB0 - least significant bit is numbered bit 0 */
 static inline int x_to_index_offset(int x, int* offset)
 {
     *offset = (FSBUFBITS - 1) - (x % FSBUFBITS);
@@ -137,27 +159,25 @@ static inline int x_to_index_offset(int x, int* offset)
 }
 
 
-static bool fs_find_row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
-                                        fsbound* fsb,
-                                        int flags,
-                                        int width,      int height,
-                                        int* resultx,   int* resulty    )
+static int row_smart_l2r(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
+                        int bx, int by, int bw, int bh, int flags,
+                        int width, int height, int *resultx, int *resulty)
 {
     /* handle vertical direction */
     bool t2b = (flags & FSPLACE_TOP_TO_BOTTOM);
-    const int y0 =  t2b ? fsb->y : fsb->y + fsb->h - 1;
-    const int y1 =  t2b ? fsb->y + fsb->h - height : fsb->y + height - 1;
+    const int y0 =  t2b ? by : by + bh - 1;
+    const int y1 =  t2b ? by + bh - height : by + height - 1;
     const int ydir = t2b ? 1 : -1;
 
     /* get offsets and indices of boundary */
     int x0offset = 0;
     int x1offset = 0;
-    int x0index = x_to_index_offset(fsb->x, &x0offset);
-    int x1index = x_to_index_offset(fsb->x + fsb->w - 1, &x1offset);
+    int x0index = x_to_index_offset(bx, &x0offset);
+    int x1index = x_to_index_offset(bx + bw - 1, &x1offset);
 
     /* offset and index of furthest point where placement may reach */
     int xwoffset = 0;
-    int xwindex = x_to_index_offset(fsb->x + fsb->w - width, &xwoffset);
+    int xwindex = x_to_index_offset(bx + bw - width, &xwoffset);
 
     /*  note: the index (horizontal) loop must test against the boundary
      *  as the loop is a state-machine with two states:
@@ -331,28 +351,25 @@ retry:
 }
 
 
-
-static bool fs_find_row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
-                                        fsbound* fsb,
-                                        int flags,
-                                        int width,      int height,
-                                        int* resultx,   int* resulty    )
+static int row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
+                        int bx, int by, int bw, int bh, int flags,
+                        int width, int height, int *resultx, int *resulty)
 {
     /* handle vertical direction */
     bool t2b = (flags & FSPLACE_TOP_TO_BOTTOM);
-    const int y0 =  t2b ? fsb->y : fsb->y + fsb->h - 1;
-    const int y1 =  t2b ? fsb->y + fsb->h - height : fsb->y + height - 1;
+    const int y0 =  t2b ? by : by + bh - 1;
+    const int y1 =  t2b ? by + bh - height : by + height - 1;
     const int ydir = t2b ? 1 : -1;
 
     /* get offsets and indices of boundary */
     int x0offset = 0;
     int x1offset = 0;
-    int x0index = x_to_index_offset(fsb->x + fsb->w - 1, &x0offset);
-    int x1index = x_to_index_offset(fsb->x, &x1offset);
+    int x0index = x_to_index_offset(bx + bw - 1, &x0offset);
+    int x1index = x_to_index_offset(bx, &x1offset);
 
     /* offset and index of furthest point where placement may reach */
     int xwoffset = 0;
-    int xwindex = x_to_index_offset(fsb->x + width - 1, &xwoffset);
+    int xwindex = x_to_index_offset(bx + width - 1, &xwoffset);
 
     /*  note: the index (horizontal) loop must test against the boundary
      *  as the loop is a state-machine with two states:
@@ -523,136 +540,6 @@ retry:
 }
 
 
-static bool fs_find_col_smart(   fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
-                                    fsbound* fsb,
-                                    int flags,
-                                    int width,      int height,
-                                    int* resultx,   int* resulty    )
-{
-    bool t2b = !!(flags & FSPLACE_TOP_TO_BOTTOM);
-
-    const int starty = t2b ? fsb->y : fsb->y + fsb->h - 1;
-    const int endy = t2b ? fsb->y + fsb->h : fsb->y;
-    const int diry = t2b ? 1 : -1;
-
-    bool l2r = !!(flags & FSPLACE_LEFT_TO_RIGHT);
-
-    int startx, endx;
-    int startxoffset = 0;
-    int endxoffset = 0;
-
-    startx = (l2r)
-            ? x_to_index_offset(fsb->x, &startxoffset)
-            : x_to_index_offset(fsb->x + fsb->w - width, &startxoffset);
-
-    endx = (l2r)
-            ? x_to_index_offset(fsb->x + fsb->w - width, &endxoffset)
-            : x_to_index_offset(fsb->x, &endxoffset);
-
-    int x, y, y1;
-    int w, h;
-    int xoffset = startxoffset;
-    int xofs;
-
-    fsbuf_type mask[FSBUFWIDTH];
-
-    bool scanning = false;
-
-    *resultx = -1;
-    *resulty = -1;
-
-    int mx;
-    int mxtestend = (l2r) ? endx : startx;
-    int mendx;
-
-    x = startx;
-
-    while((l2r) ? x <= endx : x >= endx)
-    {
-        w = width;
-        mx = x;
-        xofs = xoffset;
-
-        while (w >= 0 && mx <= mxtestend )
-        {
-            if (w < xofs)
-                mask[mx] = (((fsbuf_type)1 << w) - 1) << (xofs - w);
-            else if (xofs < FSBUFBITS)
-                mask[mx] = ((fsbuf_type)1 << xofs) - 1;
-            else
-                mask[mx] = fsbuf_max;
-
-            w -= xofs;
-            xofs = FSBUFBITS;
-            ++mx;
-        }
-
-        mendx = mx;
-
-        if (w > 0)
-            return false;
-
-        scanning = false;
-
-        for (y = starty; t2b ? y < endy : y >= endy; y += diry)
-        {
-            if (!scanning)
-            {
-                y1 = y;
-                h = height;
-                scanning = true;
-            }
-
-            for (mx = x; mx < mendx; ++mx)
-            {
-                if (buf[y][mx] & mask[mx])
-                {
-                    scanning = false;
-                    break;
-                }
-                
-            }
-
-            if (!scanning)
-                continue;
-
-            --h;
-
-            if (!h)
-            {
-                *resultx = x * FSBUFBITS + (FSBUFBITS - xoffset);
-                *resulty = t2b ? y1 : y1 + 1 - height;
-
-                return true;
-            }
-        }
-
-        if (x == endx && xoffset == endxoffset)
-            return false;
-
-        if (l2r)
-        {
-            if (xoffset > 0)
-                --xoffset;
-            else
-            {
-                xoffset = FSBUFBITS;
-                ++x;
-            }
-        }
-        else
-        {
-            if (xoffset < FSBUFBITS)
-                ++xoffset;
-            else
-            {
-                xoffset = 0;
-                --x;
-            }
-        }
-    }
-    return false;
-}
 
 
 bool freespace_find( freespace* fs,  fsbound* fsb,
@@ -662,29 +549,93 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
 {
     *resultx = *resulty = -1;
 
+    #ifdef FSDEBUG
+    char* pstr = freespace_placement_to_str(flags);
+    DMESSAGE("\n---------------------------\n"
+             "flags:%s\tarea w:%d, h:%d\n"
+             "boundary x:%d,y:%d, w:%d, h:%d\n", pstr, width, height,
+             fsb->x, fsb->y, fsb->w, fsb->h);
+    #endif
+
     if (width < 1 || width > fsb->w || height < 1 || height > fsb->h)
+    {
+        #ifdef FSDEBUG
+        DWARNING("\ninvalid area or area does not fit in boundary\n");
+        #endif
         return false;
+    }
 
     if (flags & FSPLACE_ROW_SMART)
     {
         if (flags & FSPLACE_LEFT_TO_RIGHT)
         {
-            return fs_find_row_smart_l2r(   fs->buf, fsb, flags,
-                                            width,   height,
-                                            resultx, resulty );
+            return row_smart_l2r(fs->row_buf,
+                                    fsb->x, fsb->y, fsb->w, fsb->h,
+                                    flags,
+                                    width, height, resultx, resulty);
         }
         else
         {
-            return fs_find_row_smart_r2l(   fs->buf, fsb, flags,
-                                            width,   height,
-                                            resultx, resulty );
+            return row_smart_r2l(fs->row_buf,
+                                    fsb->x, fsb->y, fsb->w, fsb->h,
+                                    flags,
+                                    width, height, resultx, resulty);
         }
     }
     else
     {
-        return fs_find_col_smart(   fs->buf, fsb, flags,
-                                    width,   height,
-                                    resultx, resulty );
+        /*  the row smart algorithm can be used for column-smart by
+            rotating 90 degrees clockwise...
+        */
+        bool ret;
+
+        int rx = FSWIDTH - fsb->y - fsb->h;
+        int ry = fsb->x;
+
+        int rflags = (flags & FSPLACE_LEFT_TO_RIGHT)
+                            ? FSPLACE_TOP_TO_BOTTOM
+                            : 0;
+
+        rflags |= (flags & FSPLACE_TOP_TO_BOTTOM)
+                            ? 0
+                            : FSPLACE_LEFT_TO_RIGHT;
+
+        #ifdef FSDEBUG
+        pstr = freespace_placement_to_str(rflags);
+        DMESSAGE("\n---------------------------\n"
+             "rflags:%s\tarea w:%d, h:%d\n"
+             "boundary rx:%d, ry:%d, w:%d, h:%d\n", pstr, width, height,
+             rx, ry, fsb->w, fsb->h);
+        #endif
+
+
+        if (rflags & FSPLACE_LEFT_TO_RIGHT)
+        {
+            ret = row_smart_l2r(fs->col_buf,
+                                    rx,     ry,
+                                    fsb->h, fsb->w,
+                                    rflags,
+                                    height, width, resultx, resulty);
+        }
+        else
+        {
+            ret = row_smart_r2l(fs->col_buf,
+                                    rx,     ry,
+                                    fsb->h, fsb->w,
+                                    rflags,
+                                    height, width, resultx, resulty);
+        }
+
+        if (!ret)
+            return false;
+
+        /* translate result back by 'rotation' 90 anti-clockwise */
+
+        rx = *resultx;
+        *resultx = *resulty;
+        *resulty = FSWIDTH - rx - height;
+
+        return true;
     }
 
     WARNING("unrecognized placement flags:%d\n", flags);
@@ -692,24 +643,27 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
 }
 
 
-void freespace_remove(freespace* fs,int x,
+void freespace_remove(freespace* fs,int x0,
                                     int y0,
-                                    int width,
-                                    int height )
+                                    int w0,
+                                    int h0 )
 {
+    int rx, ry;
+    int width = w0;
+    int height = h0;
     int offset = 0;
-    int index = x_to_index_offset(x, &offset);
-#ifdef FSDEBUG
-DMESSAGE("x:%d y:%d, width:%d, height:%d\n",x,y0,width,height);
-DMESSAGE("index:%d offset:%d\n",index,offset);
-#endif
+    int index = x_to_index_offset(x0, &offset);
+
+    #ifdef FSDEBUG
+    DMESSAGE("x:%d y:%d, width:%d, height:%d\n",x0,y0,width,height);
+    DMESSAGE("index:%d offset:%d\n",index,offset);
+    #endif
+
     for (; width > 0 && index < FSBUFWIDTH; ++index)
     {
         int y;
         fsbuf_type v;
-#ifdef FSDEBUG
-DMESSAGE("looping!:width:%d\n",width);
-#endif
+
         if (width < offset + 1)
         {
             v = (((fsbuf_type)1 << width) - 1) << (offset - width + 1);
@@ -718,11 +672,44 @@ DMESSAGE("looping!:width:%d\n",width);
         {
             v = (((fsbuf_type)1 << offset) - 1) << 1 | 1;
         }
-#ifdef FSDEBUG
-binary_dump("v:\n",v);
-#endif
+
         for (y = y0; y < y0 + height; ++y)
-            fs->buf[y][index] |= v;
+            fs->row_buf[y][index] |= v;
+
+        width -= offset + 1;
+        offset = FSBUFBITS - 1;
+    }
+
+    width = h0;
+    height = w0;
+    offset = 0;
+    rx = FSWIDTH - y0 - h0;
+    ry = x0;
+
+    index = x_to_index_offset(rx, &offset);
+
+    #ifdef FSDEBUG
+    DMESSAGE("rx:%d ry:%d, width:%d, height:%d\n",rx,ry,width,height);
+    DMESSAGE("index:%d offset:%d\n",index,offset);
+    #endif
+
+
+    for (; width > 0 && index < FSBUFWIDTH; ++index)
+    {
+        int y;
+        fsbuf_type v;
+
+        if (width < offset + 1)
+        {
+            v = (((fsbuf_type)1 << width) - 1) << (offset - width + 1);
+        }
+        else
+        {
+            v = (((fsbuf_type)1 << offset) - 1) << 1 | 1;
+        }
+
+        for (y = ry; y < ry + height; ++y)
+            fs->col_buf[y][index] |= v;
 
         width -= offset + 1;
         offset = FSBUFBITS - 1;
@@ -730,13 +717,16 @@ binary_dump("v:\n",v);
 }
 
 
-void freespace_add( freespace* fs,  int x,
+void freespace_add( freespace* fs,  int x0,
                                     int y0,
-                                    int width,
-                                    int height )
+                                    int w0,
+                                    int h0 )
 {
+    int rx, ry;
+    int width = w0;
+    int height = h0;
     int offset = 0;
-    int index = x_to_index_offset(x, &offset);
+    int index = x_to_index_offset(x0, &offset);
 
     for (; width > 0 && index < FSBUFWIDTH; ++index)
     {
@@ -753,14 +743,44 @@ void freespace_add( freespace* fs,  int x,
         }
 
         for (y = y0; y < y0 + height; ++y)
-            fs->buf[y][index] &= ~v;
+            fs->row_buf[y][index] &= ~v;
 
         width -= offset + 1;
         offset = FSBUFBITS - 1;
     }
+
+    width = h0;
+    height = w0;
+    offset = 0;
+    rx = FSWIDTH - y0 - h0;
+    ry = x0;
+
+    index = x_to_index_offset(rx, &offset);
+
+    for (; width > 0 && index < FSBUFWIDTH; ++index)
+    {
+        int y;
+        fsbuf_type v;
+
+        if (width <= offset + 1)
+        {
+            v = (((fsbuf_type)1 << width) - 1) << (offset - width + 1);
+        }
+        else
+        {
+            v = (((fsbuf_type)1 << offset) - 1) << 1 | 1;
+        }
+
+        for (y = ry; y < ry + height; ++y)
+            fs->col_buf[y][index] &= ~v;
+
+        width -= offset + 1;
+        offset = FSBUFBITS - 1;
+    }
+
 }
 
-
+/*
 bool freespace_test( freespace* fs, int state,
                                     int x,      int y1,
                                     int width,  int height )
@@ -782,7 +802,7 @@ bool freespace_test( freespace* fs, int state,
 
         for (y = y1; y < y1 + height; ++y)
         {
-            if (!!(fs->buf[y][x] & v) == state)
+            if (!!(fs->row_buf[y][x] & v) == state)
                 return false;
         }
 
@@ -795,18 +815,51 @@ bool freespace_test( freespace* fs, int state,
 
     return true;
 }
+*/
 
 
 void freespace_dump(freespace* fs)
 {
     int x, y;
 
+    for (x = 0; x < FSBUFWIDTH; ++x)
+    {
+        if (FSBUFBITS > 8)
+        {
+            int i;
+            for (i = FSBUFBITS - 1; i > 12; --i)
+                putchar(' ');
+
+            printf("...98");
+        }
+        printf("76543210%c", x < FSBUFWIDTH - 1 ? '_' : '\n');
+    }
+
     for (y = 0; y < FSHEIGHT; ++y)
     {
         for (x = 0; x < FSBUFWIDTH; ++x)
         {
             fsbuf_type i = FSBUFBITS;
-            fsbuf_type b = fs->buf[y][x];
+            fsbuf_type b = fs->row_buf[y][x];
+
+            for(; i != 0; --i, b <<= 1)
+                putchar(b & fsbuf_high ? '#' : ' ');
+
+            if (x + 1 < FSBUFWIDTH)
+                putchar('|');
+
+        }
+        putchar('\n');
+    }
+
+    printf("---------------\n");
+
+    for (y = 0; y < FSHEIGHT; ++y)
+    {
+        for (x = 0; x < FSBUFWIDTH; ++x)
+        {
+            fsbuf_type i = FSBUFBITS;
+            fsbuf_type b = fs->col_buf[y][x];
 
             for(; i != 0; --i, b <<= 1)
                 putchar(b & fsbuf_high ? '#' : ' ');

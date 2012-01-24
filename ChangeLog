@@ -1,3 +1,31 @@
+2012-01-24  James Morris  <james@jwm-art.net>
+
+    * freespace_state.c: removed column smart search algorithm. column 
+      smart searches now are performed by the row smart functions but 
+      do so on a secondary array added to the freespace struct. the 
+      secondary array is a 90 degree clockwise rotation of the primary 
+      array. space removals and additions now incurr a minor performance 
+      cost for operating on both arrays. however this cost is negligable
+      compared to the cost of searching by collumn on a data structure 
+      optimized for search by row.
+
+    * freespace_test/freespace_test.c: tests for both column smart and 
+      row smart are all performed and pass now.
+
+
+2012-01-20  James Morris  <james@jwm-art.net>
+
+    * in the entry for the 17th January 2012 i stated that
+      x_to_index_offset now returns the correct offset value
+      range, ie bit number. that is, it returns the bit
+      number in accordance with LSB0. previosuly it would
+      have been LSB1 (of which i can find no reference).
+      in the early days of the algorithm i may have tried
+      MSB1 or MSB0 but my unfamiliarity with bit twiddling
+      made it too confusing.
+      see: http://en.wikipedia.org/wiki/Bit_numbering
+
+
 2012-01-18  James Morris  <james@jwm-art.net>
 
     * libboxyseq/freespace_state.c: further work done in

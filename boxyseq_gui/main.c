@@ -55,20 +55,20 @@ int main(int argc, char** argv)
     pat1 = pattern_manager_pattern_new(patman);
     pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 4, 8);
-    pattern_set_event_height_range(pat1, 4, 8);
+    pattern_set_event_width_range(pat1, 20, 44);
+    pattern_set_event_height_range(pat1, 8, 16);
 
     el = pattern_event_list(pat1);
 
     count = steps = 16;
     st = (internal_ppqn * 4) / steps;
-    dur = st * 0.5;
-    rel = st * 0.25;
+    dur = st * 2.5;
+    rel = st * 0.745;
     t = 0;
 
     for (i = 0; i < count; ++i, t += st)
     {
-        if (i % 2 == 0 && i % 4 == 0)
+        if (i % 7 == 0 || i % 5 == 0)
             continue;
         ev = lnode_data(evlist_add_event_new(el, t));
         ev->note_dur = dur;
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
         if (i % 3 == 0)
             continue;
         ev = lnode_data(evlist_add_event_new(el, t));
-        ev->note_dur = dur;
+        ev->note_dur = dur * (i / (float)count);
         ev->box_release = rel;
     }
 
