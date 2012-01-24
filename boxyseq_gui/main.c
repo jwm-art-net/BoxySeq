@@ -55,8 +55,8 @@ int main(int argc, char** argv)
     pat1 = pattern_manager_pattern_new(patman);
     pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 20, 44);
-    pattern_set_event_height_range(pat1, 8, 16);
+    pattern_set_event_width_range(pat1, 3, 14);
+    pattern_set_event_height_range(pat1, 3, 25);
 
     el = pattern_event_list(pat1);
 
