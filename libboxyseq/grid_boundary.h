@@ -21,9 +21,8 @@ enum GRID_BOUNDARY_FLAGS
     GRBOUND_PITCH_STRICT_POS =      0x0010,
     GRBOUND_BLOCK_ON_NOTE_FAIL =    0x0020,
 
-    GRBOUND_EVENT_PLAY =        0x0100, /* normal handling of events */
-    GRBOUND_EVENT_BLOCK =       0x0200, /* handle events as blocks */
-    GRBOUND_EVENT_IGNORE =      0x0400, /* ignore all events */
+    GRBOUND_EVENT_PROCESS =     0x0100, /* process events or not */
+    GRBOUND_EVENT_PLAY =        0x0200, /* play events or place blocks */
     GRBOUND_EVENT_TYPE_MASK =   0x0f00
 };
 
@@ -36,17 +35,26 @@ int         grbound_flags(grbound*);
 void        grbound_flags_clear(grbound*);
 void        grbound_flags_set(grbound*, int flags);
 void        grbound_flags_unset(grbound*, int flags);
+void        grbound_flags_toggle(grbound*, int flag);
+
+void        grbound_event_ignore(grbound*);
+void        grbound_event_process(grbound*);
 
 void        grbound_event_play(grbound*);
 void        grbound_event_block(grbound*);
-void        grbound_event_ignore(grbound*);
 
 int         grbound_event_type(grbound*);
+
+int         grbound_event_toggle_play(grbound*);
+int         grbound_event_toggle_process(grbound*);
 
 int         grbound_scale_key_set(grbound*, int scale_key);
 int         grbound_scale_key(grbound*);
 int         grbound_scale_binary_set(grbound*, int scale_bin);
 int         grbound_scale_binary(grbound*);
+
+void        grbound_rgb_float_get(grbound*, float* r, float* g, float* b);
+void        grbound_rgb_float_set(grbound*, float r, float g, float b);
 
 /*
 int         grbound_midi_out_port(grbound*);

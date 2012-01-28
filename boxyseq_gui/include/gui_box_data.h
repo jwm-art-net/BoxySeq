@@ -20,8 +20,7 @@ struct gui_box_data
     GtkWidget*      zoom_in_button;
     GtkWidget*      zoom_out_button;
 
-    double  scale;
-    int     scale_factor;
+    int scale;  /* clamp scale to integers to prevent blurred edges */
 
     int max_x;
     int max_y;

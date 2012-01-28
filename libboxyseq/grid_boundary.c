@@ -67,28 +67,48 @@ void grbound_flags_unset(grbound* grb, int flags)
 }
 
 
-void grbound_event_play(grbound* grb)
+void grbound_flags_toggle(grbound* grb, int flags)
 {
-    grb->flags |= GRBOUND_EVENT_PLAY;
-    grb->flags &= ~(GRBOUND_EVENT_BLOCK | GRBOUND_EVENT_IGNORE);
+    grb->flags ^= flags;
 }
 
-void grbound_event_block(grbound* grb)
+void grbound_event_process(grbound* grb)
 {
-    grb->flags |= GRBOUND_EVENT_BLOCK;
-    grb->flags &= ~(GRBOUND_EVENT_PLAY | GRBOUND_EVENT_IGNORE);
+    grb->flags |= GRBOUND_EVENT_PROCESS;
 }
 
 void grbound_event_ignore(grbound* grb)
 {
-    grb->flags |= GRBOUND_EVENT_IGNORE;
-    grb->flags &= ~(GRBOUND_EVENT_PLAY | GRBOUND_EVENT_BLOCK);
+    grb->flags &= ~GRBOUND_EVENT_PROCESS;
+}
+
+void grbound_event_play(grbound* grb)
+{
+    grb->flags |= GRBOUND_EVENT_PLAY;
+}
+
+void grbound_event_block(grbound* grb)
+{
+    grb->flags &= ~GRBOUND_EVENT_PLAY;
 }
 
 int grbound_event_type(grbound* grb)
 {
     return grb->flags & GRBOUND_EVENT_TYPE_MASK;
 }
+
+
+int grbound_event_toggle_process(grbound* grb)
+{
+    return (grb->flags ^= GRBOUND_EVENT_PROCESS) & GRBOUND_EVENT_PROCESS;
+}
+
+
+int grbound_event_toggle_play(grbound* grb)
+{
+    return (grb->flags ^= GRBOUND_EVENT_PLAY) & GRBOUND_EVENT_PLAY;
+}
+
 
 int grbound_scale_key_set(grbound* grb, int scale_key)
 {
@@ -111,6 +131,22 @@ int grbound_scale_binary_set(grbound* grb, int scale_bin)
 int grbound_scale_binary(grbound* grb)
 {
     return grb->scale_bin;
+}
+
+
+void grbound_rgb_float_get(grbound* grb, float* r, float* g, float* b)
+{
+    *r = grb->r / 255.0f;
+    *g = grb->g / 255.0f;
+    *b = grb->b / 255.0f;
+}
+
+
+void grbound_rgb_float_set(grbound* grb, float r, float g, float b)
+{
+    grb->r = (int)(r * 255);
+    grb->g = (int)(g * 255);
+    grb->b = (int)(b * 255);
 }
 
 
@@ -191,33 +227,34 @@ void grbound_rt_sort(grbound* grb, evport* port)
 
     evport_read_reset(rtgrb->evinput);
 
-    switch (grb->flags & GRBOUND_EVENT_TYPE_MASK)
+    if (grb->flags & GRBOUND_EVENT_PROCESS)
     {
-    case GRBOUND_EVENT_PLAY:
-        while (evport_read_event(rtgrb->evinput, &ev))
+        if (grb->flags & GRBOUND_EVENT_PLAY)
         {
-            ev.grb = grb;
-            EVENT_CHANNEL_SET(&ev, rtgrb->channel);
-            if (!evport_write_event(port, &ev))
-                WARNING("failed to write sort to port\n");
+            while (evport_read_event(rtgrb->evinput, &ev))
+            {
+                ev.grb = grb;
+                EVENT_CHANNEL_SET(&ev, rtgrb->channel);
+                if (!evport_write_event(port, &ev))
+                    WARNING("failed to write sort to port\n");
+            }
         }
-        return;
-
-    case GRBOUND_EVENT_BLOCK:
-        while (evport_read_event(rtgrb->evinput, &ev))
+        else
         {
-            ev.grb = grb;
-            EVENT_SET_TYPE_BLOCK( &ev );
-            EVENT_CHANNEL_SET(&ev, rtgrb->channel);
-            if (!evport_write_event(port, &ev))
-                WARNING("failed to write sort to port\n");
+            while (evport_read_event(rtgrb->evinput, &ev))
+            {
+                ev.grb = grb;
+                EVENT_SET_TYPE_BLOCK( &ev );
+                EVENT_CHANNEL_SET(&ev, rtgrb->channel);
+                if (!evport_write_event(port, &ev))
+                    WARNING("failed to write sort to port\n");
+            }
         }
-        return;
-
-    case GRBOUND_EVENT_IGNORE:
-    default:
-        while(evport_read_event(rtgrb->evinput, &ev));
-            /* do nothing */
+    }
+    else
+    {
+        while(evport_read_event(rtgrb->evinput, &ev))
+            /* do nothing */;
     }
 }
 
@@ -247,15 +284,24 @@ static grbound* grbound_private_new(bool with_rtdata)
 
     fsbound_init(grb->bound);
 
-    grb->flags = /*FSPLACE_ROW_SMART
-               | FSPLACE_LEFT_TO_RIGHT
-               | */FSPLACE_TOP_TO_BOTTOM
-               | GRBOUND_BLOCK_ON_NOTE_FAIL
-               | GRBOUND_EVENT_PLAY;
+    grb->flags =  GRBOUND_BLOCK_ON_NOTE_FAIL
+                | GRBOUND_EVENT_PROCESS
+                | GRBOUND_EVENT_PLAY;
+
+    if (rand() % 2)
+        grb->flags |= FSPLACE_ROW_SMART;
+
+    if (rand() % 2)
+        grb->flags |= FSPLACE_LEFT_TO_RIGHT;
+
+    if (rand() % 2)
+        grb->flags |= FSPLACE_TOP_TO_BOTTOM;
 
     grb->channel = 0;
     grb->scale_bin = binary_string_to_int("111111111111");
     grb->scale_key = 0;
+
+    random_rgb(&grb->r, &grb->g, &grb->b);
 
     grb->evinput = 0;
     grb->midiout = 0;
@@ -285,6 +331,11 @@ static grbound* grbound_private_dup(const void* data, bool with_rtdata)
     dest->channel =     grb->channel;
     dest->scale_bin =   grb->scale_bin;
     dest->scale_key =   grb->scale_key;
+
+    dest->r =           grb->r;
+    dest->g =           grb->g;
+    dest->b =           grb->b;
+
     dest->evinput =     grb->evinput;
     dest->midiout =     grb->midiout;
 

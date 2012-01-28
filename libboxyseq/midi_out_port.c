@@ -5,6 +5,7 @@
 #include "freespace_state.h"
 #include "grid_boundary.h"
 #include "musical_scale.h"
+#include "box_grid.h"
 
 
 #include <jack/midiport.h>

@@ -9,12 +9,6 @@
 #include "include/gui_box_data.h"
 
 
-#define SCALE_RATIO( integer_0_to_10 ) \
-    (2.0 + ((double)(integer_0_to_10) / 10.0) * 6.0)
-
-
-
-
 void gui_box_motion(guibox* gb, int ptr_x, int ptr_y)
 {
     gb->ptr_x = ptr_x - gb->draw_offx;
@@ -194,22 +188,22 @@ static void gui_box_zoom_in(GtkWidget* widget, gpointer data)
 {
     guibox* gb = (guibox*)data;
 
-    if (gb->scale_factor == 10)
+    if (gb->scale == 8)
         return;
 
-    if (gb->scale_factor == 0)
+    if (gb->scale == 1)
         gtk_widget_set_sensitive(gb->zoom_out_button, TRUE);
 
-    gb->scale_factor++;
-    gb->scale = SCALE_RATIO(gb->scale_factor);
-    gb->max_x = (int)(gb->max_gx * gb->scale);
-    gb->max_y = (int)(gb->max_gy * gb->scale);
+    gb->scale++;
+
+    gb->max_x = gb->max_gx * gb->scale;
+    gb->max_y = gb->max_gy * gb->scale;
 
     gtk_widget_set_size_request(gb->drawing_area,
                                 gb->max_x + 1,
                                 gb->max_y + 1);
 
-    if (gb->scale_factor == 10)
+    if (gb->scale == 8)
         gtk_widget_set_sensitive(gb->zoom_in_button, FALSE);
 }
 
@@ -218,21 +212,20 @@ static void gui_box_zoom_out(GtkWidget* widget, gpointer data)
 {
     guibox* gb = (guibox*)data;
 
-    if (gb->scale_factor == 0)
+    if (gb->scale == 1)
         return;
 
-    if (gb->scale_factor == 10)
+    if (gb->scale == 8)
         gtk_widget_set_sensitive(gb->zoom_in_button, TRUE);
 
-    gb->scale_factor--;
-    gb->scale = SCALE_RATIO(gb->scale_factor);
-    gb->max_x = (int)(gb->max_gx * gb->scale);
-    gb->max_y = (int)(gb->max_gy * gb->scale);
+    gb->scale--;
+    gb->max_x = gb->max_gx * gb->scale;
+    gb->max_y = gb->max_gy * gb->scale;
 
     gtk_widget_set_size_request(gb->drawing_area,
                                 gb->max_x + 1,
                                 gb->max_y + 1);
-    if (gb->scale_factor == 0)
+    if (gb->scale == 0)
         gtk_widget_set_sensitive(gb->zoom_out_button, FALSE);
 }
 
@@ -254,12 +247,10 @@ guibox* gui_box_create(GtkWidget* grid_container, int maxx, int maxy)
     gb->max_gx = maxx;
     gb->max_gy = maxy;
 
-    gb->scale_factor = 1;
+    gb->scale = 3;
 
-    gb->scale = SCALE_RATIO(gb->scale_factor);
-
-    gb->max_x = (int)(gb->max_gx * gb->scale);
-    gb->max_y = (int)(gb->max_gy * gb->scale);
+    gb->max_x = gb->max_gx * gb->scale;
+    gb->max_y = gb->max_gy * gb->scale;
 
     gb->draw_offx = 0;
     gb->draw_offy = 0;

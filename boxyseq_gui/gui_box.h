@@ -5,6 +5,10 @@
 #include <gtk/gtk.h>
 
 
+/* FIXME: ***** ADD DOCUMENTATION!!! *****/
+
+
+
 typedef struct gui_box_data guibox;
 
 
@@ -63,7 +67,9 @@ void        gui_box_release(guibox*, int action);
 gboolean    gui_box_move(guibox*, int* bx, int* by, int bw, int bh);
 gboolean    gui_box_resize(guibox*, int* bx, int* by, int* bw, int* bh);
 
+/* are guibox* pointer coordinates within box bx, by, bw, bh? */
 gboolean    gui_box_ptr_within(guibox*, int bx, int by, int bw, int bh);
+
 double      gui_box_scale_get_drawable_offset(guibox*,  int* draw_offx,
                                                         int* draw_offy);
 #endif

@@ -1,3 +1,36 @@
+2012-01-28  James Morris  <james@jwm-art.net>
+
+    * CMakeLists.txt: enabled -Wall -Wextra (assume GCC compiler).
+
+    * libboxyseq/*: various minor problems such as missing headers
+      discovered and resolved due to compiler flags.
+
+    * boxyseq_gui/gui_main.c: new keyboard shortcuts, see
+      KEYBOARD_SHORTCUTS file.
+
+    * grid_boundary.h: new function grbound_flags_toggle.
+
+    * grid_boundary.h: modified GRID_BOUNDARY_FLAGS to be saner. 
+      Previously from user perspective, boundaries could either play, 
+      block, or ignore events. This was achieved by three flags but is 
+      now achieved with two: GRBOUND_EVENT_PROCESS to ignore events or 
+      not, and GRBOUND_EVENT_PLAY to process events as play events or as 
+      block events. Toggling the process/ignore state no longer destroys
+      the play/block state.
+
+    * gui_box.c: fix zoom scaling to integer multiples to maintain sharp
+      edges to boxes.
+
+    * gui_grid.c: boundaries set to ignore events now drawn with a 
+      dashed line style. selected boundary is shown not by colouring the 
+      whole box as before but by a thick blue outline. all boundary 
+      outlines drawn with translucency.
+
+    * gui_misc.[ch]: new function create_diagonal_hatching_pattern 
+      does exactly as it says. unfortunately the pattern looks crap when 
+      scaled by cairo so it isn't used for anything.
+
+
 2012-01-24  James Morris  <james@jwm-art.net>
 
     * freespace_state.c: removed column smart search algorithm. column 

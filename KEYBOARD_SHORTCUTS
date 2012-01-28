@@ -1,0 +1,23 @@
+Boundary Manipulations
+----------------------
+
+Directions:	move boundary by 1 unit in corresponding 
+		direction.
+
+r		toggle placement search type between by-row and 
+		by-column
+
+v		toggle vertical placement direction between 
+		top-to-bottom and bottom-to-top.
+
+t		set vertical placement to top-to-bottom.
+
+b		set vertical placement to bottom-to-top.
+
+h		toggle horizontal placement direction between 
+		left-to-right and right-to-left.
+
+x		toggle between process and ignore events.
+
+m		toggle between play and block events.
+

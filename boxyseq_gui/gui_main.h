@@ -15,4 +15,5 @@ typedef struct gui_main_editor gui_main;
 int gui_init(int* argc, char*** argv, boxyseq*);
 
 
+
 #endif

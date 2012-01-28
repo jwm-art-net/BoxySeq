@@ -20,6 +20,9 @@ mark_as_advanced(CMAKE_INSTALL_PREFIX)
 option (BuildForDebug "Include gdb debugging support" ON)
 set (BuildOptionsDebug "-O0 -ggdb" CACHE STRING "Debug build flags")
 
+# additional GCC flags
+add_definitions(-Wall -Wextra)
+
 if (BuildForDebug)
     set (CMAKE_BUILD_TYPE "Debug")
     set (DEBUG 1)

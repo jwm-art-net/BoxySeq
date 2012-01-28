@@ -130,3 +130,23 @@ char* int_to_binary_string(int n, int sigbits)
     return bstr;
 }
 
+
+void random_rgb(unsigned char* r, unsigned char* g, unsigned char* b)
+{
+    char n = rand() % 6;
+
+    char high = 205 + rand() % 50;
+    char mid = 100 + rand() % 25;
+    char dark = rand() % 85;
+
+    switch(n)
+    {
+    case 0: *r = high;  *g = mid;   *b = dark;  break;
+    case 1: *r = mid;   *g = dark;  *b = high;  break;
+    case 2: *r = dark;  *g = high;  *b = mid;   break;
+    case 3: *r = high;  *g = dark;  *b = mid;   break;
+    case 4: *r = dark;  *g = mid;   *b = high;  break;
+    case 5: *r = mid;   *g = high;  *b = dark;  break;
+    }
+}
+

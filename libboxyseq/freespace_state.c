@@ -88,7 +88,7 @@ static void binary_dump(const char* msg, fsbuf_type val)
         b <<= 1;
     }
 
-    printf(" ( %lu )\n", (unsigned long long)val);
+    printf(" ( %lu )\n", (unsigned long)val);
 }
 
 
@@ -119,8 +119,6 @@ freespace* freespace_new(void)
     if (FSBUFBITS == 1)
         WARNING("bit-size of freespace state array not defined!\n"
                 "things won't work properly!\n");
-
-    int y;
 
     DMESSAGE("creating freespace grid using %d %d bit integers\n",
                                       FSBUFWIDTH, FSBUFBITS);
@@ -387,9 +385,6 @@ static int row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
      *                      x1offset).
      */
 
-    int result_index;
-    int result_offset;
-
     int y;
 
     #ifdef FSDEBUG
@@ -449,8 +444,6 @@ static int row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
             {
                 scanning = true;
                 bits_remaining = width;
-                result_index = index;
-                result_offset = offset;
                 #ifdef FSDEBUG
                 DMESSAGE("start scan index:%d offset:%d br:%d\n",
                             index,   offset, bits_remaining);
@@ -460,7 +453,7 @@ static int row_smart_r2l(fsbuf_type buf[FSHEIGHT][FSBUFWIDTH],
 retry:
             if (bits_remaining < FSBUFBITS - offset)
             {   /* ie br = 4, offset = 2: 00111100 */
-                mask = ((fsbuf_type)1 << bits_remaining) - 1 << offset;
+                mask = (((fsbuf_type)1 << bits_remaining) - 1) << offset;
                 #ifdef FSDEBUG
                 DMESSAGE("mask... index:%d offset:%d br:%d\n",
                                         index,   offset, bits_remaining);
@@ -494,8 +487,6 @@ retry:
                         if (!(index < xwindex)
                          && !(index == xwindex && offset > xwoffset))
                         {
-                            result_index = index;
-                            result_offset = offset;
                             bits_remaining = width;
                             #ifdef FSDEBUG
                             DMESSAGE("rety: index:%d offset:%d br:%d\n",

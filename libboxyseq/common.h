@@ -66,6 +66,7 @@ char*   int_to_binary_string(int, int sigbits);
 /* 2520 gives int result for div by 2 ... 9 */
 extern const int internal_ppqn;
 
+void    random_rgb(unsigned char* r, unsigned char* g, unsigned char* b);
 
 #ifdef __cplusplus
 } /* closing brace for extern "C" */

@@ -98,14 +98,14 @@ int main(int argc, char** argv)
 
     srand(time(0));
 
-    for (i = 0; i < 8; ++i)
+    for (i = 0; i < 3; ++i)
     {
         int x, y, w, h;
 
-        x = rand() % 70 + 20;
-        y = rand() % 70 + 20;
-        w = rand() % 10 + 10;
-        h = rand() % 10 + 10;
+        x = rand() % 70 + 50;
+        y = rand() % 70 + 50;
+        w = rand() % 10 + 35;
+        h = rand() % 10 + 35;
 
         if (x + w > 127)
             w = 127 - x;

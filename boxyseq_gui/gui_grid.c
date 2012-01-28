@@ -13,62 +13,60 @@
 
 #include "include/gui_grid_editor.h"
 
-#define SCALE_RATIO( integer_0_to_10 ) \
-    (2.0 + ((double)(integer_0_to_10) / 10.0) * 6.0)
+
+static cairo_pattern_t* hatch_pat = 0;
 
 
 static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
 {
     int bx, by, bw, bh;
-    gboolean filled = FALSE;
+    float r, g, b;
 
     grbound_fsbound_get(grb, &bx, &by, &bw, &bh);
 
-    cairo_rectangle(cr, bx, by, bw, bh);
+    cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
 
     if (ggr->object == GRID_OBJECT_BOUNDARY && ggr->action_grb == grb)
     {
-        filled = TRUE;
+        const int sz = 4;
+        cairo_rectangle(cr, bx - sz + 1 , by - sz + 1,
+                            bw + sz * 2 - 2, bh + sz * 2 - 2);
 
         switch((ggr->action & BOX_ACTION_MASK))
         {
         case BOX_ACTION_MOVE:
         case BOX_ACTION_RESIZE:
-            cairo_set_source_rgb(cr, 1.0, 0.0, 0.0);
-            cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
-            cairo_fill(cr);
-            cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+            cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 0.5);
             break;
 
         default: /* mouse hover */
-            cairo_set_source_rgb(cr, 0.0, 0.0, 1.0);
-            cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
-            cairo_fill(cr);
-            cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+            cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 0.5);
             break;
         }
+        cairo_set_line_width(cr, sz);
+        cairo_stroke(cr);
     }
-    else
-    {
-        double r, g, b;
 
-        switch(grbound_event_type(grb))
-        {
-            case GRBOUND_EVENT_PLAY:
-                scale_int_as_rgb(grbound_scale_binary(grb), &r, &g, &b);
-                cairo_set_source_rgb(cr, r, g, b);
-                break;
-            case GRBOUND_EVENT_BLOCK:
-                cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
-                break;
-            case GRBOUND_EVENT_IGNORE:
-            default:
-                cairo_set_source_rgb(cr, 0.5, 0.0, 0.0);
-                break;
-        }
-        cairo_set_line_width(cr, 0.5);
-        cairo_stroke (cr);
+    cairo_rectangle(cr, bx - 0.5, by - 0.5, bw + 1, bh + 1);
+
+    grbound_rgb_float_get(grb, &r, &g, &b);
+    cairo_set_source_rgb(cr, r, g, b);
+    cairo_set_line_width(cr, 1);
+
+    if (!(grbound_event_type(grb) & GRBOUND_EVENT_PROCESS))
+    {
+        double dashes[] = { 2.0, 1.0 };
+        int ndash = 2;
+        double offset = 0.0;
+        cairo_set_dash(cr, dashes, ndash, 0);
+        cairo_set_line_width(cr, 1.0);
     }
+
+    cairo_stroke (cr);
+    cairo_set_dash(cr, NULL, 0, 0);
+
+    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+
 }
 
 
@@ -93,9 +91,6 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
     lnode* ln = 0;
 
     cairo_t*            cr;
-    cairo_pattern_t*    pat;
-
-    int bx, by, bw, bh;
 
     int draw_offx;
     int draw_offy;
@@ -119,6 +114,9 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
 
     while(ln)
     {
+        int bx, by, bw, bh;
+        float r, g, b;
+
         ev = (event*)lnode_data(ln);
 
         bx = ev->box_x;
@@ -126,29 +124,19 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         bw = ev->box_width;
         bh = ev->box_height;
 
-        if (EVENT_IS_TYPE_BLOCK( ev ))
+        grbound_rgb_float_get(ev->grb, &r, &g, &b);
+
+        if (EVENT_IS_STATUS_OFF( ev )
+         || EVENT_IS_TYPE_BLOCK( ev ))
         {
-            cairo_rectangle(cr, bx, by, bw, bh);
-            cairo_set_source_rgb(cr, 0.3, 0.3, 0.3);
-            cairo_fill(cr);
+            r *= 0.5;
+            g *= 0.5;
+            b *= 0.5;
         }
-        else
-        {
-            double r, g, b;
 
-            scale_int_as_rgb(grbound_scale_binary(ev->grb), &r, &g, &b);
-
-            if (EVENT_IS_STATUS_OFF( ev ))
-            {
-                r *= 0.5;
-                g *= 0.5;
-                b *= 0.5;
-            }
-
-            cairo_rectangle(cr, bx, by, bw, bh);
-            cairo_set_source_rgb(cr, r, g, b);
-            cairo_fill(cr);
-        }
+        cairo_set_source_rgb(cr, r, g, b);
+        cairo_rectangle(cr, bx, by, bw, bh);
+        cairo_fill(cr);
 
         ln = lnode_next(ln);
     }
@@ -228,6 +216,7 @@ static void gui_grid_motion_boundary(gui_grid* ggr)
         break;
 
     default:
+
         while(grb)
         {
             ggr->action_grb = 0;
@@ -323,6 +312,12 @@ static gboolean gui_grid_motion_event(  GtkWidget* widget,
 
 void gui_grid_destroy(gui_grid* ggr)
 {
+    if (hatch_pat)
+    {
+        cairo_pattern_destroy(hatch_pat);
+        hatch_pat = 0;
+    }
+
     if (!ggr)
         return;
 
@@ -340,6 +335,9 @@ gui_grid* gui_grid_create(GtkWidget* grid_container, boxyseq* bs)
     gui_grid* ggr;
     GtkWidget* tmp;
     GtkAdjustment* adj;
+
+    if (!hatch_pat)
+        hatch_pat = create_diagonal_hatching_pattern(4);
 
     ggr = malloc(sizeof(*ggr));
 
@@ -383,7 +381,7 @@ void gui_grid_connect_zoom_out_button(gui_grid* ggr, GtkWidget* button)
     gui_box_connect_zoom_out_button(ggr->gb, button);
 }
 
-
+/*
 void gui_grid_boundary_event_play(gui_grid* ggr)
 {
     if (!ggr->action_grb)
@@ -402,14 +400,53 @@ void gui_grid_boundary_event_block(gui_grid* ggr)
     grbound_event_block(ggr->action_grb);
     grbound_update_rt_data(ggr->action_grb);
 }
+*/
 
-
-void gui_grid_boundary_event_ignore(gui_grid* ggr)
+void gui_grid_boundary_event_toggle_play(gui_grid* ggr)
 {
     if (!ggr->action_grb)
         return;
 
-    grbound_event_ignore(ggr->action_grb);
+    grbound_event_toggle_play(ggr->action_grb);
+    grbound_update_rt_data(ggr->action_grb);
+}
+
+
+void gui_grid_boundary_event_toggle_process(gui_grid* ggr)
+{
+    if (!ggr->action_grb)
+        return;
+
+    grbound_event_toggle_process(ggr->action_grb);
+    grbound_update_rt_data(ggr->action_grb);
+}
+
+
+void gui_grid_boundary_flags_toggle(gui_grid* ggr, int flag)
+{
+    if (!ggr->action_grb)
+        return;
+
+    grbound_flags_toggle(ggr->action_grb, flag);
+    grbound_update_rt_data(ggr->action_grb);
+}
+
+void gui_grid_boundary_flags_set(gui_grid* ggr, int flag)
+{
+    if (!ggr->action_grb)
+        return;
+
+    grbound_flags_set(ggr->action_grb, flag);
+    grbound_update_rt_data(ggr->action_grb);
+}
+
+
+void gui_grid_boundary_flags_unset(gui_grid* ggr, int flag)
+{
+    if (!ggr->action_grb)
+        return;
+
+    grbound_flags_unset(ggr->action_grb, flag);
     grbound_update_rt_data(ggr->action_grb);
 }
 

@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "event_buffer.h"
 #include "gui_grid.h"
+#include "grid_boundary.h"
 
 #include "include/gui_main_editor.h"
 
@@ -95,33 +96,63 @@ static gboolean gui_key_press_event(GtkWidget *widget,
                                     GdkEventKey *keyevent,
                                     gpointer data)
 {
-    switch (keyevent->keyval) {
-    case GDK_P:
-    case GDK_p: gui_grid_boundary_event_play(_gui->ggr);
-                break;
-    case GDK_B:
-    case GDK_b: gui_grid_boundary_event_block(_gui->ggr);
-                break;
-    case GDK_I:
-    case GDK_i: gui_grid_boundary_event_ignore(_gui->ggr);
-                break;
+    switch (keyevent->keyval)
+    {
+    case GDK_KEY_r:
+        gui_grid_boundary_flags_toggle(_gui->ggr, FSPLACE_ROW_SMART);
+        break;
+
+    case GDK_KEY_h:
+        gui_grid_boundary_flags_toggle(_gui->ggr, FSPLACE_LEFT_TO_RIGHT);
+        break;
+
+    case GDK_KEY_v:
+        gui_grid_boundary_flags_toggle(_gui->ggr, FSPLACE_TOP_TO_BOTTOM);
+        break;
+
+    case GDK_KEY_t:
+        gui_grid_boundary_flags_set(_gui->ggr, FSPLACE_TOP_TO_BOTTOM);
+        break;
+
+    case GDK_KEY_b:
+        gui_grid_boundary_flags_unset(_gui->ggr, FSPLACE_TOP_TO_BOTTOM);
+        break;
+
+    case GDK_KEY_m:
+        gui_grid_boundary_event_toggle_play(_gui->ggr);
+        break;
+
+    case GDK_KEY_x:
+        gui_grid_boundary_event_toggle_process(_gui->ggr);
+        break;
 
     case GDK_Up:
-    case GDK_KP_Up:     gui_grid_direction(_gui->ggr, UP);
-                        break;
+    case GDK_KP_Up:
+        gui_grid_direction(_gui->ggr, UP);
+        break;
+
     case GDK_Down:
-    case GDK_KP_Down:   gui_grid_direction(_gui->ggr, DOWN);
-                        break;
+    case GDK_KP_Down:
+        gui_grid_direction(_gui->ggr, DOWN);
+        break;
+
     case GDK_Left:
-    case GDK_KP_Left:   gui_grid_direction(_gui->ggr, LEFT);
-                        break;
+    case GDK_KP_Left:
+        gui_grid_direction(_gui->ggr, LEFT);
+        break;
+
     case GDK_Right:
-    case GDK_KP_Right:  gui_grid_direction(_gui->ggr, RIGHT);
-                        break;
-    case GDK_KP_Add:       gui_grid_order_boundary(_gui->ggr, 1);
-                        break;
-    case GDK_KP_Subtract:  gui_grid_order_boundary(_gui->ggr, -1);
-                        break;
+    case GDK_KP_Right:
+        gui_grid_direction(_gui->ggr, RIGHT);
+        break;
+
+    case GDK_KP_Add:
+        gui_grid_order_boundary(_gui->ggr, 1);
+        break;
+
+    case GDK_KP_Subtract:
+        gui_grid_order_boundary(_gui->ggr, -1);
+        break;
     }
     
     return TRUE;
