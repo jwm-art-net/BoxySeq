@@ -52,11 +52,15 @@ int main(int argc, char** argv)
     mopman = boxyseq_moport_manager(bs);
     patportman = boxyseq_pattern_port_manager(bs);
 
+/* unimplemented   boxyseq_ui_place_user_block(bs, 50, 50, 50, 50); */
+
+
+
     pat1 = pattern_manager_pattern_new(patman);
     pattern_set_meter(pat1, 4, 4);
     pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 3, 14);
-    pattern_set_event_height_range(pat1, 3, 25);
+    pattern_set_event_width_range(pat1, 2, 8);
+    pattern_set_event_height_range(pat1, 2, 8);
 
     el = pattern_event_list(pat1);
 
@@ -68,7 +72,7 @@ int main(int argc, char** argv)
 
     for (i = 0; i < count; ++i, t += st)
     {
-        if (i % 7 == 0 || i % 5 == 0)
+        if (i % 27 == 0 || i % 25 == 0)
             continue;
         ev = lnode_data(evlist_add_event_new(el, t));
         ev->note_dur = dur;
@@ -118,7 +122,7 @@ int main(int argc, char** argv)
         grbound_set_input_port(grb, patport1);
 
         if ((x + w + y + h) % 2)
-            grbound_event_block(grb);
+            grbound_event_process_and_block(grb);
 
         grbound_midi_out_port_set(grb, mop1);
 

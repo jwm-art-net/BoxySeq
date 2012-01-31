@@ -77,10 +77,11 @@ const char* moport_name(moport* mo)
 }
 
 
-int moport_start_event(moport* midiport, const event* ev,
-                                            int grb_flags,
-                                            int scale_bin,
-                                            int scale_key )
+int moport_rt_placed_event_pitch(moport* midiport,
+                                    const event* ev,
+                                    int grb_flags,
+                                    int scale_bin,
+                                    int scale_key )
 {
     if (ev->note_dur == ev->pos)
         return -1;

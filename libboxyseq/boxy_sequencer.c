@@ -212,7 +212,7 @@ void boxyseq_rt_play(boxyseq* bs,
             return;
 
         case EV_TYPE_BLOCK:
-            MESSAGE("user-block placement on it's way\n");
+            MESSAGE("user-block placement not implemented :-(\n");
             break;
 
         default:
@@ -222,7 +222,7 @@ void boxyseq_rt_play(boxyseq* bs,
 
     moport_manager_rt_play_old(bs->moports, ph, nph, bs->gr);
 
-    grid_rt_unplace(bs->gr, ph, nph);
+    grid_rt_process_unplacement(bs->gr, ph, nph);
 
     evport_manager_rt_clear_all(bs->ports_pattern);
     pattern_manager_rt_play(bs->patterns, repositioned, ph, nph);
@@ -231,7 +231,7 @@ void boxyseq_rt_play(boxyseq* bs,
 
     grbound_manager_rt_sort(bs->grbounds, grid_port);
 
-    grid_rt_place(bs->gr, ph, nph);
+    grid_rt_process_placement(bs->gr, ph, nph);
 
     moport_manager_rt_play_new_and_output(  bs->moports,
                                             ph,
@@ -244,7 +244,7 @@ void boxyseq_rt_play(boxyseq* bs,
                             #endif
                                                                 );
 
-    grid_rt_block(bs->gr, ph, nph);
+    grid_rt_process_blocks(bs->gr, ph, nph);
 }
 
 

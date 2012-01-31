@@ -27,7 +27,6 @@ void    gui_grid_connect_zoom_in_button(gui_grid*, GtkWidget* button);
 void    gui_grid_connect_zoom_out_button(gui_grid*, GtkWidget* button);
 
 /*
-void    gui_grid_boundary_event_play(gui_grid*);
 void    gui_grid_boundary_event_block(gui_grid*);
 */
 
@@ -38,6 +37,7 @@ void    gui_grid_boundary_event_block(gui_grid*);
 */
 void    gui_grid_boundary_event_toggle_process(gui_grid*);
 void    gui_grid_boundary_event_toggle_play(gui_grid*);
+void    gui_grid_boundary_event_process_and_play(gui_grid*);
 
 /*  where flag is value from
     a) FREESPACE_PLACEMENT_FLAGS (libboxyseq/freespace_state.h)

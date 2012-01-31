@@ -1,3 +1,20 @@
+2012-01-31  James Morris  <james@jwm-art.net>
+
+    * freespace_test/freespace_test.c test messages no longer require
+      DEBUG defined.
+
+    * libboxyseq/freespace_state.[ch]: added capabilities for managing 
+      'block-areas'. block-areas when initially placed may overlap 
+      existing used space. a block-area is treated as any other area of
+      used space by the search algorithm - area search results won't 
+      overlap it. block-areas may also overlap other block-areas. 
+      removal of a block area won't damage any area of used space it 
+      overlaps with. comments in the source detail the process further.
+      there is no significant performance cost.
+
+    * libboxyseq/*.[ch]: added comments for future reference.
+
+
 2012-01-28  James Morris  <james@jwm-art.net>
 
     * CMakeLists.txt: enabled -Wall -Wextra (assume GCC compiler).

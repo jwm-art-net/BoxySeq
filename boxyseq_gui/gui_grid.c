@@ -381,16 +381,16 @@ void gui_grid_connect_zoom_out_button(gui_grid* ggr, GtkWidget* button)
     gui_box_connect_zoom_out_button(ggr->gb, button);
 }
 
-/*
-void gui_grid_boundary_event_play(gui_grid* ggr)
+void gui_grid_boundary_event_process_and_play(gui_grid* ggr)
 {
     if (!ggr->action_grb)
         return;
 
-    grbound_event_play(ggr->action_grb);
+    grbound_event_process_and_play(ggr->action_grb);
     grbound_update_rt_data(ggr->action_grb);
 }
 
+/*
 
 void gui_grid_boundary_event_block(gui_grid* ggr)
 {

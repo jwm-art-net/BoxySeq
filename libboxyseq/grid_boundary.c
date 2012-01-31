@@ -82,13 +82,15 @@ void grbound_event_ignore(grbound* grb)
     grb->flags &= ~GRBOUND_EVENT_PROCESS;
 }
 
-void grbound_event_play(grbound* grb)
+void grbound_event_process_and_play(grbound* grb)
 {
+    grb->flags |= GRBOUND_EVENT_PROCESS;
     grb->flags |= GRBOUND_EVENT_PLAY;
 }
 
-void grbound_event_block(grbound* grb)
+void grbound_event_process_and_block(grbound* grb)
 {
+    grb->flags |= GRBOUND_EVENT_PROCESS;
     grb->flags &= ~GRBOUND_EVENT_PLAY;
 }
 

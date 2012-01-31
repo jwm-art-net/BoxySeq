@@ -27,21 +27,29 @@ moport*         moport_manager_moport_first(moport_manager*);
 moport*         moport_manager_moport_next(moport_manager*);
 
 
-/*  the first of these need only be called if the second ever is.
-    furthermore, if the second of these is called, then the first
-    must be called after a port has been created.
-*/
-
 void    moport_manager_update_rt_data(const moport_manager*);
 
+
+/*  moport_manager_rt_init_jack_cycle is called at the beginning of every
+ *  JACK process cycle.  currently done by boxyseq_rt_init_jack_cycle.
+ */
 void    moport_manager_rt_init_jack_cycle(  moport_manager*,
                                             jack_nframes_t nframes );
 
+
+/*  moport_manager_rt_play_old processes events already placed as notes
+ *  outputting note-off for expired note events before transforming
+ *  them into block events.
+ */
 void    moport_manager_rt_play_old( moport_manager*,
                                     bbt_t ph,
                                     bbt_t nph,
                                     grid* );
 
+
+/*  moport_manager_rt_play_new_and_output processes incoming note events
+ *  and outputs note-on events to JACK.
+ */
 void    moport_manager_rt_play_new_and_output(  moport_manager*,
                                                 bbt_t ph,
                                                 bbt_t nph,

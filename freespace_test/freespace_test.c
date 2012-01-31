@@ -37,6 +37,69 @@ int main(int argc, char** argv)
     freespace* fs = freespace_new();
 
 
+    int i;
+    int resx = 0;
+    int resy = 0;
+
+
+    char* pstr = freespace_placement_to_str(placement);
+
+    MESSAGE("using %s placement...\n", pstr);
+    free(pstr);
+    fsbound* fsb = fsbound_new();
+
+    placement = 0
+                | FSPLACE_ROW_SMART
+                | FSPLACE_TOP_TO_BOTTOM
+                | FSPLACE_LEFT_TO_RIGHT
+                ;
+
+
+    int w = 27;
+    int h = 27;
+
+    fsbound_set_coords(fsb, 0, 0, 128, 128);
+
+    if (freespace_find(fs, fsb, placement, w, h, &resx, &resy))
+    {
+        MESSAGE("success result x:%d, y:%d\n", resx, resy);
+        freespace_remove(fs, resx, resy, w, h);
+    }
+    else
+    {
+        WARNING("guess what? it fail\n");
+    }
+
+    freespace_dump(fs,0);
+
+    freespace_block_remove(fs, 15, 15, w, h);
+
+    freespace_dump(fs,0);
+
+    freespace_block_remove(fs, 25, 25, w, h);
+
+    freespace_dump(fs,0);
+
+    freespace_block_add(fs, 15, 15, w, h);
+
+    freespace_dump(fs,0);
+
+/*
+    freespace_add(fs, 0, 0, w, h);
+
+    freespace_dump(fs,0);
+
+    freespace_remove(fs, resx, resy, w, h);
+
+    freespace_dump(fs,0);
+
+    freespace_block_add(fs, 25, 25, w, h);
+
+    freespace_dump(fs,0);
+*/
+    goto end;
+
+
     /*---------------------------------------------------*/
 
 /*
@@ -47,7 +110,7 @@ int main(int argc, char** argv)
 
     char* pstr = freespace_placement_to_str(placement);
 
-    DMESSAGE("using %s placement...\n", pstr);
+    MESSAGE("using %s placement...\n", pstr);
     free(pstr);
     fsbound* fsb = fsbound_new();
 
@@ -65,12 +128,12 @@ int main(int argc, char** argv)
 
     if (freespace_find(fs, fsb, placement, w, h, &resx, &resy))
     {
-        DMESSAGE("success result x:%d, y:%d\n", resx, resy);
+        MESSAGE("success result x:%d, y:%d\n", resx, resy);
         freespace_remove(fs, resx, resy, w, h);
     }
     else
     {
-        DWARNING("guess what? it fail\n");
+        WARNING("guess what? it fail\n");
     }
 
     freespace_dump(fs);
@@ -80,12 +143,12 @@ int main(int argc, char** argv)
 
     if (freespace_find(fs, fsb, placement, w, h , &resx, &resy))
     {
-        DMESSAGE("success result x:%d, y:%d\n", resx, resy);
+        MESSAGE("success result x:%d, y:%d\n", resx, resy);
         freespace_remove(fs, resx, resy, w, h);
     }
     else
     {
-        DWARNING("guess what? it fail\n");
+        WARNING("guess what? it fail\n");
     }
 
     freespace_dump(fs);
@@ -99,12 +162,12 @@ int main(int argc, char** argv)
     {
         if (freespace_find(fs, fsb, placement, 1, 1, &resx, &resy))
         {
-            DMESSAGE("success result x:%d, y:%d\n", resx, resy);
+            MESSAGE("success result x:%d, y:%d\n", resx, resy);
             freespace_remove(fs, resx, resy, 1, 1 );
         }
         else
         {
-            DWARNING("guess what? it fail\n");
+            WARNING("guess what? it fail\n");
         }
     }
     
@@ -119,7 +182,7 @@ int main(int argc, char** argv)
             continue;
 
         char* pstr = freespace_placement_to_str(placement);
-        DMESSAGE("using %s placement...\n", pstr);
+        MESSAGE("using %s placement...\n", pstr);
         free(pstr);
 
         freespace_clear(fs);
@@ -128,7 +191,7 @@ int main(int argc, char** argv)
         {
             if (!freespace_find(fs, fsb, placement, bs, bs, &resx, &resy))
             {
-                DWARNING("fail on:size %d\n",bs);
+                WARNING("fail on:size %d\n",bs);
                 break;
             }
 
@@ -139,7 +202,7 @@ int main(int argc, char** argv)
         {
             if (!freespace_find(fs, fsb, placement, bs, bs, &resx, &resy))
             {
-                DWARNING("fail2 on:size %d\n",bs);
+                WARNING("fail2 on:size %d\n",bs);
                 break;
             }
 
@@ -161,7 +224,7 @@ test_boundary_placement_equal_size:
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
         char* pstr = freespace_placement_to_str(placement);
-        DMESSAGE("using %s placement...\n", pstr);
+        MESSAGE("using %s placement...\n", pstr);
         free(pstr);
 
         for (bs = 1; bs < 128; ++bs)
@@ -184,7 +247,7 @@ test_multiples:
     {
         int maxbs = 64;
         char* pstr = freespace_placement_to_str(placement);
-        DMESSAGE("using %s placement...\n", pstr);
+        MESSAGE("using %s placement...\n", pstr);
         free(pstr);
 
         bs = 1;
@@ -210,7 +273,7 @@ test_placement_and_removal:
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
         char* pstr = freespace_placement_to_str(placement);
-        DMESSAGE("using %s placement...\n", pstr);
+        MESSAGE("using %s placement...\n", pstr);
         free(pstr);
 
         if (test_box_placement_and_removal(fs, placement))
@@ -228,12 +291,11 @@ test_limited_boundary:
     for (placement = 0; placement <= lastplacementtype; ++placement)
     {
         char* pstr = freespace_placement_to_str(placement);
-        DMESSAGE("using %s placement...\n", pstr);
+        MESSAGE("using %s placement...\n", pstr);
         free(pstr);
 
         if (test_box_placement_limited_boundary(fs, placement))
         {
-            freespace_dump(fs);
             printf("\tfail\n");
         }
         else
@@ -282,7 +344,7 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
         {
             if (!fsbound_set_coords(fsb, x, y, size, size))
             {
-                DWARNING("invalid boundary coordinates "
+                WARNING("invalid boundary coordinates "
                          "x:%d, y:%d, w:%d, h:%d", x, y, size, size);
                 return -1;
             }
@@ -291,7 +353,7 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
 
             if (!freespace_find(fs, fsb, flags, size, size, &resx, &resy))
             {
-                DWARNING(   "area search for size %d failed in boundary "
+                WARNING(   "area search for size %d failed in boundary "
                             "size %d at location x:%d, y:%d\n",
                             size, size, x, y);
                 return -1;
@@ -299,10 +361,10 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
 
             if (resx != x || resy != y)
             {
-                DWARNING(   "area search for size %d returned incorrect "
+                WARNING(   "area search for size %d returned incorrect "
                             "result location x:%d, y:%d\n",
                             size, resx, resy);
-                DWARNING(   "expected x:%d, y:%d\n", x, y);
+                WARNING(   "expected x:%d, y:%d\n", x, y);
                 return -1;
             }
         }
@@ -357,9 +419,9 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
 
             if (!freespace_find(fs, fsb, flags, size, size, &resx, &resy))
             {
-                DWARNING(   "area search for size %d failed at location "
+                WARNING(   "area search for size %d failed at location "
                             " x:%d, y:%d\n", size, expx, expy);
-                DWARNING(" size:%d count:%d x:%d y:%d\n",
+                WARNING(" size:%d count:%d x:%d y:%d\n",
                             size, count, expx, expy);
                 return -1;
             }
@@ -370,10 +432,10 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
 
             if (resx != expx || resy != expy)
             {
-                DWARNING(   "size %d area found at x:%d, y:%d "
+                WARNING(   "size %d area found at x:%d, y:%d "
                             "but expected x:%d, y:%d\n",
                             size, resx, resy, expx, expy);
-                DWARNING(" size:%d count:%d x:%d y:%d\n",
+                WARNING(" size:%d count:%d x:%d y:%d\n",
                             size, count, x, y);
                 return -1;
             }
@@ -417,7 +479,7 @@ int test_box_placement_and_removal(freespace* fs, int flags)
 
         if (!freespace_find(fs, fsb, flags, w[i], h[i], &x[i], &y[i]))
         {
-            DWARNING("area search %d for %d x %d failed\n", i, w[i], h[i]);
+            WARNING("area search %d for %d x %d failed\n", i, w[i], h[i]);
             return -1;
         }
 
@@ -434,14 +496,14 @@ int test_box_placement_and_removal(freespace* fs, int flags)
 
         if (!freespace_find(fs, fsb, flags, w[i], h[i], &tx, &ty))
         {
-            DWARNING("repeat area search %d for %d x %d failed\n",
+            WARNING("repeat area search %d for %d x %d failed\n",
                             i, w[i], h[i]);
             return -1;
         }
 
         if (tx != x[i] || ty != y[i])
         {
-            DWARNING("repeat of area %d x %d search %d result x:%d, y:%d "
+            WARNING("repeat of area %d x %d search %d result x:%d, y:%d "
                      "turned up differing result x:%d, y:%d\n",
                         w[i], h[i], i, x[i], y[i], tx, ty);
             return -1;
@@ -486,7 +548,7 @@ int test_box_placement_limited_boundary(freespace* fs, int flags)
 
             if (!fsbound_set_coords(fsb, offset, offset, fsbs, fsbs))
             {
-                DWARNING("invalid boundary coordinates "
+                WARNING("invalid boundary coordinates "
                      "x:%d, y:%d, w:%d, h:%d\n", fsxy, fsxy, fsbs, fsbs);
                 return -1;
             }
@@ -508,43 +570,43 @@ int test_box_placement_limited_boundary(freespace* fs, int flags)
 
                     if (resx + bs > offset + fsbs)
                     {
-                        DWARNING("placement x:%d, y:%d size:%d juts on"
+                        WARNING("placement x:%d, y:%d size:%d juts on"
                                  " rhs\n", resx, resy, bs);
-                        DWARNING("boundary x:%d, y:%d, size:%d\n",
+                        WARNING("boundary x:%d, y:%d, size:%d\n",
                                     offset, offset, fsbs);
                         jut++;
                     }
 
                     if (resx < offset)
                     {
-                        DWARNING("placement x:%d, y:%d size:%d juts on"
+                        WARNING("placement x:%d, y:%d size:%d juts on"
                                 " lhs\n", resx, resy, bs);
-                        DWARNING("boundary x:%d, y:%d, size:%d\n",
+                        WARNING("boundary x:%d, y:%d, size:%d\n",
                                     offset, offset, fsbs);
                         jut++;
                     }
 
                     if (resy + bs > offset + fsbs)
                     {
-                        DWARNING("placement x:%d, y:%d size:%d juts on"
+                        WARNING("placement x:%d, y:%d size:%d juts on"
                                 " bhs\n", resx, resy, bs);
-                        DWARNING("boundary x:%d, y:%d, size:%d\n",
+                        WARNING("boundary x:%d, y:%d, size:%d\n",
                                     offset, offset, fsbs);
                         jut++;
                     }
 
                     if (resy < offset)
                     {
-                        DWARNING("placement x:%d, y:%d size:%d juts on"
+                        WARNING("placement x:%d, y:%d size:%d juts on"
                                 " ths\n", resx, resy, bs);
-                        DWARNING("boundary x:%d, y:%d, size:%d\n",
+                        WARNING("boundary x:%d, y:%d, size:%d\n",
                                     offset, offset, fsbs);
                         jut++;
                     }
 
                     if (jut)
                     {
-                        DMESSAGE("boundary size:%d box size:%d\n",fsbs,bs);
+                        MESSAGE("boundary size:%d box size:%d\n",fsbs,bs);
                         return -1;
                     }
                 }

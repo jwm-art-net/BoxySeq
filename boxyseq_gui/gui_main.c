@@ -122,6 +122,10 @@ static gboolean gui_key_press_event(GtkWidget *widget,
         gui_grid_boundary_event_toggle_play(_gui->ggr);
         break;
 
+    case GDK_KEY_p:
+        gui_grid_boundary_event_process_and_play(_gui->ggr);
+        break;
+
     case GDK_KEY_x:
         gui_grid_boundary_event_toggle_process(_gui->ggr);
         break;

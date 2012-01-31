@@ -40,8 +40,8 @@ void        grbound_flags_toggle(grbound*, int flag);
 void        grbound_event_ignore(grbound*);
 void        grbound_event_process(grbound*);
 
-void        grbound_event_play(grbound*);
-void        grbound_event_block(grbound*);
+void        grbound_event_process_and_play(grbound*);
+void        grbound_event_process_and_block(grbound*);
 
 int         grbound_event_type(grbound*);
 

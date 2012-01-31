@@ -94,18 +94,39 @@ static void binary_dump(const char* msg, fsbuf_type val)
 
 struct freespace_state
 {
+    /*  the freespace state is primarily stored in a pair of arrays. only a
+        single array is required, but by optimizing with the usage of bits
+        we are optimizing only for row-smart searches. the second array
+        is a 90deg clockwise rotation of the first and is used for
+        performing column smart searchs.
+    */
     fsbuf_type row_buf[FSHEIGHT][FSBUFWIDTH];
-
-    /*  the row smart algorithm is heavily optimized by the use of
-        bit manipulation. however, the column smart algorithm, while still
-        (being forced into) using bit manipulation, the optimization is
-        completely lost due to vertical rather than horizontal. this can
-        be overcome by introducing a second buffer which essentially holds
-        the same freespace grid but rotated 90 degrees. this rotation allows
-        the optimized row-smart algorithm to be used in place of the
-        column smart algorithm.
-     */
     fsbuf_type col_buf[FSHEIGHT][FSBUFWIDTH];
+
+    /*  so two arrays are sufficient until you realize that there are some
+        cases where overlap is very definitely required (think user
+        interaction via a gui). the block-areas must be allowed to overlap
+        existing used space when they are put down. so two more arrays are
+        needed for masking between the two types of used space:
+        block-areas and "natural" areas. and with the added rotation, that
+        extra two arrays becomes four.
+    */
+    fsbuf_type blk_row_buf[FSHEIGHT][FSBUFWIDTH];
+    fsbuf_type blk_col_buf[FSHEIGHT][FSBUFWIDTH];
+
+    fsbuf_type nat_row_buf[FSHEIGHT][FSBUFWIDTH];
+    fsbuf_type nat_col_buf[FSHEIGHT][FSBUFWIDTH];
+
+    /*  and we don't want removal of a block from a pair of intersecting
+        blocks to damage the remaining block so we store the coordinates.
+        because this must all be real-time safe we limit the number of
+        block areas - the user can realistically manage only so many anyway.
+    */
+    struct blk
+    {
+        int x, y, w, h;
+        struct blk* n;
+    } blklist[MAX_BLOCK_AREAS];
 };
 
 
@@ -123,6 +144,9 @@ freespace* freespace_new(void)
     DMESSAGE("creating freespace grid using %d %d bit integers\n",
                                       FSBUFWIDTH, FSBUFBITS);
     freespace_clear(fs);
+    freespace_block_clear(fs);
+
+    DMESSAGE("sizeof(freespace_state):%d\n", sizeof(*fs));
 
     return fs;
 }
@@ -531,8 +555,6 @@ retry:
 }
 
 
-
-
 bool freespace_find( freespace* fs,  fsbound* fsb,
                         int flags,
                         int width,      int height,
@@ -634,10 +656,14 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
 }
 
 
-void freespace_remove(freespace* fs,int x0,
-                                    int y0,
-                                    int w0,
-                                    int h0 )
+/*  mark_used marks an area in the freespace grid as used space. it must
+    operate on two or three arrays.
+ */
+static void mark_used(  fsbuf_type buf_row[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type buf_col[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type aux_row[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type aux_col[FSHEIGHT][FSBUFWIDTH],
+                        int x0, int y0, int w0, int h0 )
 {
     int rx, ry;
     int width = w0;
@@ -656,16 +682,15 @@ void freespace_remove(freespace* fs,int x0,
         fsbuf_type v;
 
         if (width < offset + 1)
-        {
             v = (((fsbuf_type)1 << width) - 1) << (offset - width + 1);
-        }
         else
-        {
             v = (((fsbuf_type)1 << offset) - 1) << 1 | 1;
-        }
 
         for (y = y0; y < y0 + height; ++y)
-            fs->row_buf[y][index] |= v;
+        {
+            buf_row[y][index] |= v;
+            aux_row[y][index] |= v;
+        }
 
         width -= offset + 1;
         offset = FSBUFBITS - 1;
@@ -676,7 +701,6 @@ void freespace_remove(freespace* fs,int x0,
     offset = 0;
     rx = FSWIDTH - y0 - h0;
     ry = x0;
-
     index = x_to_index_offset(rx, &offset);
 
     #ifdef FSDEBUG
@@ -684,23 +708,21 @@ void freespace_remove(freespace* fs,int x0,
     DMESSAGE("index:%d offset:%d\n",index,offset);
     #endif
 
-
     for (; width > 0 && index < FSBUFWIDTH; ++index)
     {
         int y;
         fsbuf_type v;
 
         if (width < offset + 1)
-        {
             v = (((fsbuf_type)1 << width) - 1) << (offset - width + 1);
-        }
         else
-        {
             v = (((fsbuf_type)1 << offset) - 1) << 1 | 1;
-        }
 
         for (y = ry; y < ry + height; ++y)
-            fs->col_buf[y][index] |= v;
+        {
+            buf_col[y][index] |= v;
+            aux_col[y][index] |= v;
+        }
 
         width -= offset + 1;
         offset = FSBUFBITS - 1;
@@ -708,10 +730,13 @@ void freespace_remove(freespace* fs,int x0,
 }
 
 
-void freespace_add( freespace* fs,  int x0,
-                                    int y0,
-                                    int w0,
-                                    int h0 )
+static void mark_unused(fsbuf_type buf_row[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type buf_col[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type aux_row[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type aux_col[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type msk_row[FSHEIGHT][FSBUFWIDTH],
+                        fsbuf_type msk_col[FSHEIGHT][FSBUFWIDTH],
+                        int x0, int y0, int w0, int h0 )
 {
     int rx, ry;
     int width = w0;
@@ -725,16 +750,15 @@ void freespace_add( freespace* fs,  int x0,
         fsbuf_type v;
 
         if (width <= offset + 1)
-        {
-            v = (((fsbuf_type)1 << width) - 1) << (offset - width + 1);
-        }
+            v = ~((((fsbuf_type)1 << width) - 1) << (offset - width + 1));
         else
-        {
-            v = (((fsbuf_type)1 << offset) - 1) << 1 | 1;
-        }
+            v = ~((((fsbuf_type)1 << offset) - 1) << 1 | 1);
 
         for (y = y0; y < y0 + height; ++y)
-            fs->row_buf[y][index] &= ~v;
+        {
+            buf_row[y][index] = (buf_row[y][index] & v) | msk_row[y][index];
+            aux_row[y][index] &= v;
+        }
 
         width -= offset + 1;
         offset = FSBUFBITS - 1;
@@ -754,62 +778,158 @@ void freespace_add( freespace* fs,  int x0,
         fsbuf_type v;
 
         if (width <= offset + 1)
-        {
-            v = (((fsbuf_type)1 << width) - 1) << (offset - width + 1);
-        }
+            v = ~((((fsbuf_type)1 << width) - 1) << (offset - width + 1));
         else
-        {
-            v = (((fsbuf_type)1 << offset) - 1) << 1 | 1;
-        }
+            v = ~((((fsbuf_type)1 << offset) - 1) << 1 | 1);
 
         for (y = ry; y < ry + height; ++y)
-            fs->col_buf[y][index] &= ~v;
+        {
+            buf_col[y][index] = (buf_col[y][index] & v) | msk_col[y][index];
+            aux_col[y][index] &= v;
+        }
 
         width -= offset + 1;
         offset = FSBUFBITS - 1;
     }
-
 }
 
-/*
-bool freespace_test( freespace* fs, int state,
-                                    int x,      int y1,
-                                    int width,  int height )
-{
-    int xoffset = 0;
-    x = x_to_index_offset(x, &xoffset);
 
-    fsbuf_type v;
+void freespace_remove(freespace* fs, int x0, int y0, int w0, int h0)
+{
+    mark_used(  fs->row_buf,        fs->col_buf,
+                fs->nat_row_buf,    fs->nat_col_buf,
+                x0,     y0,     w0,     h0);
+}
+
+
+void freespace_add(freespace* fs, int x0, int y0, int w0, int h0 )
+{
+    mark_unused(fs->row_buf,        fs->col_buf,
+                fs->nat_row_buf,    fs->nat_col_buf,
+                fs->blk_row_buf,    fs->blk_col_buf,
+                x0,     y0,     w0,     h0);
+}
+
+
+void freespace_block_clear(freespace* fs)
+{
     int y;
 
-    for (; width > 0 && x < FSBUFWIDTH; ++x)
+    for (y = 0; y < FSHEIGHT; ++y)
     {
-        if (width < xoffset)
-            v = (((fsbuf_type)1 << width) - 1) << (xoffset - width);
-        else if (xoffset < FSBUFBITS)
-            v = ((fsbuf_type)1 << xoffset) - 1;
-        else
-            v = fsbuf_max;
-
-        for (y = y1; y < y1 + height; ++y)
-        {
-            if (!!(fs->row_buf[y][x] & v) == state)
-                return false;
-        }
-
-        if (width < xoffset)
-            return true;
-
-        width -= xoffset;
-        xoffset = FSBUFBITS;
+        memset(&fs->blk_row_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
+        memset(&fs->blk_col_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
+        memset(&fs->nat_row_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
+        memset(&fs->nat_col_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
     }
 
-    return true;
+    fs->blkcount = 0;
+
+    for (y = 0; y < MAX_BLOCK_AREAS; ++y)
+        fs->blklist[y].w = 0;
 }
-*/
 
 
-void freespace_dump(freespace* fs)
+bool freespace_block_remove(freespace* fs, int x0, int y0, int w0, int h0)
+{
+    int i;
+
+    for (i = 0; i < MAX_BLOCK_AREAS; ++i)
+    {
+        if (fs->blklist[i].w == 0)
+        {
+            fs->blklist[i].x = x0;
+            fs->blklist[i].y = y0;
+            fs->blklist[i].w = w0;
+            fs->blklist[i].h = h0;
+
+            mark_used(  fs->row_buf,        fs->col_buf,
+                        fs->blk_row_buf,    fs->blk_col_buf,
+                        x0,     y0,     w0,     h0);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+#ifndef MIN
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+#define FSMINUNDEFINED
+#endif
+
+#ifndef MAX
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
+#define FSMAXUNDEFINED
+#endif
+
+void freespace_block_add(freespace* fs, int x0, int y0, int w0, int h0 )
+{
+    int i;
+
+    for (i = 0; i < MAX_BLOCK_AREAS; ++i)
+    {
+        /* search for existing block which matches */
+
+        if (fs->blklist[i].w
+         && fs->blklist[i].x == x0
+         && fs->blklist[i].y == y0
+         && fs->blklist[i].w == w0
+         && fs->blklist[i].h == h0)
+        {
+            int j;
+
+            fs->blklist[i].w = 0;
+
+            /* set the area to unused space */
+
+            mark_unused(fs->row_buf,        fs->col_buf,
+                        fs->blk_row_buf,    fs->blk_col_buf,
+                        fs->nat_row_buf,    fs->nat_col_buf,
+                        x0,     y0,     w0,     h0);
+
+            /* check for intersections with other blocks */
+
+            for (j = 0; j < MAX_BLOCK_AREAS; ++j)
+            {
+                if (fs->blklist[j].w == 0)
+                    continue;
+
+                if (j == i)
+                    continue; /* __ */
+                {
+                    int ix0 = MAX(fs->blklist[j].x, x0);
+                    int iy0 = MAX(fs->blklist[j].y, y0);
+                    int ix1 = MIN(x0 + w0,  fs->blklist[j].x
+                                          + fs->blklist[j].w);
+                    int iy1 = MIN(y0 + h0,  fs->blklist[j].y
+                                          + fs->blklist[j].h);
+
+                    if (ix1 > ix0 && iy1 > iy0)
+                    {
+                        mark_used(  fs->row_buf,        fs->col_buf,
+                                    fs->blk_row_buf,    fs->blk_col_buf,
+                                    ix0,    iy0,    ix1 - ix0,  iy1 - iy0);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#ifdef FSMINUNDEFINED
+#undef MIN
+#undef FSMINUNDEFINED
+#endif
+
+#ifdef FSMAXUNDEFINED
+#undef MAX
+#undef FSMAXUNDEFINED
+#endif
+
+
+void freespace_dump(freespace* fs, int buf)
 {
     int x, y;
 
@@ -830,27 +950,18 @@ void freespace_dump(freespace* fs)
     {
         for (x = 0; x < FSBUFWIDTH; ++x)
         {
+            fsbuf_type b;
             fsbuf_type i = FSBUFBITS;
-            fsbuf_type b = fs->row_buf[y][x];
 
-            for(; i != 0; --i, b <<= 1)
-                putchar(b & fsbuf_high ? '#' : ' ');
-
-            if (x + 1 < FSBUFWIDTH)
-                putchar('|');
-
-        }
-        putchar('\n');
-    }
-
-    printf("---------------\n");
-
-    for (y = 0; y < FSHEIGHT; ++y)
-    {
-        for (x = 0; x < FSBUFWIDTH; ++x)
-        {
-            fsbuf_type i = FSBUFBITS;
-            fsbuf_type b = fs->col_buf[y][x];
+            switch(buf)
+            {
+            case 1:     b = fs->col_buf[y][x];      break;
+            case 2:     b = fs->blk_row_buf[y][x];  break;
+            case 3:     b = fs->blk_col_buf[y][x];  break;
+            case 4:     b = fs->nat_row_buf[y][x];  break;
+            case 5:     b = fs->nat_col_buf[y][x];  break;
+            default:    b = fs->row_buf[y][x];      break;
+            }
 
             for(; i != 0; --i, b <<= 1)
                 putchar(b & fsbuf_high ? '#' : ' ');

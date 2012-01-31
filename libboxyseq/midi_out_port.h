@@ -19,8 +19,20 @@ void        moport_free(moport*);
 
 const char* moport_name(moport*);
 
-/*  moport_test_pitch
-        an event is given a potential coordinate for where within a
+
+/*  moport_rt_event_get_pitch
+ *-----------------------------
+ *  determines the pitch if possible of an event placed in the grid.
+ *
+ *  returns values:
+ *      -1 if it is not possible for the event to generate any pitch
+ *      the event pitch
+ *
+ *  the pitch is determined by a number of factors:
+ *      1) is boundary flag GRBOUND_PITCH_STRICT_POS is set then
+ *          only the x coordinate of the event is taken as the pitch
+ *          and if 
+ *  an event is given a potential coordinate for where within a
         boundary (within the grid) it might be placed.
         before it is actually placed, we need to check if there are
         notes on this channel already playing at that pitch.
@@ -39,16 +51,17 @@ const char* moport_name(moport*);
 */
 
 
-/*  moport_start_event:
+/*  moport_rt_start_event:
 
     channel is stored in event at this stage,
     returns pitch:
 */
 
-int         moport_start_event(moport*, const event* ev,
-                                        int grb_flags,
-                                        int scale_bin,
-                                        int scale_key  );
+int         moport_rt_placed_event_pitch(   moport*,
+                                            const event* ev,
+                                            int grb_flags,
+                                            int scale_bin,
+                                            int scale_key  );
 
 void        moport_rt_init_jack_cycle(moport*,  jack_nframes_t nframes);
 

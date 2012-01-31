@@ -133,7 +133,7 @@ void grid_set_ui_unplace_buf(grid* gr, evbuf* evb)
 
 
 
-void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
+void grid_rt_process_placement(grid* gr, bbt_t ph, bbt_t nph)
 {
     event ev;
 
@@ -160,18 +160,16 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
             if (EVENT_IS_TYPE_NOTE( &ev ))
             {
                 ev.note_pitch =
-                    pitch = moport_start_event( rtgrb->midiout, &ev,
-                                                rtgrb->flags,
-                                                rtgrb->scale_bin,
-                                                rtgrb->scale_key );
+                pitch = moport_rt_placed_event_pitch(rtgrb->midiout,
+                                                    &ev,
+                                                    rtgrb->flags,
+                                                    rtgrb->scale_bin,
+                                                    rtgrb->scale_key );
                 if (pitch == -1)
                 {
                     if (!(rtgrb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
                         continue;
 
-/* why the special case i wonder?
-                    EVENT_SET_TYPE_BLOCKED_NOTE( &ev );
-*/
                     EVENT_SET_TYPE_BLOCK( &ev );
                 }
             }
@@ -194,7 +192,7 @@ void grid_rt_place(grid* gr, bbt_t ph, bbt_t nph)
 }
 
 
-void grid_rt_block(grid* gr, bbt_t ph, bbt_t nph)
+void grid_rt_process_blocks(grid* gr, bbt_t ph, bbt_t nph)
 {
     /*  purpose: process events within block_port,
         these are events which don't emit any
@@ -251,7 +249,7 @@ int grid_rt_unplace_event(grid* gr, event* ev)
 }
 
 
-void grid_rt_unplace(grid* gr, bbt_t ph, bbt_t nph)
+void grid_rt_process_unplacement(grid* gr, bbt_t ph, bbt_t nph)
 {
     event ev;
 

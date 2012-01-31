@@ -52,7 +52,7 @@ void            boxyseq_ui_place_user_block(const boxyseq*,
                                             int x,      int y,
                                             int width,  int height);
 
-void            boxyseq_update_rt_data(const boxyseq*);
+/* unused void  boxyseq_update_rt_data(const boxyseq*); */
 
 /*  rt threads stuff -------->
 */
