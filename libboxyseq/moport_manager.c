@@ -167,6 +167,7 @@ void moport_manager_rt_init_jack_cycle( moport_manager* mopman,
         moport_rt_init_jack_cycle(*mops++, nframes);
 }
 
+/*
 void moport_manager_rt_play_old( moport_manager* mopman,
                                  bbt_t ph,  bbt_t nph,
                                  grid* gr)
@@ -179,13 +180,24 @@ void moport_manager_rt_play_old( moport_manager* mopman,
     while(*mops)
         moport_rt_play_old(*mops++, ph, nph, gr);
 }
+*/
+
+void moport_manager_rt_pull_ending(moport_manager* mopman,
+                                    bbt_t ph, bbt_t nph,
+                                    evport* grid_intersort)
+{
+    moport** mops = rtdata_data(mopman->rt);
+
+    if (!mops)
+        return;
+
+    while(*mops)
+        moport_rt_pull_ending(*mops++, ph, nph, grid_intersort);
+}
 
 
-void    moport_manager_rt_play_new_and_output(  moport_manager* mopman,
-                                                bbt_t ph,
-                                                bbt_t nph,
-                                                jack_nframes_t nframes,
-                                                double frames_per_tick )
+void moport_manager_rt_process_new(moport_manager* mopman,
+                                    bbt_t ph, bbt_t nph)
 {
     moport** mops = rtdata_data(mopman->rt);
 
@@ -194,11 +206,34 @@ void    moport_manager_rt_play_new_and_output(  moport_manager* mopman,
 
     while(*mops)
     {
-        moport_rt_play_new(*mops, ph, nph);
-        moport_rt_output_jack_midi(*mops, nframes, frames_per_tick);
+        moport_rt_process_new(*mops, ph, nph);
         ++mops;
     }
 }
+
+/*
+int moport_manager_rt_play_new_and_output(  moport_manager* mopman,
+                                                bbt_t ph,
+                                                bbt_t nph,
+                                                jack_nframes_t nframes,
+                                                double frames_per_tick )
+{
+    int ret = 0;
+    moport** mops = rtdata_data(mopman->rt);
+
+    if (!mops)
+        return;
+
+    while(*mops)
+    {
+        ret += moport_rt_play_new(*mops, ph, nph);
+        moport_rt_output_jack_midi(*mops, nframes, frames_per_tick);
+        ++mops;
+    }
+
+    return ret;
+}
+*/
 
 
 void moport_manager_rt_empty(   moport_manager* mopman,

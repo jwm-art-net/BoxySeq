@@ -9,9 +9,6 @@
 #include <string.h>
 
 
-static int evbuf_id = 0;
-
-
 struct event_buffer
 {
     size_t  count;
@@ -23,23 +20,22 @@ struct event_buffer
     event*  volatile head;   /* write ptr */
     event*  volatile tail;   /* read ptr */
 
-    char*   name;   /*  yes we're naming ring buffers...
-                        are we?
-                        do we still need to do this?
-                    */
+    char* name;
 };
 
 
-evbuf* evbuf_new(size_t count)
+evbuf* evbuf_new(size_t count, const char* name)
 {
     size_t sz = 1;
     evbuf* rb = malloc(sizeof(*rb));
 
     if (!rb)
     {
-        WARNING("out of memory for evbuf\n");
+        WARNING("out of memory for evbuf name:%s\n", name);
         return 0;
     }
+
+    rb->name = strdup(name);
 
     for (sz = 1; sz < count; sz <<= 1)
         ;
@@ -60,16 +56,14 @@ evbuf* evbuf_new(size_t count)
     rb->head = rb->buf;
     rb->tail = rb->buf;
 
-    rb->name = name_and_number("buffer", ++evbuf_id);
-
     return rb;
 }
 
 
 void evbuf_free(evbuf* rb)
 {
-    free(rb->buf);
     free(rb->name);
+    free(rb->buf);
     free(rb);
 }
 
@@ -99,7 +93,7 @@ event* evbuf_write(evbuf* rb, const event* data)
 
     if (!evbuf_write_count(rb))
     {
-        WARNING("failed to write event to buffer\n");
+        DWARNING("failed to write event to buffer\n");
         return 0;
     }
 

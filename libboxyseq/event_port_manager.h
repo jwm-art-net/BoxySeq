@@ -15,8 +15,9 @@ typedef struct event_port_manager evport_manager;
 evport_manager* evport_manager_new(const char* groupname);
 void            evport_manager_free(evport_manager*);
 
-evport*         evport_manager_evport_new(evport_manager*,
-                                          int rt_evlist_sort_flags );
+evport*         evport_manager_evport_new(  evport_manager*,
+                                            const char* name,
+                                            int rt_evlist_sort_flags );
 
 evport*         evport_manager_evport_first(evport_manager*);
 evport*         evport_manager_evport_next(evport_manager*);

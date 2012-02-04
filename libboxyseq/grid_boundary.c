@@ -38,7 +38,6 @@ void grbound_free(grbound* grb)
         return;
 
     rtdata_free(grb->rt);
-    fsbound_free(grb->bound);
     free(grb);
 }
 
@@ -138,17 +137,17 @@ int grbound_scale_binary(grbound* grb)
 
 void grbound_rgb_float_get(grbound* grb, float* r, float* g, float* b)
 {
-    *r = grb->r / 255.0f;
-    *g = grb->g / 255.0f;
-    *b = grb->b / 255.0f;
+    *r = grb->box.r / 255.0f;
+    *g = grb->box.g / 255.0f;
+    *b = grb->box.b / 255.0f;
 }
 
 
 void grbound_rgb_float_set(grbound* grb, float r, float g, float b)
 {
-    grb->r = (int)(r * 255);
-    grb->g = (int)(g * 255);
-    grb->b = (int)(b * 255);
+    grb->box.r = (int)(r * 255);
+    grb->box.g = (int)(g * 255);
+    grb->box.b = (int)(b * 255);
 }
 
 
@@ -176,31 +175,18 @@ void grbound_channel_set(grbound* grb, int ch)
 }
 
 
-fsbound* grbound_fsbound(grbound* grb)
+bool grbound_fsbound_set(grbound* grb, int x, int y, int w, int h)
 {
-    return grb->bound;
-}
-
-
-void grbound_fsbound_set(grbound* grb, int x, int y, int w, int h)
-{
-    fsbound* fsb = grbound_fsbound(grb);
-
-    if (!fsbound_set_coords(fsb, x, y, w, h))
-    {
-        WARNING("boundary x:%d y:%d w:%d h:%d out of bounds\n",
-                x, y, w, h);
-        WARNING("default size will be used\n");
-    }
+    return box_set_coords(&grb->box, x, y, w, h);
 }
 
 
 void grbound_fsbound_get(grbound* grb, int* x, int* y, int* w, int* h)
 {
-    if (x) *x = grb->bound->x;
-    if (y) *y = grb->bound->y;
-    if (w) *w = grb->bound->w;
-    if (h) *h = grb->bound->h;
+    if (x) *x = grb->box.x;
+    if (y) *y = grb->box.y;
+    if (w) *w = grb->box.w;
+    if (h) *h = grb->box.h;
 }
 
 
@@ -216,7 +202,7 @@ void grbound_update_rt_data(const grbound* grb)
 }
 
 
-void grbound_rt_sort(grbound* grb, evport* port)
+void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
 {
     event ev;
     grbound* rtgrb = rtdata_data(grb->rt);
@@ -236,9 +222,20 @@ void grbound_rt_sort(grbound* grb, evport* port)
             while (evport_read_event(rtgrb->evinput, &ev))
             {
                 ev.grb = grb;
-                EVENT_CHANNEL_SET(&ev, rtgrb->channel);
-                if (!evport_write_event(port, &ev))
-                    WARNING("failed to write sort to port\n");
+
+                if (!ev.box.r && !ev.box.g && !ev.box.b)
+                {
+                    ev.box.r = grb->box.r;
+                    ev.box.g = grb->box.g;
+                    ev.box.b = grb->box.b;
+                }
+
+                EVENT_SET_STATUS_ON( &ev );
+                EVENT_SET_TYPE_NOTE( &ev );
+                EVENT_SET_CHANNEL( &ev, rtgrb->channel );
+
+                if (!evport_write_event(grid_intersort, &ev))
+                    WARNING("failed to write to grid intersort\n");
             }
         }
         else
@@ -246,10 +243,20 @@ void grbound_rt_sort(grbound* grb, evport* port)
             while (evport_read_event(rtgrb->evinput, &ev))
             {
                 ev.grb = grb;
+
+                if (!ev.box.r && !ev.box.g && !ev.box.b)
+                {
+                    ev.box.r = grb->box.r;
+                    ev.box.g = grb->box.g;
+                    ev.box.b = grb->box.b;
+                }
+
+                EVENT_SET_STATUS_ON( &ev );
                 EVENT_SET_TYPE_BLOCK( &ev );
-                EVENT_CHANNEL_SET(&ev, rtgrb->channel);
-                if (!evport_write_event(port, &ev))
-                    WARNING("failed to write sort to port\n");
+                EVENT_SET_CHANNEL( &ev, rtgrb->channel );
+
+                if (!evport_write_event(grid_intersort, &ev))
+                    WARNING("failed to write to grid intersort\n");
             }
         }
     }
@@ -271,20 +278,17 @@ static grbound* grbound_private_new(bool with_rtdata)
     if (!grb)
         goto fail0;
 
-    if (!(grb->bound = fsbound_new()))
-        goto fail1;
-
     if (with_rtdata)
     {
         grb->rt = rtdata_new(grb,   grbound_rtdata_get_cb,
                                     grbound_rtdata_free_cb );
         if (!grb->rt)
-            goto fail2;
+            goto fail1;
     }
     else
         grb->rt = 0;
 
-    fsbound_init(grb->bound);
+    box_init_max_dim(&grb->box);
 
     grb->flags =  GRBOUND_BLOCK_ON_NOTE_FAIL
                 | GRBOUND_EVENT_PROCESS
@@ -303,7 +307,7 @@ static grbound* grbound_private_new(bool with_rtdata)
     grb->scale_bin = binary_string_to_int("111111111111");
     grb->scale_key = 0;
 
-    random_rgb(&grb->r, &grb->g, &grb->b);
+    random_rgb(&grb->box.r, &grb->box.g, &grb->box.b);
 
     grb->evinput = 0;
     grb->midiout = 0;
@@ -314,7 +318,6 @@ static grbound* grbound_private_new(bool with_rtdata)
 
     return grb;
 
-fail2:  fsbound_free(grb->bound);
 fail1:  free(grb);
 fail0:  WARNING("out of memory for grid boundary\n");
     return 0;
@@ -334,14 +337,10 @@ static grbound* grbound_private_dup(const void* data, bool with_rtdata)
     dest->scale_bin =   grb->scale_bin;
     dest->scale_key =   grb->scale_key;
 
-    dest->r =           grb->r;
-    dest->g =           grb->g;
-    dest->b =           grb->b;
+    box_copy(&dest->box, &grb->box);
 
     dest->evinput =     grb->evinput;
     dest->midiout =     grb->midiout;
-
-    fsbound_copy(dest->bound, grb->bound);
 
     return dest;
 }

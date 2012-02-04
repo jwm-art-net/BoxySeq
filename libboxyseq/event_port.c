@@ -80,25 +80,20 @@
 evport* evport_new( evpool* pool,   const char* name,
                     int id,         int rt_evlist_sort_flags  )
 {
-    char* tmp;
+    char tmp[80];
     evport* port = malloc(sizeof(*port));
 
     if (!port)
         goto fail0;
 
-    tmp = jwm_strcat_alloc(name, "-port");
-    if (tmp)
-    {
-        port->name = name_and_number(tmp, id);
-        free(tmp);
-    }
-    else
-        port->name = name_and_number(name, id);
+    snprintf(tmp, 79, "%s-port_%02d", name, id);
+    tmp[79] = '\0';
 
-    if (!port->name)
-        goto fail1;
+    port->name = strdup(tmp);
 
-    port->data = rt_evlist_new(pool, rt_evlist_sort_flags);
+    DMESSAGE("new event port \"%s\"\n",port->name);
+
+    port->data = rt_evlist_new(pool, rt_evlist_sort_flags, port->name);
 
     if (!port->data)
         goto fail2;
@@ -108,7 +103,6 @@ evport* evport_new( evpool* pool,   const char* name,
 fail2:
     free(port->name);
 
-fail1:
     free(port);
 
 fail0:

@@ -28,16 +28,20 @@ event* event_new(void)
 
 void event_init(event* ev)
 {
+    ev->box.x = -1;
+    ev->box.y = -1;
+    ev->box.w = -1;
+    ev->box.h = -1;
+    ev->box.r = 0;
+    ev->box.g = 0;
+    ev->box.b = 0;
+
     ev->flags =         0;
     ev->pos =           -1;
     ev->frame =         0;
     ev->note_dur =      -1;
     ev->note_pitch =    -1;
     ev->note_velocity = -1;
-    ev->box_x =         -1;
-    ev->box_y =         -1;
-    ev->box_width =     -1;
-    ev->box_height =    -1;
     ev->box_release =   -1;
     ev->grb =            0;
 }
@@ -45,15 +49,19 @@ void event_init(event* ev)
 
 void event_copy(event* dest, const event* src)
 {
+    dest->box.x = src->box.x;
+    dest->box.y = src->box.y;
+    dest->box.w = src->box.w;
+    dest->box.h = src->box.h;
+    dest->box.r = src->box.r;
+    dest->box.g = src->box.g;
+    dest->box.b = src->box.b;
+
     dest->flags =           src->flags;
     dest->pos =             src->pos;
     dest->note_dur =        src->note_dur;
     dest->note_pitch =      src->note_pitch;
     dest->note_velocity =   src->note_velocity;
-    dest->box_x =           src->box_x;
-    dest->box_y =           src->box_y;
-    dest->box_width =       src->box_width;
-    dest->box_height =      src->box_height;
     dest->box_release =     src->box_release;
     dest->grb =             src->grb;
 }
@@ -71,9 +79,32 @@ void event_dump(const event* ev)
             ev,             ev->flags,
             ev->pos,   ev->note_dur,   ev->box_release,
             ev->note_pitch, ev->note_velocity,
-            ev->box_x,      ev->box_y,
-            ev->box_width,  ev->box_height,
+            ev->box.x,      ev->box.y,
+            ev->box.w,      ev->box.h,
             ev->grb );
+}
+
+
+void event_flags_to_str(int flags, char buf[40])
+{
+    const char* type = 0;
+    const char* status = 0;
+    int r;
+
+    switch(flags & EV_TYPEMASK)
+    {
+    case EV_TYPE_NOTE:      type = "note";  break;
+    case EV_TYPE_BLOCK:     type = "block"; break;
+    case EV_TYPE_CLEAR:     type = "RT>GUI:CLEAR";      break;
+    case EV_TYPE_SHUTDOWN:  type = "RT<GUI:SHUTDOW";    break;
+    default:
+        type = "UNKNOWN";
+        break;
+    }
+
+    status = (flags & EV_STATUS_ON) ? "ON" : "OFF";
+
+    snprintf(buf, 40, "type [%15s] status [%3s]", type, status);
 }
 
 
@@ -131,8 +162,8 @@ static bool event_pri_sel_coord_cb(const void* data, const void* crit)
 {
     const event* ev = data;
     const ev_sel_coord* sel = crit;
-    return ((ev->box_x >= sel->tlx &&  ev->box_x <= sel->brx)
-         && (ev->box_y >= sel->tly &&  ev->box_y <= sel->bry));
+    return ((ev->box.x >= sel->tlx &&  ev->box.x <= sel->brx)
+         && (ev->box.y >= sel->tly &&  ev->box.y <= sel->bry));
 }
 
 
@@ -155,12 +186,12 @@ static void event_pri_mod_coord_cb(void* data, void* init)
 
     if (offset->x == -1)
     {
-        offset->x = ev->box_x;
-        offset->y = ev->box_y;
+        offset->x = ev->box.x;
+        offset->y = ev->box.y;
     }
 
-    ev->box_x -= offset->x;
-    ev->box_y -= offset->y;
+    ev->box.x -= offset->x;
+    ev->box.y -= offset->y;
 }
 
 
@@ -192,8 +223,8 @@ static char* event_pri_str_cb(const void* data, int level)
                              "event:%p pos:%d dur:%d rel:%d w:%d h:%d",
                              ev, ev->pos, ev->note_dur,
                              ev->box_release,
-                             ev->box_width,
-                             ev->box_height);
+                             ev->box.w,
+                             ev->box.h);
     }
 
     if (count >= DATACB_STR_SIZE)
@@ -294,35 +325,35 @@ static void event_pri_x_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_x = (int)n;
+    ev->box.x = (int)n;
 }
 
 static void event_pri_y_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_y = (int)n;
+    ev->box.y = (int)n;
 }
 
 static void event_pri_w_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_width = (int)n;
+    ev->box.w = (int)n;
 }
 
 static void event_pri_h_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_height = (int)n;
+    ev->box.h = (int)n;
 }
 
 static void event_pri_x_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_x = (int)((float)ev->box_x + n);
+    ev->box.x = (int)((float)ev->box.x + n);
 }
 
 
@@ -330,21 +361,21 @@ static void event_pri_y_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_y = (int)((float)ev->box_y + n);
+    ev->box.y = (int)((float)ev->box.y + n);
 }
 
 static void event_pri_w_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_width = (int)((float)ev->box_width + n);
+    ev->box.w = (int)((float)ev->box.w + n);
 }
 
 static void event_pri_h_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box_height = (int)((float)ev->box_height + n);
+    ev->box.h = (int)((float)ev->box.h + n);
 }
 
 datacb_cmp event_get_cmp_cb(ev_type type)

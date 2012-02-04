@@ -12,15 +12,13 @@
 
 struct grid_boundary
 {
+    basebox     box;
     int         flags;
     int         channel;
     int         scale_bin;
     int         scale_key;
 
-    unsigned char r, g, b;
-
     evport*     evinput;
-    fsbound*    bound;
 
     moport*     midiout;
 

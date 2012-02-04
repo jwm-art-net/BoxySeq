@@ -27,8 +27,8 @@ struct event_pattern
     float   beat_type;
     double  beat_ratio;
 
-    seed_type   seedtype;
-    uint32_t    seed;
+/*    seed_type   seedtype;
+    int         seed;*/
 
     evlist*     events;
 
@@ -48,8 +48,8 @@ typedef struct rt_event_pattern
     int     height_min;
     int     height_max;
 
-    seed_type   seedtype;
-    uint32_t    seed;
+/*    seed_type   seedtype;
+    int         seed;*/
 
     event*  events;
 

@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-
+#include "basebox.h"
 #include "boxyseq_types.h"
 #include "common.h"
 #include "datacb.h"
@@ -31,7 +31,6 @@ typedef enum EVENT_FLAGS
     EV_TYPEMASK =           0x000f,
 
     EV_STATUS_ON =      0x0010, /* or off */
-    EV_STATUS_USER =    0x0020, /* implies indefinite duration */
 
     EV_CHANNEL_MASK =   0xf000,
 
@@ -46,6 +45,7 @@ typedef enum EVENT_FLAGS
  */
 typedef struct event_
 {
+    basebox box;
     int     flags;
     bbt_t   pos;
 
@@ -55,10 +55,6 @@ typedef struct event_
     int     note_pitch;
     int     note_velocity;
 
-    int     box_x;          /* maybe converts to pitch       */
-    int     box_y;          /* maybe converts to velocity    */
-    int     box_width;
-    int     box_height;
     bbt_t   box_release;    /* duration of box after note off (ticks) */
 
     grbound* grb;
@@ -72,6 +68,7 @@ event*  event_dup(const event*);
 void    event_dump(const event*);
 void    event_copy(event* dest, const event* src);
 
+void    event_flags_to_str(int flags, char buf[40]);
 
 
 #define EVENT_IS_STATUS_ON( ev ) \
@@ -79,9 +76,6 @@ void    event_copy(event* dest, const event* src);
 
 #define EVENT_IS_STATUS_OFF( ev ) \
     ((( ev )->flags & EV_STATUS_ON ) != EV_STATUS_ON)
-
-#define EVENT_IS_STATUS_USER( ev ) \
-    ((( ev )->flags & EV_STATUS_USER ) == EV_STATUS_USER)
 
 #define EVENT_TYPE( ev ) \
     (( ev )-> flags & EV_TYPEMASK)
@@ -114,9 +108,6 @@ void    event_copy(event* dest, const event* src);
 #define EVENT_SET_STATUS_OFF( ev ) \
     ( ev )->flags &= ~EV_STATUS_ON
 
-#define EVENT_SET_STATUS_USER( ev ) \
-    ( ev )->flags |= EV_STATUS_USER
-
 #define EVENT_SET_TYPE_NOTE( ev ) \
     ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_NOTE
 
@@ -135,7 +126,7 @@ void    event_copy(event* dest, const event* src);
 #define EVENT_CHANNEL( ev ) \
     ((0xf000 & ( ev )->flags) >> 12)
 
-#define EVENT_CHANNEL_SET( ev, ch ) \
+#define EVENT_SET_CHANNEL( ev, ch ) \
     ( ev )->flags = (0xf000 & (( ch ) << 12)) + (0x0fff & ( ev )->flags);
 
 

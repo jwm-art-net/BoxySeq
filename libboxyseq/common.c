@@ -131,6 +131,16 @@ char* int_to_binary_string(int n, int sigbits)
 }
 
 
+int lcg_rand(int *x, int max)
+{
+    int a = 134775813;
+    int c = 1;
+    int m = 4294967296;
+    *x = ((*x * a) + c) % m;
+    return (max) ? *x % max : x;
+}
+
+
 void random_rgb(unsigned char* r, unsigned char* g, unsigned char* b)
 {
     char n = rand() % 6;

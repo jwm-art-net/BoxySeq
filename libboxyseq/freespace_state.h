@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 
-#include "freespace_boundary.h"
+#include "basebox.h"
 
 
 #include <stdbool.h>
@@ -84,7 +84,7 @@ void        freespace_clear(freespace*);
                         both to -1 each.
 */
 bool        freespace_find(     freespace*,
-                                fsbound*,
+                                basebox* boundary,
                                 int placement_flags,
                                 int width,      int height,
                                 int* resultx,   int* resulty    );
@@ -136,17 +136,6 @@ bool        freespace_block_remove(freespace*,
 void        freespace_block_add(freespace*,
                                 int x,      int y,
                                 int width,  int height );
-
-
-/*  freespace_test:     tests the area at x,y of width, height for
-                        complete conformity with the specified state
-                        (unused state 0, used state 1).
-
-bool        freespace_test(     freespace*,
-                                int state,
-                                int x,      int y,
-                                int width,  int height );
-*/
 
 
 /*  freespace_dump:     dumps one of the 4 freespace state bufs as text.

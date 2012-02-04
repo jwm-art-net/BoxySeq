@@ -24,20 +24,22 @@ struct event_pool
     rt_evlink*   mempool;
     rt_evlink*   memfree;
 
-#ifdef EVPOOL_DEBUG
-    int min_free;
-    char* origin_string;
-#endif
+    char* name;
 
+    #ifdef EVPOOL_DEBUG
+    int min_free;
+    #endif
 };
 
 
-evpool* evpool_new(int count)
+evpool* evpool_new(int count, const char* name)
 {
     if (count < 1)
         count = DEFAULT_EVPOOL_SIZE;
 
     evpool* evp = malloc(sizeof(*evp));
+
+    DMESSAGE("new event pool \"%s\"\n", name);
 
     if (!evp)
     {
@@ -55,28 +57,27 @@ evpool* evpool_new(int count)
     }
 
     int i;
-
     rt_evlink* evlnk = evp->mempool;
 
     for (i = 0; i < count; ++i, ++evlnk)
     {
         event_init(&evlnk->ev);
-#ifdef EVPOOL_DEBUG
-        evlnk->ev.flags = EV_IS_FREE_ERROR;
-#endif
         evlnk->next = evlnk + 1;
+        #ifdef EVPOOL_DEBUG
+        evlnk->ev.flags = EV_IS_FREE_ERROR;
+        #endif
     }
 
     evp->mempool[count - 1].next = 0;
-
     evp->count = evp->free_count = count;
-
     evp->memfree = evp->mempool;
+    evp->name = strdup(name);
 
-#ifdef EVPOOL_DEBUG
+
+    #ifdef EVPOOL_DEBUG
     evp->min_free = evp->count;
-    evp->origin_string = 0;
-#endif
+    #endif
+
 
     return evp;
 }
@@ -88,8 +89,8 @@ void evpool_free(evpool* evp)
         return;
 
     #ifdef EVPOOL_DEBUG
-    MESSAGE("pool:%p origin string:'%s'\n", evp, evp->origin_string);
-    free(evp->origin_string);
+    MESSAGE("pool:%p name:'%s'\n", evp, evp->name);
+
     if (evp->free_count < evp->count)
         WARNING("\tmemory remaining in pool: %d... short by %d of %d\n",
                 evp->free_count, evp->count - evp->free_count,
@@ -105,35 +106,9 @@ void evpool_free(evpool* evp)
     #endif
 
     free(evp->mempool);
+    free(evp->name);
     free(evp);
 }
-
-
-#ifdef EVPOOL_DEBUG
-void evpool_set_origin_string(evpool* evp, const char* origin_string)
-{
-    if (evp->origin_string)
-    {
-        WARNING("pool: %p has origin already set as:'%s'\n",
-                evp, evp->origin_string);
-        WARNING("not changing\n");
-
-        return;
-    }
-
-    if (!(evp->origin_string = strdup(origin_string)))
-        WARNING("failed to set origin string '%s' for evpool:%p\n",
-                origin_string, evp);
-
-}
-#endif
-
-#ifdef EVPOOL_DEBUG
-const char* evpool_get_origin_string(evpool* evp)
-{
-    return evp->origin_string;
-}
-#endif
 
 
 static inline rt_evlink* evpool_private_event_alloc(evpool* evp)
@@ -196,40 +171,18 @@ struct rt_event_list
     evpool* pool;
     bool pool_managed;
 
-#ifdef EVPOOL_DEBUG
-    char* origin_string;
-#endif
+    const char* origin_str; /* name of port of whatever using this */
 
     int count;
 };
 
 
+const char* rt_evlist_get_origin_str(rt_evlist* rtevl)
+{
+    return rtevl->origin_str;
+}
+
 #ifdef EVPOOL_DEBUG
-void rt_evlist_set_origin_string(   rt_evlist* rtevl,
-                                    const char* origin_string)
-{
-    if (rtevl->origin_string)
-    {
-        WARNING("rt_evlist: %p has origin already set as:'%s'\n",
-                rtevl, rtevl->origin_string);
-        WARNING("not changing\n");
-
-        return;
-    }
-
-    if (!(rtevl->origin_string = strdup(origin_string)))
-        WARNING("failed to set origin string '%s' for evpool:%p\n",
-                origin_string, rtevl);
-
-    if (rtevl->pool_managed)
-        evpool_set_origin_string(rtevl->pool, origin_string);
-
-}
-
-const char* rt_evlist_get_origin_string(rt_evlist* rtevl)
-{
-    return rtevl->origin_string;
-}
 
 void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
 {
@@ -360,7 +313,8 @@ void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
     return;
 
 fail:
-    WARNING("***** integrity checks failed *****\n");
+    WARNING("***** integrity checks  for [%s] failed *****\n",
+                                            rtevl->origin_str);
 
     fwd = rtevl->head;
     fwd_count = 0;
@@ -385,16 +339,18 @@ fail:
 #endif
 
 
-rt_evlist*  rt_evlist_new(evpool* pool, int flags)
+rt_evlist*  rt_evlist_new(evpool* pool, int flags, const char* origin_str)
 {
     rt_evlist* rtevl = malloc(sizeof(*rtevl));
 
     if (!rtevl)
         goto fail0;
 
+    DMESSAGE("new RT event list [origin: \"%s\"]\n", origin_str);
+
     if (!pool)
     {
-        if (!(rtevl->pool = evpool_new(DEFAULT_EVPOOL_SIZE)))
+        if (!(rtevl->pool = evpool_new(DEFAULT_EVPOOL_SIZE, origin_str)))
             goto fail1;
 
         rtevl->pool_managed = 1;
@@ -411,9 +367,7 @@ rt_evlist*  rt_evlist_new(evpool* pool, int flags)
     rtevl->flags = flags;
     rtevl->count = 0;
 
-#ifdef EVPOOL_DEBUG
-    rtevl->origin_string = 0;
-#endif
+    rtevl->origin_str = origin_str;
 
     return rtevl;
 
@@ -436,10 +390,6 @@ void rt_evlist_free(rt_evlist* rtevl)
 
     if (rtevl->pool_managed)
         evpool_free(rtevl->pool);
-
-#ifdef EVPOOL_DEBUG
-    free(rtevl->origin_string);
-#endif
 
     free(rtevl);
 }
@@ -466,8 +416,8 @@ int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 #ifdef EVPOOL_DEBUG
         WARNING("rt_evlist %p '%s', pool %p '%s', "
                 "short of memory for event\n",
-                rtevl,          rtevl->origin_string,
-                rtevl->pool,    rtevl->pool->origin_string );
+                rtevl,          rtevl->origin_str,
+                rtevl->pool,    rtevl->pool->origin_str );
 #else
         WARNING("rt_evlist %p, pool %p, short of memory for event\n",
                 rtevl, rtevl->pool);
@@ -702,7 +652,16 @@ void rt_evlist_and_remove_event(rt_evlist* rtevl)
         if (rtevl->head == rtevl->tail)
             rtevl->head = rtevl->tail = 0;
         else
+        {
+            DMESSAGE(   "rtevl->tail:%p\n"
+                        "rtevl->tail->prev:%p\n",
+                        rtevl->tail, rtevl->tail->prev);
+
+            if (!rtevl->tail->prev)
+                rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+
             rtevl->tail->prev->next = 0;
+        }
 
         --rtevl->count;
         evpool_private_event_free(rtevl->pool, rem);

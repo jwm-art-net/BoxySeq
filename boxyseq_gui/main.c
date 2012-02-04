@@ -9,6 +9,42 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+pattern*    new_pat(pattern_manager* patman,
+                    int steps,
+                    float dur_r,    float rel_r,
+                    int wmin,       int wmax,
+                    int hmin,       int hmax)
+{
+    pattern* p = pattern_manager_pattern_new(patman);
+    evlist* el = pattern_event_list(p);
+    event*  ev = 0;
+
+    int count = steps;
+    int i;
+
+    bbt_t   st =    (internal_ppqn * 4) / steps;
+    bbt_t   dur =   st * dur_r - 1;
+    bbt_t   rel =   st * rel_r - 1;
+    bbt_t   t = 0;
+
+    DMESSAGE("dur:%d rel:%d\n",dur,rel);
+
+    pattern_set_meter(p, 4, 4);
+    pattern_set_loop_length(p, internal_ppqn * 4);
+    pattern_set_event_width_range(p,    wmin, wmax);
+    pattern_set_event_height_range(p,   hmin, hmax);
+
+    for (i = 0; i < count; ++i, t += st)
+    {
+        DMESSAGE("adding note pos:%d dur:%d rel:%d\n", t, dur, rel);
+        ev = lnode_data(evlist_add_event_new(el, t));
+        ev->note_dur = dur;
+        ev->box_release = rel;
+    }
+
+    return p;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -23,19 +59,17 @@ int main(int argc, char** argv)
     sclist* scales;
     scale*  sc;
 
-    pattern*    pat1;
+    pattern*    pat1 = 0;
+    pattern*    pat2 = 0;
     grbound*    grb;
     moport*     mop1;
     evport*     patport1;
+    evport*     patport2;
 
-    evlist* el;
-    event* ev;
-
-    int count, steps, i;
+    int i;
 
     double r, g, b;
 
-    bbt_t st, dur, rel, t;
     _Bool err = -1;
 
     if (!(bs = boxyseq_new(argc, argv)))
@@ -51,41 +85,16 @@ int main(int argc, char** argv)
     grbman = boxyseq_grbound_manager(bs);
     mopman = boxyseq_moport_manager(bs);
     patportman = boxyseq_pattern_port_manager(bs);
+    patport1 = evport_manager_evport_new(patportman, "patport1",
+                                                    RT_EVLIST_SORT_POS);
 
-/* unimplemented   boxyseq_ui_place_user_block(bs, 50, 50, 50, 50); */
-
-
-
-    pat1 = pattern_manager_pattern_new(patman);
-    pattern_set_meter(pat1, 4, 4);
-    pattern_set_loop_length(pat1, internal_ppqn * 4);
-    pattern_set_event_width_range(pat1, 2, 8);
-    pattern_set_event_height_range(pat1, 2, 8);
-
-    el = pattern_event_list(pat1);
-
-    count = steps = 16;
-    st = (internal_ppqn * 4) / steps;
-    dur = st * 2.5;
-    rel = st * 0.745;
-    t = 0;
-
-    for (i = 0; i < count; ++i, t += st)
-    {
-        if (i % 27 == 0 || i % 25 == 0)
-            continue;
-        ev = lnode_data(evlist_add_event_new(el, t));
-        ev->note_dur = dur;
-        ev->box_release = rel * 4;
-        if (i % 3 == 0)
-            continue;
-        ev = lnode_data(evlist_add_event_new(el, t));
-        ev->note_dur = dur * (i / (float)count);
-        ev->box_release = rel;
-    }
-
-    patport1 = evport_manager_evport_new(patportman, RT_EVLIST_SORT_POS);
+    pat1 = new_pat(patman, 4, 2.25, 0.25, 15,16,15,16);
     pattern_set_output_port(pat1, patport1);
+    pattern_update_rt_data(pat1);
+
+    pat2 = new_pat(patman, 16, 0.25, 0.25, 4, 5, 4, 5);
+    pattern_set_output_port(pat2, patport1);
+    pattern_update_rt_data(pat2);
 
     mop1 = moport_manager_moport_new(mopman);
 
@@ -98,11 +107,10 @@ int main(int argc, char** argv)
     int scint = scale_as_int(sc);
     int keyint = note_number("F#");
 
-    pattern_update_rt_data(pat1);
 
     srand(time(0));
 
-    for (i = 0; i < 3; ++i)
+    for (i = 0; i < 1; ++i)
     {
         int x, y, w, h;
 
@@ -120,9 +128,6 @@ int main(int argc, char** argv)
         grb = grbound_manager_grbound_new(grbman);
         grbound_fsbound_set(grb, x, y, w, h);
         grbound_set_input_port(grb, patport1);
-
-        if ((x + w + y + h) % 2)
-            grbound_event_process_and_block(grb);
 
         grbound_midi_out_port_set(grb, mop1);
 

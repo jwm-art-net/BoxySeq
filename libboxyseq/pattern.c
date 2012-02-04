@@ -27,10 +27,10 @@ pattern* pattern_new(int id)
     if (!pat)
         goto fail0;
 
-    if (id < 0)
-        pat->name = name_and_number("pattern duplicate", -id);
-    else
-        pat->name = name_and_number("pattern", id);
+    char tmp[80];
+    snprintf(tmp, 79, "pattern_%02d", id);
+    tmp[79] = '\0';
+    pat->name = strdup(tmp);
 
     if (!(pat->name))
         goto fail1;
@@ -50,8 +50,9 @@ pattern* pattern_new(int id)
     pattern_set_meter(pat, 4, 4);
     pattern_set_event_width_range(pat, 4, 5);
     pattern_set_event_height_range(pat, 4, 5);
+/*
     pattern_set_random_seed_type(pat, SEED_TIME_SYS);
-
+*/
     pat->evout = 0;
 
     return pat;
@@ -94,8 +95,8 @@ pattern* pattern_dup(const pattern* pat)
     dest->beat_type =       pat->beat_type;
     dest->beat_ratio =      pat->beat_ratio;
 
-    dest->seedtype =        pat->seedtype;
-    dest->seed =            pat->seed;
+/*    dest->seedtype =        pat->seedtype;
+    dest->seed =            pat->seed;*/
 
     dest->evout =           pat->evout;
 
@@ -182,17 +183,29 @@ void pattern_set_event_height_range(pattern* pat,
 }
 
 
+/*
 void pattern_set_random_seed_type(pattern* pat, seed_type seedtype)
 {
     pat->seedtype = seedtype;
+
+    if (seedtype != SEED_USER)
+    {
+        if (seedtype == SEED_TIME_SYS)
+            pat->seed = time(NULL);
+        else
+            pat->seed = 0;
+    }
 }
 
 
-void pattern_set_random_seed(pattern* pat, uint32_t seed)
+void pattern_set_random_seed(pattern* pat, int seed)
 {
-    pat->seed = seed;
+    if (pat->seedtype == SEED_USER)
+        pat->seed = seed;
+    else
+        pat->seed = 0;
 }
-
+*/
 
 void pattern_dump(const pattern* pat)
 {
@@ -311,14 +324,12 @@ void pattern_rt_play(pattern* pat,  bool repositioned,
             /* FIXME:   weren't we going to have events where the
                         dimensions were specified rather than random?
             */
-
-            ev->box_width = g_rand_int_range(   rtpat->rnd,
-                                                rtpat->width_min,
-                                                rtpat->width_max);
-
-            ev->box_height = g_rand_int_range(  rtpat->rnd,
-                                                rtpat->height_min,
-                                                rtpat->height_max);
+            if (!ev->box.w)
+                ev->box.w = g_rand_int_range(rtpat->rnd, rtpat->width_min,
+                                                         rtpat->width_max);
+            if (!ev->box.h)
+                ev->box.h = g_rand_int_range(rtpat->rnd, rtpat->height_min,
+                                                         rtpat->height_max);
             ev->pos = evpos;
             ev->note_dur += evpos;
             ev->box_release += ev->note_dur;
@@ -365,7 +376,7 @@ static rt_pattern* rt_pattern_new(void)
     rtpat->playing = 0;
     rtpat->triggered = 0;
 
-    rtpat->seedtype = SEED_TIME_SYS;
+/*    rtpat->seedtype = SEED_TIME_SYS;*/
 
     rtpat->start_tick = rtpat->end_tick = 0;
     rtpat->index = rtpat->loop_length = 0;
@@ -419,8 +430,8 @@ static void* pattern_rtdata_get_cb(const void* data)
     rtpat->height_min =     pat->height_min;
     rtpat->height_max =     pat->height_max;
 
-    rtpat->seedtype =       pat->seedtype;
-    rtpat->seed =           pat->seed;
+/*    rtpat->seedtype =       pat->seedtype;
+    rtpat->seed =           pat->seed;*/
 
     rtpat->evout =          pat->evout;
 

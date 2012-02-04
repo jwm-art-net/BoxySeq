@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 
 #include "boxyseq_types.h"
 #include "event_buffer.h"
@@ -16,12 +17,19 @@ extern "C" {
 grid*       grid_new(void);
 void        grid_free(grid*);
 
-evport*     grid_global_input_port(grid*);
-freespace*  grid_freespace(grid*);
+/*evport*     grid_global_input_port(grid*);*/
 
+/* grid intersort: port for collecting all events occurring this cycle */
+evport*     grid_get_intersort(grid*);
+
+freespace*  grid_get_freespace(grid*);
+
+/*  buffers read by user-interface for representation of events */
 void        grid_set_ui_note_on_buf(grid*, evbuf*);
 void        grid_set_ui_note_off_buf(grid*, evbuf*);
 void        grid_set_ui_unplace_buf(grid*, evbuf*);
+
+void        grid_rt_process_intersort(grid*, bbt_t ph, bbt_t nph);
 
 /*  grid_rt_process_placement
  *-----------------------------
@@ -32,8 +40,8 @@ void        grid_set_ui_unplace_buf(grid*, evbuf*);
  *      * remove freespace
  *      * send event to user-interface note-on buffer
  *                  (regardless of categorization)
- */
 void        grid_rt_process_placement(grid*, bbt_t ph, bbt_t nph);
+ */
 
 /*  grid_rt_process_blocks
  *--------------------------
@@ -44,15 +52,25 @@ void        grid_rt_process_placement(grid*, bbt_t ph, bbt_t nph);
 void        grid_rt_process_blocks(grid*, bbt_t ph, bbt_t nph);
 
 
+
 /*  grid_rt_process_unplacement
  *-------------------------------
  *  process events stored in unplace port
  *      * check if event has released
  *      * if released, return freespace, remove from unplace port
  *        to ui unplace port.
- */
 void        grid_rt_process_unplacement(grid*, bbt_t ph, bbt_t nph);
+ */
 
+
+/*  grid_rt_add_block_area
+ *--------------------------
+ *  a block-area is an area in the freespace grid which disrupts placement.
+ *  the location of a block-area is chosen by the user not the placement
+ *  algorithm.
+ *  returns 1 on sucess.
+ */
+bool        grid_rt_add_block_area(grid*, int x, int y, int w, int h);
 
 
 int         grid_rt_note_off_event(grid*, event*);

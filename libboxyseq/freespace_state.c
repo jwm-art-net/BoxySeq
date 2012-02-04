@@ -555,7 +555,7 @@ retry:
 }
 
 
-bool freespace_find( freespace* fs,  fsbound* fsb,
+bool freespace_find( freespace* fs,  basebox* boundary,
                         int flags,
                         int width,      int height,
                         int* resultx,   int* resulty    )
@@ -567,10 +567,11 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
     DMESSAGE("\n---------------------------\n"
              "flags:%s\tarea w:%d, h:%d\n"
              "boundary x:%d,y:%d, w:%d, h:%d\n", pstr, width, height,
-             fsb->x, fsb->y, fsb->w, fsb->h);
+             boundary->x, boundary->y, boundary->w, boundary->h);
     #endif
 
-    if (width < 1 || width > fsb->w || height < 1 || height > fsb->h)
+    if (width  < 1 || width  > boundary->w
+     || height < 1 || height > boundary->h)
     {
         #ifdef FSDEBUG
         DWARNING("\ninvalid area or area does not fit in boundary\n");
@@ -583,14 +584,16 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
         if (flags & FSPLACE_LEFT_TO_RIGHT)
         {
             return row_smart_l2r(fs->row_buf,
-                                    fsb->x, fsb->y, fsb->w, fsb->h,
+                                    boundary->x, boundary->y,
+                                    boundary->w, boundary->h,
                                     flags,
                                     width, height, resultx, resulty);
         }
         else
         {
             return row_smart_r2l(fs->row_buf,
-                                    fsb->x, fsb->y, fsb->w, fsb->h,
+                                    boundary->x, boundary->y,
+                                    boundary->w, boundary->h,
                                     flags,
                                     width, height, resultx, resulty);
         }
@@ -602,8 +605,8 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
         */
         bool ret;
 
-        int rx = FSWIDTH - fsb->y - fsb->h;
-        int ry = fsb->x;
+        int rx = FSWIDTH - boundary->y - boundary->h;
+        int ry = boundary->x;
 
         int rflags = (flags & FSPLACE_LEFT_TO_RIGHT)
                             ? FSPLACE_TOP_TO_BOTTOM
@@ -618,7 +621,7 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
         DMESSAGE("\n---------------------------\n"
              "rflags:%s\tarea w:%d, h:%d\n"
              "boundary rx:%d, ry:%d, w:%d, h:%d\n", pstr, width, height,
-             rx, ry, fsb->w, fsb->h);
+             rx, ry, boundary->w, boundary->h);
         #endif
 
 
@@ -626,7 +629,7 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
         {
             ret = row_smart_l2r(fs->col_buf,
                                     rx,     ry,
-                                    fsb->h, fsb->w,
+                                    boundary->h, boundary->w,
                                     rflags,
                                     height, width, resultx, resulty);
         }
@@ -634,7 +637,7 @@ bool freespace_find( freespace* fs,  fsbound* fsb,
         {
             ret = row_smart_r2l(fs->col_buf,
                                     rx,     ry,
-                                    fsb->h, fsb->w,
+                                    boundary->h, boundary->w,
                                     rflags,
                                     height, width, resultx, resulty);
         }
@@ -822,8 +825,6 @@ void freespace_block_clear(freespace* fs)
         memset(&fs->nat_row_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
         memset(&fs->nat_col_buf[y][0], 0, sizeof(fsbuf_type) * FSBUFWIDTH);
     }
-
-    fs->blkcount = 0;
 
     for (y = 0; y < MAX_BLOCK_AREAS; ++y)
         fs->blklist[y].w = 0;

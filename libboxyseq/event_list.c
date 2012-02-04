@@ -122,14 +122,14 @@ lnode* evlist_add_event_new(evlist* el, bbt_t start_tick)
     ev->note_dur =  evlist_default_duration;
 
     ev->box_release =   0;
-    ev->box_width =     evlist_default_width;
-    ev->box_height =    evlist_default_height;
+    ev->box.w = evlist_default_width;
+    ev->box.h = evlist_default_height;
 
     #ifdef EVLIST_DEBUG
     MESSAGE("pos:%d dur:%d w:%d h:%d\n",ev->pos,
                                         ev->note_dur,
-                                        ev->box_width,
-                                        ev->box_height  );
+                                        ev->box.w,
+                                        ev->box.h  );
                                         
     #endif
 

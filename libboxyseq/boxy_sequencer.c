@@ -41,16 +41,20 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->gr = grid_new()))
         goto fail6;
 
-    if (!(bs->ui_note_on_buf =  evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_note_on_buf =  evbuf_new(DEFAULT_EVBUF_SIZE,
+                                            "ui_note_on_buf")))
         goto fail7;
 
-    if (!(bs->ui_note_off_buf = evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_note_off_buf = evbuf_new(DEFAULT_EVBUF_SIZE,
+                                            "ui_note_off_buf")))
         goto fail8;
 
-    if (!(bs->ui_unplace_buf =  evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_unplace_buf =  evbuf_new(DEFAULT_EVBUF_SIZE,
+                                            "ui_unplace_buf")))
         goto fail9;
 
-    if (!(bs->ui_input_buf =    evbuf_new(DEFAULT_EVBUF_SIZE)))
+    if (!(bs->ui_input_buf =    evbuf_new(DEFAULT_EVBUF_SIZE,
+                                            "ui_input_buf")))
         goto fail10;
 
     if (!(bs->ui_eventlist = evlist_new()))
@@ -171,14 +175,13 @@ void boxyseq_ui_place_user_block(   const boxyseq* bs,
 
     event_init(&ev);
 
-    ev.box_x = x;
-    ev.box_y = y;
-    ev.box_width = width;
-    ev.box_height = height;
+    ev.box.x = x;
+    ev.box.y = y;
+    ev.box.w = width;
+    ev.box.h = height;
 
     EVENT_SET_TYPE_BLOCK( &ev );
     EVENT_SET_STATUS_ON( &ev );
-    EVENT_SET_STATUS_USER( &ev );
 
     if (!evbuf_write(bs->ui_input_buf, &ev))
         WARNING("unable to create user block\n");
@@ -197,7 +200,7 @@ void boxyseq_rt_play(boxyseq* bs,
                      bbt_t ph, bbt_t nph)
 {
     event ev;
-    evport* grid_port;
+    evport* intersort;
 
     if (bs->rt_quitting)
         return;
@@ -212,7 +215,17 @@ void boxyseq_rt_play(boxyseq* bs,
             return;
 
         case EV_TYPE_BLOCK:
-            MESSAGE("user-block placement not implemented :-(\n");
+/*            MESSAGE("user-block placement not implemented :-(\n");*/
+            if (!grid_rt_add_block_area(bs->gr, ev.box.x, ev.box.y,
+                                                ev.box.w, ev.box.h))
+            {
+                WARNING("failed to add block-area\n");
+            }
+            else
+            {
+                MESSAGE("placed block-area:x:%d, y:%d, w:%d, h:%d\n", 
+                        ev.box.x, ev.box.y, ev.box.w, ev.box.h);
+            }
             break;
 
         default:
@@ -220,6 +233,21 @@ void boxyseq_rt_play(boxyseq* bs,
         }
     }
 
+    intersort = grid_get_intersort(bs->gr);
+
+    moport_manager_rt_process_new(bs->moports, ph, nph);
+    moport_manager_rt_pull_ending(bs->moports, ph, nph, intersort);
+
+    evport_manager_rt_clear_all(bs->ports_pattern);
+    pattern_manager_rt_play(bs->patterns, repositioned, ph, nph);
+
+    grbound_manager_rt_pull_starting(bs->grbounds, intersort);
+
+    grid_rt_process_blocks(bs->gr, ph, nph);
+
+    grid_rt_process_intersort(bs->gr, ph, nph);
+
+/*
     moport_manager_rt_play_old(bs->moports, ph, nph, bs->gr);
 
     grid_rt_process_unplacement(bs->gr, ph, nph);
@@ -233,7 +261,7 @@ void boxyseq_rt_play(boxyseq* bs,
 
     grid_rt_process_placement(bs->gr, ph, nph);
 
-    moport_manager_rt_play_new_and_output(  bs->moports,
+    if (moport_manager_rt_play_new_and_output(  bs->moports,
                                             ph,
                                             nph,
                                             nframes,
@@ -242,9 +270,14 @@ void boxyseq_rt_play(boxyseq* bs,
                             #else
                             jackdata_rt_transport_frames_per_tick(bs->jd)
                             #endif
-                                                                );
+                                                                ))
+    {
+        moport_manager_rt_play_old(bs->moports, ph, nph, bs->gr);
+        grid_rt_process_unplacement(bs->gr, ph, nph);
+    }
 
     grid_rt_process_blocks(bs->gr, ph, nph);
+*/
 }
 
 
@@ -295,10 +328,10 @@ int boxyseq_ui_collect_events(boxyseq* bs)
             event* ev = lnode_data(ln);
             lnode* nln = lnode_next(ln);
 
-            if (ev->box_x == evin.box_x
-             && ev->box_y == evin.box_y
-             && ev->box_width  == evin.box_width
-             && ev->box_height == evin.box_height)
+            if (ev->box.x == evin.box.x
+             && ev->box.y == evin.box.y
+             && ev->box.w == evin.box.w
+             && ev->box.h == evin.box.h)
             {
                 evlist_unlink_free(bs->ui_eventlist, ln);
                 nln = 0;
@@ -317,10 +350,10 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         {
             event* ev = lnode_data(ln);
 
-            if (ev->box_x == evin.box_x
-             && ev->box_y == evin.box_y
-             && ev->box_width  == evin.box_width
-             && ev->box_height == evin.box_height)
+            if (ev->box.x == evin.box.x
+             && ev->box.y == evin.box.y
+             && ev->box.w == evin.box.w
+             && ev->box.h == evin.box.h)
             {
                 EVENT_SET_STATUS_OFF( ev );
             }

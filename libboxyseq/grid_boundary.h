@@ -9,7 +9,6 @@ extern "C" {
 
 #include "boxyseq_types.h"
 #include "event_port.h"
-#include "freespace_boundary.h"
 
 
 enum GRID_BOUNDARY_FLAGS
@@ -67,10 +66,8 @@ void        grbound_midi_out_port_set(grbound*, moport*);
 int         grbound_channel(grbound*);
 void        grbound_channel_set(grbound*, int);
 
-fsbound*    grbound_fsbound(grbound*);
 
-
-void        grbound_fsbound_set(grbound*, int x, int y, int w, int h);
+bool        grbound_fsbound_set(grbound*, int x, int y, int w, int h);
 void        grbound_fsbound_get(grbound*, int* x, int* y, int* w, int* h);
 
 void        grbound_set_input_port(grbound*, evport*);
@@ -83,7 +80,11 @@ void        grbound_set_input_port(grbound*, evport*);
 */
 void        grbound_update_rt_data(const grbound*);
 
-void        grbound_rt_sort(grbound*, evport* output);
+
+/*
+void        grbound_rt_sort(grbound*, evport* output);*/
+
+void        grbound_rt_pull_starting(grbound*, evport* grid_intersort);
 
 
 #ifdef __cplusplus

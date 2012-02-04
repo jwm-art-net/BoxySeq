@@ -52,14 +52,6 @@ else (JACK_FOUND)
 endif (JACK_FOUND)
 
 
-pkg_check_modules (GLIB2 REQUIRED glib-2.0>=2.16)
-if (GLIB2_FOUND)
-  message(STATUS "Found glib2 ${GLIB2_VERSION}")
-else (GLIB2_FOUND)
-  message(FATAL_ERROR "glib2 was not found.")
-endif (GLIB2_FOUND)
-
-
 ADD_SUBDIRECTORY( libboxyseq )
 ADD_SUBDIRECTORY( boxyseq_gui )
 ADD_SUBDIRECTORY( freespace_test )

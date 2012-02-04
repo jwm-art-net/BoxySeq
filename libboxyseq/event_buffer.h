@@ -14,7 +14,7 @@ extern "C" {
 
 typedef struct event_buffer evbuf;
 
-evbuf*  evbuf_new(size_t count);
+evbuf*  evbuf_new(size_t count, const char* name);
 void    evbuf_free(evbuf*);
 
 void    evbuf_reset(evbuf*);

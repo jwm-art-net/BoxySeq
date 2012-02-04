@@ -1,6 +1,6 @@
 #include "debug.h"
 #include "freespace_state.h"
-#include "freespace_boundary.h"
+#include "basebox.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +46,8 @@ int main(int argc, char** argv)
 
     MESSAGE("using %s placement...\n", pstr);
     free(pstr);
-    fsbound* fsb = fsbound_new();
+
+    basebox box;
 
     placement = 0
                 | FSPLACE_ROW_SMART
@@ -58,9 +59,9 @@ int main(int argc, char** argv)
     int w = 27;
     int h = 27;
 
-    fsbound_set_coords(fsb, 0, 0, 128, 128);
+    box_set_coords(&box, 0, 0, 128, 128);
 
-    if (freespace_find(fs, fsb, placement, w, h, &resx, &resy))
+    if (freespace_find(fs, &box, placement, w, h, &resx, &resy))
     {
         MESSAGE("success result x:%d, y:%d\n", resx, resy);
         freespace_remove(fs, resx, resy, w, h);
@@ -112,7 +113,7 @@ int main(int argc, char** argv)
 
     MESSAGE("using %s placement...\n", pstr);
     free(pstr);
-    fsbound* fsb = fsbound_new();
+    boxound* box = boxound_new();
 
     placement = 0
                 | FSPLACE_ROW_SMART
@@ -124,9 +125,9 @@ int main(int argc, char** argv)
     int w = 2;
     int h = 2;
 
-    fsbound_set_coords(fsb, 0, 0, 128, 128);
+    box_set_coords(box, 0, 0, 128, 128);
 
-    if (freespace_find(fs, fsb, placement, w, h, &resx, &resy))
+    if (freespace_find(fs, box, placement, w, h, &resx, &resy))
     {
         MESSAGE("success result x:%d, y:%d\n", resx, resy);
         freespace_remove(fs, resx, resy, w, h);
@@ -141,7 +142,7 @@ int main(int argc, char** argv)
     w = 32;
     h = 32;
 
-    if (freespace_find(fs, fsb, placement, w, h , &resx, &resy))
+    if (freespace_find(fs, box, placement, w, h , &resx, &resy))
     {
         MESSAGE("success result x:%d, y:%d\n", resx, resy);
         freespace_remove(fs, resx, resy, w, h);
@@ -160,7 +161,7 @@ int main(int argc, char** argv)
 /*
     for (i = 0; i < 2; ++i)
     {
-        if (freespace_find(fs, fsb, placement, 1, 1, &resx, &resy))
+        if (freespace_find(fs, box, placement, 1, 1, &resx, &resy))
         {
             MESSAGE("success result x:%d, y:%d\n", resx, resy);
             freespace_remove(fs, resx, resy, 1, 1 );
@@ -189,7 +190,7 @@ int main(int argc, char** argv)
 
         for (bs = 1; bs < 34; bs++)
         {
-            if (!freespace_find(fs, fsb, placement, bs, bs, &resx, &resy))
+            if (!freespace_find(fs, box, placement, bs, bs, &resx, &resy))
             {
                 WARNING("fail on:size %d\n",bs);
                 break;
@@ -200,7 +201,7 @@ int main(int argc, char** argv)
 
         for (bs = 1; bs < 17; bs++)
         {
-            if (!freespace_find(fs, fsb, placement, bs, bs, &resx, &resy))
+            if (!freespace_find(fs, box, placement, bs, bs, &resx, &resy))
             {
                 WARNING("fail2 on:size %d\n",bs);
                 break;
@@ -334,7 +335,7 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
 {
     int x, y, resx, resy;
 
-    fsbound* fsb = fsbound_new();
+    basebox box;
 
     freespace_clear(fs);
 
@@ -342,7 +343,7 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
     {
         for (y = 0; y < FSHEIGHT - size; ++y)
         {
-            if (!fsbound_set_coords(fsb, x, y, size, size))
+            if (!box_set_coords(&box, x, y, size, size))
             {
                 WARNING("invalid boundary coordinates "
                          "x:%d, y:%d, w:%d, h:%d", x, y, size, size);
@@ -351,7 +352,7 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
 
             total_searches++;
 
-            if (!freespace_find(fs, fsb, flags, size, size, &resx, &resy))
+            if (!freespace_find(fs, &box, flags, size, size, &resx, &resy))
             {
                 WARNING(   "area search for size %d failed in boundary "
                             "size %d at location x:%d, y:%d\n",
@@ -388,8 +389,8 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
     int y;
     int count = FSWIDTH / size;
 
-    fsbound* fsb = fsbound_new();
-    fsbound_set_coords(fsb, 0, 0, 128, 128);
+    basebox box;
+    box_set_coords(&box, 0, 0, 128, 128);
 
     freespace_clear(fs);
 
@@ -417,7 +418,7 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
 
             total_searches++;
 
-            if (!freespace_find(fs, fsb, flags, size, size, &resx, &resy))
+            if (!freespace_find(fs, &box, flags, size, size, &resx, &resy))
             {
                 WARNING(   "area search for size %d failed at location "
                             " x:%d, y:%d\n", size, expx, expy);
@@ -463,8 +464,8 @@ int test_box_placement_and_removal(freespace* fs, int flags)
 {
     int i, x[100], y[100], w[100], h[100];
 
-    fsbound* fsb = fsbound_new();
-    fsbound_set_coords(fsb, 0, 0, FSWIDTH, FSHEIGHT);
+    basebox box;
+    box_set_coords(&box, 0, 0, FSWIDTH, FSHEIGHT);
 
     freespace_clear(fs);
 
@@ -477,7 +478,7 @@ int test_box_placement_and_removal(freespace* fs, int flags)
 
         total_searches++;
 
-        if (!freespace_find(fs, fsb, flags, w[i], h[i], &x[i], &y[i]))
+        if (!freespace_find(fs, &box, flags, w[i], h[i], &x[i], &y[i]))
         {
             WARNING("area search %d for %d x %d failed\n", i, w[i], h[i]);
             return -1;
@@ -494,7 +495,7 @@ int test_box_placement_and_removal(freespace* fs, int flags)
 
         total_searches++;
 
-        if (!freespace_find(fs, fsb, flags, w[i], h[i], &tx, &ty))
+        if (!freespace_find(fs, &box, flags, w[i], h[i], &tx, &ty))
         {
             WARNING("repeat area search %d for %d x %d failed\n",
                             i, w[i], h[i]);
@@ -525,7 +526,7 @@ int test_box_placement_and_removal(freespace* fs, int flags)
  */
 int test_box_placement_limited_boundary(freespace* fs, int flags)
 {
-    fsbound* fsb = fsbound_new();
+    basebox box;
 
     int fsbs;
     int fsbs0 = 8, fsbs1 = 120;
@@ -546,7 +547,7 @@ int test_box_placement_limited_boundary(freespace* fs, int flags)
             int filled = 0;
             int jut = 0;
 
-            if (!fsbound_set_coords(fsb, offset, offset, fsbs, fsbs))
+            if (!box_set_coords(&box, offset, offset, fsbs, fsbs))
             {
                 WARNING("invalid boundary coordinates "
                      "x:%d, y:%d, w:%d, h:%d\n", fsxy, fsxy, fsbs, fsbs);
@@ -562,7 +563,7 @@ int test_box_placement_limited_boundary(freespace* fs, int flags)
 
                 total_searches++;
 
-                if (freespace_find(fs, fsb, flags, bs, bs, &resx, &resy))
+                if (freespace_find(fs, &box, flags, bs, bs, &resx, &resy))
                 {
                     total_removals++;
 

@@ -40,21 +40,29 @@ void    moport_manager_rt_init_jack_cycle(  moport_manager*,
 /*  moport_manager_rt_play_old processes events already placed as notes
  *  outputting note-off for expired note events before transforming
  *  them into block events.
- */
 void    moport_manager_rt_play_old( moport_manager*,
                                     bbt_t ph,
                                     bbt_t nph,
                                     grid* );
+ */
+
+void    moport_manager_rt_pull_ending(  moport_manager*,
+                                        bbt_t ph,
+                                        bbt_t nph,
+                                        evport* grid_intersort);
 
 
 /*  moport_manager_rt_play_new_and_output processes incoming note events
  *  and outputs note-on events to JACK.
- */
-void    moport_manager_rt_play_new_and_output(  moport_manager*,
+ *  returns non-zero if any notes begin _and_ finish in current cycle.
+int     moport_manager_rt_play_new_and_output(  moport_manager*,
                                                 bbt_t ph,
                                                 bbt_t nph,
                                                 jack_nframes_t nframes,
                                                 double frames_per_tick );
+ */
+
+void    moport_manager_rt_process_new(moport_manager*, bbt_t ph, bbt_t nph);
 
 void    moport_manager_rt_empty(moport_manager*,
                                 grid*,

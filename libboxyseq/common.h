@@ -16,7 +16,13 @@ extern "C" {
 #define MAX_MOPORT_SLOTS 16
 
 #define DEFAULT_EVBUF_SIZE 256
-#define DEFAULT_EVPOOL_SIZE 1024
+#define DEFAULT_EVPOOL_SIZE 256
+
+
+/* 2520 gives int result for div by 2 ... 9 */
+extern const int internal_ppqn;
+
+
 
 
 typedef enum random_seed     /* random seed: */
@@ -53,7 +59,9 @@ void    bbtpos_copy(bbtpos* dest, const bbtpos* src);
 
 
 const char* string_set(char** str_ptr, const char* new_str);
-char*       name_and_number(const char* name, int number);
+
+/*char*       name_and_number(const char* name, int number);*/
+
 char*       name_copy_of(const char* name);
 
 char*   jwm_strcat_alloc(const char* str1, const char* str2);
@@ -62,9 +70,9 @@ char*   jwm_strcat_alloc(const char* str1, const char* str2);
 int     binary_string_to_int(const char*);
 char*   int_to_binary_string(int, int sigbits);
 
+/*      *x is initially the seed, usually kept for each sucessive call */
+int     lcg_rand(int *x, int max);
 
-/* 2520 gives int result for div by 2 ... 9 */
-extern const int internal_ppqn;
 
 void    random_rgb(unsigned char* r, unsigned char* g, unsigned char* b);
 

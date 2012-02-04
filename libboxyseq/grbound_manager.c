@@ -116,6 +116,8 @@ grbound* grbound_manager_grbound_next(grbound_manager* grbman)
 
     return (grbman->cur) ? lnode_data(grbman->cur) : 0;
 }
+
+
 void grbound_manager_grbound_order(grbound_manager* grbman,
                                                 grbound* grb,
                                                 int dir)
@@ -151,6 +153,19 @@ void grbound_manager_update_rt_data(const grbound_manager* grbman)
 }
 
 
+void    grbound_manager_rt_pull_starting(grbound_manager* grbman,
+                                            evport* grid_intersort)
+{
+    grbound** grb = rtdata_data(grbman->rt);
+
+    if (!grb)
+        return;
+
+    while(*grb)
+        grbound_rt_pull_starting(*grb++, grid_intersort);
+}
+
+/*
 void grbound_manager_rt_sort(grbound_manager* grbman, evport* grid_port)
 {
     grbound** grb = rtdata_data(grbman->rt);
@@ -161,3 +176,4 @@ void grbound_manager_rt_sort(grbound_manager* grbman, evport* grid_port)
     while(*grb)
         grbound_rt_sort(*grb++, grid_port);
 }
+*/

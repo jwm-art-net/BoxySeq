@@ -27,13 +27,13 @@ warnf(  warning_t level,
 
     #ifndef NDEBUG
     if ( file )
-        fprintf( fp, "%s", file );
+        fprintf( fp, "%70s", file );
 
     if ( line )
-        fprintf( fp, ":%zi", line );
+        fprintf( fp, ":%4zi", line );
 
     if ( function )
-        fprintf( fp, " %s()", function );
+        fprintf( fp, " %30s()", function );
 
     fprintf( fp, ": " );
     #endif

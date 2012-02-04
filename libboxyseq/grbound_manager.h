@@ -28,7 +28,8 @@ void        grbound_manager_grbound_order(grbound_manager*,
 
 void    grbound_manager_update_rt_data(const grbound_manager*);
 
-void    grbound_manager_rt_sort(grbound_manager*, evport* grid_port);
+void    grbound_manager_rt_pull_starting(grbound_manager*,
+                                            evport* grid_intersort);
 
 
 #ifdef __cplusplus

@@ -22,6 +22,8 @@ static void gui_grid_boundary(cairo_t* cr, grbound* grb, gui_grid* ggr)
     int bx, by, bw, bh;
     float r, g, b;
 
+    /* this is called by expose */
+
     grbound_fsbound_get(grb, &bx, &by, &bw, &bh);
 
     cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
@@ -114,17 +116,13 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
 
     while(ln)
     {
-        int bx, by, bw, bh;
         float r, g, b;
 
         ev = (event*)lnode_data(ln);
 
-        bx = ev->box_x;
-        by = ev->box_y;
-        bw = ev->box_width;
-        bh = ev->box_height;
-
-        grbound_rgb_float_get(ev->grb, &r, &g, &b);
+        r = ev->box.r / 255.0f;
+        g = ev->box.g / 255.0f;
+        b = ev->box.b / 255.0f;
 
         if (EVENT_IS_STATUS_OFF( ev )
          || EVENT_IS_TYPE_BLOCK( ev ))
@@ -135,7 +133,7 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         }
 
         cairo_set_source_rgb(cr, r, g, b);
-        cairo_rectangle(cr, bx, by, bw, bh);
+        cairo_rectangle(cr, ev->box.x, ev->box.y, ev->box.w, ev->box.h);
         cairo_fill(cr);
 
         ln = lnode_next(ln);

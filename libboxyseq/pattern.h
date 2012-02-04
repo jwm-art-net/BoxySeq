@@ -44,9 +44,10 @@ void        pattern_set_event_height_range( pattern*,
                                             int height_min,
                                             int height_max  );
 
+/*
 void        pattern_set_random_seed_type(   pattern*, seed_type seedtype);
 void        pattern_set_random_seed(        pattern*, uint32_t seed);
-
+*/
 
 void        pattern_dump(const pattern*);
 

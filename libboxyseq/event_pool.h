@@ -15,13 +15,8 @@ extern "C" {
 
 typedef struct event_pool evpool;
 
-evpool*     evpool_new(int count);
+evpool*     evpool_new(int count, const char* name);
 void        evpool_free(evpool*);
-
-#ifdef EVPOOL_DEBUG
-void        evpool_set_origin_string(evpool*, const char*);
-const char* evpool_get_origin_string(evpool*);
-#endif
 
 event*      evpool_event_alloc(evpool*);
 void        evpool_event_free(evpool*, event*);
@@ -42,13 +37,11 @@ typedef struct rt_event_list rt_evlist;
 typedef void (*rt_evlist_cb)(event* ev);
 
 
-rt_evlist*  rt_evlist_new(evpool*, int flags);
+rt_evlist*  rt_evlist_new(evpool*, int flags, const char* name);
 void        rt_evlist_free(rt_evlist*);
 int         rt_evlist_count(rt_evlist*);
 
 #ifdef EVPOOL_DEBUG
-void        rt_evlist_set_origin_string(rt_evlist*, const char*);
-const char* rt_evlist_get_origin_string(rt_evlist*);
 void        rt_evlist_integrity_dump(rt_evlist*, const char* from);
 #endif
 
@@ -65,7 +58,7 @@ void        rt_evlist_clear_events(rt_evlist*);
 event*      rt_evlist_goto_first(rt_evlist*);
 event*      rt_evlist_goto_next(rt_evlist*);
 
-
+/* read pointers are not disrupted by adding events */
 void        rt_evlist_read_reset(rt_evlist*);
 event*      rt_evlist_read_event(rt_evlist*);
 event*      rt_evlist_read_and_remove_event(rt_evlist* rtevl,
