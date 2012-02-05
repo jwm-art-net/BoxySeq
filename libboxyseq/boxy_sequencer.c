@@ -210,8 +210,9 @@ void boxyseq_rt_play(boxyseq* bs,
         switch(EVENT_TYPE( &ev ))
         {
         case EV_TYPE_SHUTDOWN:
+            DMESSAGE("RT shutdown...\n");
             bs->rt_quitting = 1;
-            boxyseq_rt_clear(bs, nframes);
+            boxyseq_rt_clear(bs, 0, 0, nframes);
             return;
 
         case EV_TYPE_BLOCK:
@@ -245,7 +246,8 @@ void boxyseq_rt_play(boxyseq* bs,
 
     grid_rt_process_blocks(bs->gr, ph, nph);
 
-    grid_rt_process_intersort(bs->gr, ph, nph);
+    grid_rt_process_intersort(bs->gr, ph, nph, nframes,
+                            jackdata_rt_transport_frames_per_tick(bs->jd));
 
 /*
     moport_manager_rt_play_old(bs->moports, ph, nph, bs->gr);
@@ -281,10 +283,26 @@ void boxyseq_rt_play(boxyseq* bs,
 }
 
 
-void boxyseq_rt_clear(boxyseq* bs, jack_nframes_t nframes)
+void boxyseq_rt_clear(boxyseq* bs, bbt_t ph, bbt_t nph,
+                                    jack_nframes_t nframes)
 {
+/*
     moport_manager_rt_empty(bs->moports, bs->gr, nframes);
     grid_remove_events(bs->gr);
+*/
+
+    DMESSAGE("-------------- CLEAR -------------\n");
+
+    evport* intersort = grid_get_intersort(bs->gr);
+
+    moport_manager_rt_pull_playing_and_empty(bs->moports, 0, 0, intersort);
+    grbound_manager_rt_empty_incoming(bs->grbounds);
+    grbound_manager_rt_pull_starting(bs->grbounds, intersort);
+
+    grid_rt_pull_blocks_to_intersort(bs->gr, 0, 0);
+
+    grid_rt_process_intersort(bs->gr, 0, 4, nframes,
+                            jackdata_rt_transport_frames_per_tick(bs->jd));
 }
 
 

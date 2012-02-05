@@ -10,34 +10,34 @@
 
 #include <jack/midiport.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 #include "include/midi_out_port_data.h"
 
 
-moport* moport_new(jack_client_t* client, evport_manager* portman)
+moport* moport_new(jack_client_t* client,   int port_id,
+                                            evport_manager* portman)
 {
     moport* mo = malloc(sizeof(*mo));
 
     if (!mo)
         goto fail0;
 
-    mo->intersort = evport_manager_evport_new(  portman, "intersort",
-                                                RT_EVLIST_SORT_POS  );
-
-    if (!mo->intersort)
-        goto fail1;
+    char tmp[80];
+    snprintf(tmp, 79, "port-%2d", port_id);
+    mo->name = strdup(tmp);
 
     #ifndef NO_REAL_TIME
     mo->jack_out_port = jack_port_register( client,
-                                            evport_name(mo->intersort),
+                                            mo->name,
                                             JACK_DEFAULT_MIDI_TYPE,
                                             JackPortIsOutput,
                                             0);
     if (!mo->jack_out_port)
     {
         WARNING("failed to register jack port\n");
-        goto fail1;
+        goto fail2;
     }
     #else
     mo->jack_out_port = 0;
@@ -56,6 +56,7 @@ moport* moport_new(jack_client_t* client, evport_manager* portman)
 
     return mo;
 
+fail2:  free(mo->name);
 fail1:  free(mo);
 fail0:  WARNING("out of memory for new midi out port\n");
     return 0;
@@ -67,17 +68,12 @@ void moport_free(moport* mo)
     if (!mo)
         return;
 
+    free(mo->name);
     free(mo);
 }
 
 
-const char* moport_name(moport* mo)
-{
-    return evport_name(mo->intersort);
-}
-
-
-int moport_rt_placed_event_pitch(moport* midiport,
+int moport_rt_push_event_pitch(moport* midiport,
                                     const event* ev,
                                     int grb_flags,
                                     int scale_bin,
@@ -172,56 +168,6 @@ void moport_rt_pull_ending(moport* midiport, bbt_t ph, bbt_t nph,
     }
 }
 
-/*
-void moport_rt_play_old(moport* midiport, bbt_t ph, bbt_t nph, grid* gr)
-{
-    int channel, pitch;
-    event* play;
-
-    for (channel = 0; channel < 16; ++channel)
-    {
-        play = midiport->play[channel];
-
-        for (pitch = 0; pitch < 128; ++pitch)
-        {
-            if (play[pitch].flags)
-            {
-                if (play[pitch].note_dur < nph)
-                {
-                    #ifndef NDEBUG
-                    int pos = play[pitch].pos;
-                    #endif
-
-                    play[pitch].pos = play[pitch].note_dur - ph;
-
-                    #ifndef NDEBUG
-                    if (play[pitch].pos < 0)
-                    {
-                        DMESSAGE("oops! ph:%d startpos:%d"
-                                 "endpos:%d (dur:%d)\n",
-                                ph,                 pos,
-                                play[pitch].pos,    play[pitch].note_dur);
-                    }
-                    #endif
-
-                    EVENT_SET_STATUS_OFF( &play[pitch] );
-
-                    if (!evport_write_event(midiport->intersort,
-                                                    &play[pitch]))
-                    {
-                        WARNING("failed to write event to intersort\n");
-                    }
-
-                    if (!grid_rt_note_off_event(gr, &play[pitch]))
-                        WARNING("old event output to unplace failed\n");
-
-                    play[pitch].flags = 0;
-                }
-            }
-        }
-    }
-}
-*/
 
 void moport_rt_process_new(moport* midiport, bbt_t ph, bbt_t nph)
 {
@@ -246,10 +192,59 @@ void moport_rt_process_new(moport* midiport, bbt_t ph, bbt_t nph)
 }
 
 
-/*
-int moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
+void moport_rt_init_jack_cycle(moport* midiport, jack_nframes_t nframes)
 {
-    int ret = 0;
+    midiport->jport_buf = jack_port_get_buffer( midiport->jack_out_port,
+                                                nframes);
+    jack_midi_clear_buffer(midiport->jport_buf);
+}
+
+
+void moport_rt_output_jack_midi_event(  moport* midiport,
+                                        event* ev,
+                                        bbt_t ph,
+                                        jack_nframes_t nframes,
+                                        double frames_per_tick )
+{
+    unsigned char* buf;
+    void* jport_buf = midiport->jport_buf;
+    jack_nframes_t pos = (ev->pos - ph) * frames_per_tick;
+
+    if (EVENT_IS_STATUS_ON( ev ))
+    {
+        buf = jack_midi_event_reserve(jport_buf, pos, 3);
+
+        if (buf)
+        {
+            buf[0] = (unsigned char)(0x90 | EVENT_CHANNEL( ev ));
+            buf[1] = (unsigned char)ev->note_pitch;
+            buf[2] = (unsigned char)ev->note_velocity;
+        }
+        else
+            WARNING("ph:%d note-ON event pos: %d "
+                    "was not reserved by JACK\n", ph, ev->pos);
+    }
+    else if(EVENT_IS_STATUS_OFF( ev ))
+    {
+        buf = jack_midi_event_reserve(jport_buf, pos, 3);
+
+        if (buf)
+        {
+                buf[0] = (unsigned char)(0x80 | EVENT_CHANNEL( ev ));
+                buf[1] = (unsigned char)ev->note_pitch;
+                buf[2] = (unsigned char)ev->note_velocity;
+        }
+        else
+            WARNING("ph:%d note-OFF event pos: %d "
+                    "was not reserved by JACK\n", ph, ev->pos);
+    }
+}
+
+
+void moport_rt_pull_playing_and_empty(  moport* midiport,
+                                        bbt_t ph, bbt_t nph,
+                                        evport* grid_intersort)
+{
     int channel, pitch;
     event* start;
     event* play;
@@ -261,155 +256,23 @@ int moport_rt_play_new(moport* midiport, bbt_t ph, bbt_t nph)
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
-            if (!start[pitch].flags)
+            start[pitch].flags = 0;
+
+            if (!play[pitch].flags)
                 continue;
 
-            start[pitch].pos -= ph;
+            play[pitch].pos = 0;
+            play[pitch].note_dur = 1;
+            play[pitch].box_release = 2;/*ph;*/
 
-            if (evport_write_event(midiport->intersort, &start[pitch]))
+            EVENT_SET_STATUS_OFF( &play[pitch] );
+
+            if (!evport_write_event(grid_intersort, &play[pitch]))
             {
-                event_copy(&play[pitch], &start[pitch]);
-
-                if (start[pitch].note_dur < nph)
-                    ret++;
+                WARNING("failed to write to grid intersort\n");
             }
-            else
-                WARNING("new event output to intersort failed\n");
 
-            start[pitch].flags = 0;
-        }
-    }
-
-    if (ret)
-        DMESSAGE("%d notes end this cycle\n", ret);
-
-    return ret;
-}
-*/
-
-
-void moport_rt_init_jack_cycle(moport* midiport, jack_nframes_t nframes)
-{
-    midiport->jport_buf = jack_port_get_buffer( midiport->jack_out_port,
-                                                nframes);
-    jack_midi_clear_buffer(midiport->jport_buf);
-}
-
-
-void moport_rt_output_jack_midi(moport* midiport, jack_nframes_t nframes,
-                                                  double frames_per_tick )
-{
-    event ev;
-    unsigned char* buf;
-    void* jport_buf = midiport->jport_buf;
-
-    evport_read_reset(midiport->intersort);
-
-    #ifdef NO_REAL_TIME
-    if (!evport_count(midiport->intersort))
-        return;
-    MESSAGE("midi out port:\n");
-    while(evport_read_and_remove_event(midiport->intersort, &ev))
-        event_dump(&ev);
-    return;
-    #endif
-
-    #ifndef NDEBUG
-    int lastpos = 0;
-    #endif
-
-    while(evport_read_and_remove_event(midiport->intersort, &ev))
-    {
-        #ifndef NDEBUG
-        if (ev.pos < lastpos)
-            DWARNING("unsorted event detected\n");
-
-        lastpos = ev.pos;
-        #endif
-
-        if (EVENT_IS_STATUS_ON( &ev ))
-        {
-            buf = jack_midi_event_reserve(  jport_buf,
-                    (jack_nframes_t)((double)ev.pos * frames_per_tick),
-                                            3 );
-            if (buf)
-            {
-                buf[0] = (unsigned char)(0x90 | EVENT_CHANNEL( &ev ));
-                buf[1] = (unsigned char)ev.note_pitch;
-                buf[2] = (unsigned char)ev.note_velocity;
-            }
-            else
-                WARNING("note-ON event pos:%d was not reserved by JACK\n",
-                                    ev.pos);
-        }
-        else if(EVENT_IS_STATUS_OFF( &ev ))
-        {
-            buf = jack_midi_event_reserve(jport_buf,
-                (jack_nframes_t)((double)ev.pos * frames_per_tick),
-                                            3 );
-            if (buf)
-            {
-                buf[0] = (unsigned char)(0x80 | EVENT_CHANNEL( &ev ));
-                buf[1] = (unsigned char)ev.note_pitch;
-                buf[2] = (unsigned char)ev.note_velocity;
-            }
-            else
-                WARNING("note-OFF event pos:%d was not reserved by JACK\n",
-                                    ev.pos);
-        }
-    }
-}
-
-
-void moport_rt_empty(moport* midiport, grid* gr, jack_nframes_t nframes)
-{
-    int channel;
-    int pitch;
-    event  ev;
-    event* play;
-    unsigned char* buf;
-    void* jport_buf = midiport->jport_buf;
-
-    for (channel = 0; channel < 16; ++channel)
-    {
-        play = midiport->play[channel];
-
-        for (pitch = 0; pitch < 128; ++pitch)
-        {
-            if (play[pitch].flags)
-            {
-                EVENT_SET_STATUS_OFF( &play[pitch] );
-
-                if (!evport_write_event(midiport->intersort,
-                                                    &play[pitch]))
-                {
-                    WARNING("failed to write event to intersort\n");
-                }
-
-                grid_remove_event(gr, &play[pitch]);
-                play[pitch].flags = 0;
-            }
-        }
-    }
-
-    evport_read_reset(midiport->intersort);
-
-    while(evport_read_and_remove_event(midiport->intersort, &ev))
-    {
-        if (EVENT_IS_STATUS_OFF( &ev ))
-        {
-            buf = jack_midi_event_reserve(jport_buf,(jack_nframes_t)0, 3);
-
-            if (buf)
-            {
-                buf[0] = (unsigned char)(0x80 | EVENT_CHANNEL( &ev ));
-                buf[1] = (unsigned char)ev.note_pitch;
-                buf[2] = (unsigned char)ev.note_velocity;
-            }
-            #ifdef GRID_DEBUG
-            else
-                WARNING("note-OFF event was not reserved by JACK\n");
-            #endif
+            play[pitch].flags = 0;
         }
     }
 }

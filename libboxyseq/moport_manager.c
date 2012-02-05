@@ -106,8 +106,9 @@ void moport_manager_jack_client_set(moport_manager* mopman,
 
 moport* moport_manager_moport_new(moport_manager* mopman)
 {
-    moport* mop = moport_new( mopman->client, mopman->portman );
-
+    moport* mop = moport_new(   mopman->client,
+                                mopman->next_moport_id++, 
+                                mopman->portman );
     if (!mop)
         return 0;
 
@@ -211,34 +212,10 @@ void moport_manager_rt_process_new(moport_manager* mopman,
     }
 }
 
-/*
-int moport_manager_rt_play_new_and_output(  moport_manager* mopman,
-                                                bbt_t ph,
-                                                bbt_t nph,
-                                                jack_nframes_t nframes,
-                                                double frames_per_tick )
-{
-    int ret = 0;
-    moport** mops = rtdata_data(mopman->rt);
 
-    if (!mops)
-        return;
-
-    while(*mops)
-    {
-        ret += moport_rt_play_new(*mops, ph, nph);
-        moport_rt_output_jack_midi(*mops, nframes, frames_per_tick);
-        ++mops;
-    }
-
-    return ret;
-}
-*/
-
-
-void moport_manager_rt_empty(   moport_manager* mopman,
-                                grid* gr,
-                                jack_nframes_t nframes)
+void    moport_manager_rt_pull_playing_and_empty(moport_manager* mopman,
+                                                    bbt_t ph, bbt_t nph,
+                                                    evport* grid_intersort)
 {
     moport** mops = rtdata_data(mopman->rt);
 
@@ -246,6 +223,6 @@ void moport_manager_rt_empty(   moport_manager* mopman,
         return;
 
     while(*mops)
-        moport_rt_empty(*mops++, gr, nframes);
+        moport_rt_pull_playing_and_empty(*mops++, ph, nph, grid_intersort);
 }
 

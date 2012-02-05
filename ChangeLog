@@ -1,3 +1,21 @@
+2012-02-05  James Morris  <james@jwm-art.net>
+
+    * libboxyseq/*: event ordering reworking. it was noticed that there 
+      was potentially a problem with how boxyseq was ordering the 
+      processing of differing event types within the JACK cycle. 
+      detailed inspection revealed the assumption that events would 
+      always begin in one cycle and end in another. some quite subtle 
+      implications arise from this but the extensive reworking 
+      that has been undertaken fixes all that so that placements and 
+      unplacements are carefully handled in order within each JACK cycle 
+      and no more assumptions are made.
+
+NOTE: in boxyseq, a relationship is formed between existing events 
+and newly created events via the freespace grid. a new event requires 
+space to exist, if the space is taken up by old events the new event 
+will not come to exist. this is why the ordering rework was necessary.
+
+
 2012-01-31  James Morris  <james@jwm-art.net>
 
     * freespace_test/freespace_test.c test messages no longer require

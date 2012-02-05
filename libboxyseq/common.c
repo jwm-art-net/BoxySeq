@@ -46,25 +46,6 @@ const char* string_set(char** str_ptr, const char* new_str)
 }
 
 
-char* name_and_number(const char* name, int number)
-{
-    char buf[MAX_NAME_LEN];
-
-    if (snprintf(buf, MAX_NAME_LEN,
-                 "%s #%d", name, number)
-             >   MAX_NAME_LEN)
-    {
-        buf[MAX_NAME_LEN - 1] = '\0';
-    }
-
-    char* ret = strdup(buf);
-
-    if (!ret)
-        WARNING("error creating name and number (%s %d)\n", name, number);
-
-    return ret;
-}
-
 
 char* jwm_strcat_alloc(const char* str1, const char* str2)
 {
@@ -128,16 +109,6 @@ char* int_to_binary_string(int n, int sigbits)
     *p = '\0';
 
     return bstr;
-}
-
-
-int lcg_rand(int *x, int max)
-{
-    int a = 134775813;
-    int c = 1;
-    int m = 4294967296;
-    *x = ((*x * a) + c) % m;
-    return (max) ? *x % max : x;
 }
 
 

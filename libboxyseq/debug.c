@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+static size_t src_dir_len = 0;
+
 void
 warnf(  warning_t level,
         const char *file,
@@ -26,8 +28,15 @@ warnf(  warning_t level,
     FILE *fp = W_MESSAGE == level ? stdout : stderr;
 
     #ifndef NDEBUG
+
+    if (!src_dir_len)
+        src_dir_len = strlen(SRC_DIR);
+
     if ( file )
-        fprintf( fp, "%70s", file );
+    {
+        const char* fstr = file + src_dir_len + 1;
+        fprintf( fp, "%35s", fstr );
+    }
 
     if ( line )
         fprintf( fp, ":%4zi", line );

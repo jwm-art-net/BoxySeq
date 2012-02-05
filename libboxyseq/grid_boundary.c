@@ -268,6 +268,36 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
 }
 
 
+void grbound_rt_empty_incoming(grbound* grb)
+{
+    event ev;
+    grbound* rtgrb;
+    int count = 0;
+
+    if (!grb->rt)
+    {
+        DWARNING("bollocks\n");
+        return;
+    }
+
+    rtgrb = rtdata_data(grb->rt);
+
+    if (!rtgrb)
+    {
+        WARNING("no grbound RT data\n");
+        return;
+    }
+
+    evport_read_reset(rtgrb->evinput);
+
+    while(evport_read_event(rtgrb->evinput, &ev))
+        count++;
+
+    DMESSAGE("emptied %d events from incoming\n", count);
+}
+
+
+
 /*  STATIC/PRIVATE implementation:
 */
 

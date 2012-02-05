@@ -192,8 +192,9 @@ int evport_count(evport* port)
 #ifdef EVPORT_DEBUG
 void evport_dump(evport* port)
 {
-    MESSAGE("freeing port: '%s'\n", port->name);
-    MESSAGE("port contains: %d events\n",  rt_evlist_count(port->data));
+    MESSAGE("port %s contains: %d events\n",
+            port->name, rt_evlist_count(port->data));
+
     rt_evlist_integrity_dump(port->data, __FUNCTION__);
 
     if (rt_evlist_count(port->data))

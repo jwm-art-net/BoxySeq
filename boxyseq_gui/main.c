@@ -59,6 +59,7 @@ int main(int argc, char** argv)
     sclist* scales;
     scale*  sc;
 
+    pattern*    pat0 = 0;
     pattern*    pat1 = 0;
     pattern*    pat2 = 0;
     grbound*    grb;
@@ -87,12 +88,15 @@ int main(int argc, char** argv)
     patportman = boxyseq_pattern_port_manager(bs);
     patport1 = evport_manager_evport_new(patportman, "patport1",
                                                     RT_EVLIST_SORT_POS);
+    pat0 = new_pat(patman, 4, 4.25, 2.25, 2,3,2,3);
+    pattern_set_output_port(pat0, patport1);
+    pattern_update_rt_data(pat0);
 
-    pat1 = new_pat(patman, 4, 2.25, 0.25, 15,16,15,16);
+    pat1 = new_pat(patman, 16, 4.25, 2.25, 8,9,8,9);
     pattern_set_output_port(pat1, patport1);
     pattern_update_rt_data(pat1);
 
-    pat2 = new_pat(patman, 16, 0.25, 0.25, 4, 5, 4, 5);
+    pat2 = new_pat(patman, 8, 4.25, 16.25, 4,5,4,5);
     pattern_set_output_port(pat2, patport1);
     pattern_update_rt_data(pat2);
 
@@ -189,8 +193,6 @@ printf("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
     boxyseq_shutdown(bs);
 
     jackdata_shutdown(jd);
-
-    printf("sizeof(event):%ld\n",sizeof(event));
 
     jackdata_free(jd);
 

@@ -412,13 +412,16 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
 
     boxyseq_rt_init_jack_cycle(jd->bs, nframes);
 
+    ph =  (bbt_t)(0 + jd->ticks);
+    nph = (bbt_t)(0 + trunc(ph + jd->ticks_per_period));
+
     if (!jd->is_rolling)
     {
         if (!jd->stopped)
         {
             jd->stopped = 1;
             jd->was_stopped = 1;
-            boxyseq_rt_clear(jd->bs, nframes);
+            boxyseq_rt_clear(jd->bs, ph, nph, nframes);
         }
         return 0;
     }
@@ -427,11 +430,9 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
     {
         repositioned = 1;
         jd->repositioned = 0;
-        boxyseq_rt_clear(jd->bs, nframes);
+        boxyseq_rt_clear(jd->bs, ph, nph, nframes);
     }
 
-    ph =  (bbt_t)(0 + jd->ticks);
-    nph = (bbt_t)(0 + trunc(ph + jd->ticks_per_period));
 
     if (ph && ph == jd->oph)
     {

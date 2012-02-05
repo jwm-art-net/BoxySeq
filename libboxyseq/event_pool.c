@@ -171,16 +171,12 @@ struct rt_event_list
     evpool* pool;
     bool pool_managed;
 
-    const char* origin_str; /* name of port of whatever using this */
+    char* name;
 
     int count;
 };
 
 
-const char* rt_evlist_get_origin_str(rt_evlist* rtevl)
-{
-    return rtevl->origin_str;
-}
 
 #ifdef EVPOOL_DEBUG
 
@@ -314,7 +310,7 @@ void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
 
 fail:
     WARNING("***** integrity checks  for [%s] failed *****\n",
-                                            rtevl->origin_str);
+                                            rtevl->name);
 
     fwd = rtevl->head;
     fwd_count = 0;
@@ -339,18 +335,18 @@ fail:
 #endif
 
 
-rt_evlist*  rt_evlist_new(evpool* pool, int flags, const char* origin_str)
+rt_evlist*  rt_evlist_new(evpool* pool, int flags, const char* name)
 {
     rt_evlist* rtevl = malloc(sizeof(*rtevl));
 
     if (!rtevl)
         goto fail0;
 
-    DMESSAGE("new RT event list [origin: \"%s\"]\n", origin_str);
+    DMESSAGE("new RT event list \"%s\"\n", name);
 
     if (!pool)
     {
-        if (!(rtevl->pool = evpool_new(DEFAULT_EVPOOL_SIZE, origin_str)))
+        if (!(rtevl->pool = evpool_new(DEFAULT_EVPOOL_SIZE, name)))
             goto fail1;
 
         rtevl->pool_managed = 1;
@@ -367,7 +363,7 @@ rt_evlist*  rt_evlist_new(evpool* pool, int flags, const char* origin_str)
     rtevl->flags = flags;
     rtevl->count = 0;
 
-    rtevl->origin_str = origin_str;
+    rtevl->name = strdup(name);
 
     return rtevl;
 
@@ -391,6 +387,7 @@ void rt_evlist_free(rt_evlist* rtevl)
     if (rtevl->pool_managed)
         evpool_free(rtevl->pool);
 
+    free(rtevl->name);
     free(rtevl);
 }
 
@@ -416,8 +413,8 @@ int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
 #ifdef EVPOOL_DEBUG
         WARNING("rt_evlist %p '%s', pool %p '%s', "
                 "short of memory for event\n",
-                rtevl,          rtevl->origin_str,
-                rtevl->pool,    rtevl->pool->origin_str );
+                rtevl,          rtevl->name,
+                rtevl->pool,    rtevl->pool->name );
 #else
         WARNING("rt_evlist %p, pool %p, short of memory for event\n",
                 rtevl, rtevl->pool);
@@ -432,6 +429,7 @@ int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
         rtevl->head = rtevl->tail = newlnk;
         rtevl->head->next = 0;
         rtevl->head->prev = 0;
+        rtevl->cur = rtevl->head;
         ++rtevl->count;
 
         return 1;

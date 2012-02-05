@@ -36,16 +36,6 @@ void    moport_manager_update_rt_data(const moport_manager*);
 void    moport_manager_rt_init_jack_cycle(  moport_manager*,
                                             jack_nframes_t nframes );
 
-
-/*  moport_manager_rt_play_old processes events already placed as notes
- *  outputting note-off for expired note events before transforming
- *  them into block events.
-void    moport_manager_rt_play_old( moport_manager*,
-                                    bbt_t ph,
-                                    bbt_t nph,
-                                    grid* );
- */
-
 void    moport_manager_rt_pull_ending(  moport_manager*,
                                         bbt_t ph,
                                         bbt_t nph,
@@ -64,9 +54,9 @@ int     moport_manager_rt_play_new_and_output(  moport_manager*,
 
 void    moport_manager_rt_process_new(moport_manager*, bbt_t ph, bbt_t nph);
 
-void    moport_manager_rt_empty(moport_manager*,
-                                grid*,
-                                jack_nframes_t nframes);
+void    moport_manager_rt_pull_playing_and_empty(   moport_manager*,
+                                                    bbt_t ph, bbt_t nph,
+                                                    evport* grid_intersort);
 
 
 #ifdef __cplusplus

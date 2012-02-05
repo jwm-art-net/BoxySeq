@@ -65,7 +65,8 @@ void            boxyseq_rt_play(boxyseq*,
                                 bbt_t ph, bbt_t nph);
 
 
-void            boxyseq_rt_clear(boxyseq*, jack_nframes_t nframes);
+void            boxyseq_rt_clear(boxyseq*, bbt_t ph, bbt_t nph,
+                                            jack_nframes_t nframes);
 
 /*  UI event triggering... -->
 */

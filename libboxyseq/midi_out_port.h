@@ -14,10 +14,10 @@ extern "C" {
 #include <jack/jack.h>
 
 
-moport*     moport_new(jack_client_t* client, evport_manager* portman);
+moport*     moport_new(jack_client_t* client,   int port_id,
+                                                evport_manager* portman);
 void        moport_free(moport*);
 
-const char* moport_name(moport*);
 
 
 /*  moport_rt_event_get_pitch
@@ -51,35 +51,32 @@ const char* moport_name(moport*);
 */
 
 
-/*  moport_rt_start_event:
+/*  moport_rt_placed_event_pitch:
 
     channel is stored in event at this stage,
     returns pitch:
 */
 
-int         moport_rt_placed_event_pitch(   moport*,
-                                            const event* ev,
-                                            int grb_flags,
-                                            int scale_bin,
-                                            int scale_key  );
+int         moport_rt_push_event_pitch( moport*, const event* ev,
+                                        int grb_flags,
+                                        int scale_bin,
+                                        int scale_key  );
 
 void        moport_rt_init_jack_cycle(  moport*,  jack_nframes_t nframes);
 
-/*
-void        moport_rt_play_old(moport*, bbt_t ph, bbt_t nph, grid*);
-*/
 void        moport_rt_pull_ending(      moport*, bbt_t ph, bbt_t nph,
                                                 evport* grid_intersort);
 
-/* returns non-zero if any notes begin _and_ end in current cycle
-int         moport_rt_play_new(         moport*, bbt_t ph, bbt_t nph);
-*/
-
 void        moport_rt_process_new(      moport*, bbt_t ph, bbt_t nph);
 
-
-void        moport_rt_output_jack_midi( moport*, jack_nframes_t nframes,
+void        moport_rt_output_jack_midi_event(moport*, event*,
+                                                bbt_t ph,
+                                                jack_nframes_t nframes,
                                                 double frames_per_tick );
+
+void        moport_rt_pull_playing_and_empty(   moport*,
+                                                bbt_t ph, bbt_t nph,
+                                                evport* grid_intersort);
 
 void        moport_rt_empty(moport*, grid*, jack_nframes_t nframes);
 

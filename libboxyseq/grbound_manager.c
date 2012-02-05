@@ -165,6 +165,18 @@ void    grbound_manager_rt_pull_starting(grbound_manager* grbman,
         grbound_rt_pull_starting(*grb++, grid_intersort);
 }
 
+
+void    grbound_manager_rt_empty_incoming(grbound_manager* grbman)
+{
+    grbound** grb = rtdata_data(grbman->rt);
+
+    if (!grb)
+        return;
+
+    while(*grb)
+        grbound_rt_empty_incoming(*grb++);
+}
+
 /*
 void grbound_manager_rt_sort(grbound_manager* grbman, evport* grid_port)
 {

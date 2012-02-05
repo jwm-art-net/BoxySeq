@@ -15,7 +15,7 @@ struct midi_out_port
     event start[16][128];
     event  play[16][128];
 
-    evport* intersort;
+    char* name;
 
     jack_port_t*    jack_out_port;
     void*           jport_buf;
