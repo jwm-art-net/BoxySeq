@@ -19,6 +19,7 @@ enum GRID_BOUNDARY_FLAGS
     */
     GRBOUND_PITCH_STRICT_POS =      0x0010,
     GRBOUND_BLOCK_ON_NOTE_FAIL =    0x0020,
+    GRBOUND_OVERRIDE_NOTE_CH =      0x0040,
 
     GRBOUND_EVENT_PROCESS =     0x0100, /* process events or not */
     GRBOUND_EVENT_PLAY =        0x0200, /* play events or place blocks */
@@ -86,6 +87,14 @@ void        grbound_rt_sort(grbound*, evport* output);*/
 
 void        grbound_rt_pull_starting(grbound*, evport* grid_intersort);
 
+#ifndef NDEBUG
+void        grbound_rt_check_incoming(grbound*, bbt_t ph, bbt_t nph);
+#endif
+
+void        grbound_rt_empty_incoming(grbound*);
+
+
+void        grbound_dump_events(grbound*);
 
 #ifdef __cplusplus
 } /* closing brace for extern "C" */

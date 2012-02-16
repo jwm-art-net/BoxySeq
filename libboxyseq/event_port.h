@@ -62,13 +62,14 @@ const char* evport_name(evport*);
 int         evport_write_event(evport*, const event*);
 
 void        evport_clear_data(evport*);
-void        evport_read_reset(evport* port);
+void        evport_read_reset(evport*);
 int         evport_read_event(evport*, event* dest);
 int         evport_read_and_remove_event(evport*, event* dest);
 void        evport_and_remove_event(evport*);
 
 int         evport_count(evport*);
 
+void        evport_pre_flush_check(evport*);
 
 #ifdef EVPORT_DEBUG
 void        evport_dump(evport*);

@@ -22,7 +22,7 @@ warnf(  warning_t level,
     va_list args;
     static const char *level_tab[] = {
         "message", "\033[1;32m",
-        "warning", "\033[1;33m",
+        "warning", "\07\033[1;33m",
     };
 
     FILE *fp = W_MESSAGE == level ? stdout : stderr;

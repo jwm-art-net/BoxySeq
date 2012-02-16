@@ -10,22 +10,30 @@
 #include <unistd.h>
 
 pattern*    new_pat(pattern_manager* patman,
+                    int evtype,
+                    int ch,
                     int steps,
+                    int count,
+                    float offset_ratio,
+                    int simul,
                     float dur_r,    float rel_r,
                     int wmin,       int wmax,
                     int hmin,       int hmax)
 {
     pattern* p = pattern_manager_pattern_new(patman);
     evlist* el = pattern_event_list(p);
-    event*  ev = 0;
 
-    int count = steps;
+    unsigned char r = 0;
+    unsigned char g = 0;
+    unsigned char b = 0;
     int i;
 
     bbt_t   st =    (internal_ppqn * 4) / steps;
     bbt_t   dur =   st * dur_r - 1;
     bbt_t   rel =   st * rel_r - 1;
-    bbt_t   t = 0;
+    bbt_t   t = st * offset_ratio;
+
+    random_rgb(&r, &g, &b);
 
     DMESSAGE("dur:%d rel:%d\n",dur,rel);
 
@@ -36,10 +44,23 @@ pattern*    new_pat(pattern_manager* patman,
 
     for (i = 0; i < count; ++i, t += st)
     {
-        DMESSAGE("adding note pos:%d dur:%d rel:%d\n", t, dur, rel);
-        ev = lnode_data(evlist_add_event_new(el, t));
-        ev->note_dur = dur;
-        ev->box_release = rel;
+        int j;
+
+        DMESSAGE("adding %d note(s) at pos:%d dur:%d rel:%d\n",
+                        simul, t, dur, rel);
+
+        for (j = 0; j < simul; ++j)
+        {
+            event* ev = lnode_data(evlist_add_event_new(el, t));
+            EVENT_SET_TYPE( ev, evtype );
+            EVENT_SET_CHANNEL( ev, ch );
+            ev->note_dur = dur;
+            ev->box_release = rel;
+            ev->box.r = r;
+            ev->box.g = g;
+            ev->box.b = b;
+            event_dump( ev );
+        }
     }
 
     return p;
@@ -82,21 +103,43 @@ int main(int argc, char** argv)
     if (!jackdata_startup(jd, bs))
         goto quit;
 
+/*    boxyseq_ui_place_static_block(bs, 32, 32, 64, 64);*/
+
     patman = boxyseq_pattern_manager(bs);
     grbman = boxyseq_grbound_manager(bs);
     mopman = boxyseq_moport_manager(bs);
     patportman = boxyseq_pattern_port_manager(bs);
+
+
+/*
+                    int evtype,
+                    int ch,
+                    int steps,
+                    int count,
+                    float offset_ratio,b
+                    int simul,
+                    float dur_r,    float rel_r,
+                    int wmin,       int wmax,
+                    int hmin,       int hmax)
+*/
+
+
     patport1 = evport_manager_evport_new(patportman, "patport1",
                                                     RT_EVLIST_SORT_POS);
-    pat0 = new_pat(patman, 4, 4.25, 2.25, 2,3,2,3);
+
+    pat0 = new_pat(patman, EV_TYPE_NOTE, 2, 4, 4, 0.0,
+                                        1, 4.25, 2.05, 4,5,4,5);
     pattern_set_output_port(pat0, patport1);
     pattern_update_rt_data(pat0);
 
-    pat1 = new_pat(patman, 16, 4.25, 2.25, 8,9,8,9);
+
+    pat1 = new_pat(patman, EV_TYPE_NOTE, 1, 64, 64, 0.1,
+                                        1, 0.5, 42.25, 2,3,2,3);
     pattern_set_output_port(pat1, patport1);
     pattern_update_rt_data(pat1);
 
-    pat2 = new_pat(patman, 8, 4.25, 16.25, 4,5,4,5);
+    pat2 = new_pat(patman, EV_TYPE_NOTE, 0, 16, 16, 0.0,
+                                        1, 0.75, 3.85, 7,8,7,8);
     pattern_set_output_port(pat2, patport1);
     pattern_update_rt_data(pat2);
 
@@ -106,10 +149,10 @@ int main(int argc, char** argv)
 
     sclist_add_default_scales(scales);
 
-    sc = sclist_scale_by_name(scales, "Dorian");
+    sc = sclist_scale_by_name(scales, "Major");
 
     int scint = scale_as_int(sc);
-    int keyint = note_number("F#");
+    int keyint = note_number("C#");
 
 
     srand(time(0));

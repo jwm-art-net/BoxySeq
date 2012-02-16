@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <glib.h>
 
 /*
 const int internal_ppqn = 24;
@@ -114,11 +114,21 @@ char* int_to_binary_string(int n, int sigbits)
 
 void random_rgb(unsigned char* r, unsigned char* g, unsigned char* b)
 {
-    char n = rand() % 6;
+    static GRand* rgb_rand = 0;
 
-    char high = 205 + rand() % 50;
-    char mid = 100 + rand() % 25;
-    char dark = rand() % 85;
+    if (!rgb_rand)
+        rgb_rand = g_rand_new_with_seed(time(NULL));
+
+    char n = g_rand_int_range(rgb_rand, 0, 6);
+
+    char high = 205 + g_rand_int_range(rgb_rand, 0, 50);
+    char mid;
+    char dark = g_rand_int_range(rgb_rand, 0, 85);
+
+    if (g_rand_int_range(rgb_rand, 0, 5))
+        mid = 100 + g_rand_int_range(rgb_rand, 0, 25);
+    else
+        mid = 205 + g_rand_int_range(rgb_rand, 0, 50);
 
     switch(n)
     {

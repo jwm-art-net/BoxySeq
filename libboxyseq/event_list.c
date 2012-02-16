@@ -116,12 +116,14 @@ lnode* evlist_add_event_new(evlist* el, bbt_t start_tick)
     if (!ev)
         return 0;
 
+/*    this doesn't seem right here:
     EVENT_SET_TYPE_NOTE( ev );
+ */
 
     ev->pos =  start_tick;
     ev->note_dur =  evlist_default_duration;
 
-    ev->box_release =   0;
+    ev->box_release = 0;
     ev->box.w = evlist_default_width;
     ev->box.h = evlist_default_height;
 

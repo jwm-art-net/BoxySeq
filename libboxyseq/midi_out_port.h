@@ -51,11 +51,14 @@ void        moport_free(moport*);
 */
 
 
-/*  moport_rt_placed_event_pitch:
-
-    channel is stored in event at this stage,
-    returns pitch:
-*/
+/*  moport_rt_push_event_pitch
+ *------------------------------
+ *  final determination of event note-on status. the event has already been
+ *  placed when this is called. this determines if the x placement is valid
+ *  within the key/scale (width may or may not be taken into account) and if
+ *  the resultant pitch is already active on that midi port/channel.
+ *  returns pitch on success, -1 on failure.
+ */
 
 int         moport_rt_push_event_pitch( moport*, const event* ev,
                                         int grb_flags,
@@ -80,6 +83,8 @@ void        moport_rt_pull_playing_and_empty(   moport*,
 
 void        moport_rt_empty(moport*, grid*, jack_nframes_t nframes);
 
+
+void        moport_event_dump(moport*);
 
 #ifdef GRID_DEBUG
 #include <stdbool.h>

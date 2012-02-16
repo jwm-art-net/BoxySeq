@@ -583,7 +583,7 @@ event* rt_evlist_read_and_remove_event(rt_evlist* rtevl, event* dest)
 
     #ifdef EVPOOL_DEBUG
     if (rtevl->cur != rtevl->head)
-        WARNING("%p->cur != %p->head\n", rtevl,rtevl);
+        WARNING("[%s] %p->cur != %p->head\n", rtevl->name, rtevl, rtevl);
     #endif
 
     rt_evlink* evlnk = rtevl->cur;
@@ -639,12 +639,17 @@ void rt_evlist_and_remove_event(rt_evlist* rtevl)
 */
     if (!rtevl->count)
     {
-        WARNING("ERROR: rt_evlist empty, nothing to remove\n");
+        WARNING("ERROR: rt_evlist %s empty, nothing to remove\n",
+                                                rtevl->name);
         return;
     }
 
     if (!rtevl->cur) /* remove tail */
     {
+        DMESSAGE("%s removing tail:%p current not set\n",
+                                rtevl->name, rtevl->tail);
+        event_dump(&rtevl->tail->ev);
+
         rem = rtevl->tail;
 
         if (rtevl->head == rtevl->tail)
@@ -656,9 +661,13 @@ void rt_evlist_and_remove_event(rt_evlist* rtevl)
                         rtevl->tail, rtevl->tail->prev);
 
             if (!rtevl->tail->prev)
+            {   DWARNING("check....\n");
                 rt_evlist_integrity_dump(rtevl, __FUNCTION__);
+                DWARNING("...checked\n");
+            }
 
             rtevl->tail->prev->next = 0;
+            rtevl->tail = rtevl->tail->prev;
         }
 
         --rtevl->count;

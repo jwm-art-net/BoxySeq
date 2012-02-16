@@ -1,3 +1,33 @@
+2012-02-16  James Morris  <james@jwm-art.net>
+
+    * since the reordering work, a bug became apparent when transport
+      was stopped. annoyingly only rarely, a block or several blocks 
+      would appear to remain within the grid as if they had been lost in 
+      the system. after almost two weeks tracking the bug (minus the 
+      time lost for a fresh linux install) i discover i've been looking 
+      in the wrong place. the bug is only within the GUI code. however 
+      despite this discovery at the end of this long frustrating period 
+      i can say that many other bugs have been reduced in the engine 
+      code. 
+
+    * libboxyseq/event.[ch]: Macro clean up. addition of debugging 
+      helper macro/function EVENT_IS/event_is. event_dump displays
+      human readable version of flags.
+
+    * libboxyseq/event_pool.c rt_evlist_and_remove_event: fix removal
+      of tail.
+
+    * libboxyseq/grid_boundary.[ch]: new flag GRBOUND_OVERRIDE_NOTE_CH
+      sets the boundary to override event channel number.
+
+    * libboxyseq/midi_out_port.c: moport_rt_pull_playing_and_empty has 
+      significant changes i believe...
+
+    * other changes i've given up tracking. it's all been a pita. some 
+      routines modified event properties which should have been left 
+      alone.
+
+
 2012-02-05  James Morris  <james@jwm-art.net>
 
     * libboxyseq/*: event ordering reworking. it was noticed that there 

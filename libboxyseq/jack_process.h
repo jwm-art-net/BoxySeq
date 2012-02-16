@@ -35,10 +35,11 @@ void    jackdata_transport_stop(jackdata*);
 jack_transport_state_t
         jackdata_transport_state(jackdata*, jack_position_t* pos);
 
-
-
-
 double  jackdata_rt_transport_frames_per_tick(jackdata*);
+
+#ifndef NDEBUG
+void    jackdata_rt_get_playhead(jackdata*, bbt_t* ph, bbt_t* nph);
+#endif
 
 
 #ifdef __cplusplus

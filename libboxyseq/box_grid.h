@@ -36,6 +36,11 @@ void        grid_rt_process_intersort(grid*,    bbt_t ph,
                                                 jack_nframes_t nframes,
                                                 double frames_per_tick);
 
+void        grid_rt_flush_intersort(    grid* gr,   bbt_t ph,
+                                                    bbt_t nph,
+                                                    jack_nframes_t nframes,
+                                                    double frames_per_tick);
+
 /*  grid_rt_process_blocks
  *--------------------------
  *  process block events stored in the block port
@@ -43,7 +48,7 @@ void        grid_rt_process_intersort(grid*,    bbt_t ph,
  *      * if expired, move event from block port to unplace port.
  */
 void        grid_rt_process_blocks(grid*, bbt_t ph, bbt_t nph);
-void        grid_rt_pull_blocks_to_intersort(grid*, bbt_t ph, bbt_t nph);
+void        grid_rt_flush_blocks_to_intersort(grid*);
 
 /*  grid_rt_add_block_area
  *--------------------------
@@ -53,6 +58,9 @@ void        grid_rt_pull_blocks_to_intersort(grid*, bbt_t ph, bbt_t nph);
  *  returns 1 on sucess.
  */
 bool        grid_rt_add_block_area(grid*, int x, int y, int w, int h);
+bool        grid_rt_add_block_area_event(grid*, event*);
+
+void        grid_dump_block_events(grid*);
 
 
 

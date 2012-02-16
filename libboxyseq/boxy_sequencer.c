@@ -167,7 +167,7 @@ evbuf* boxyseq_ui_unplace_buf(const boxyseq* bs)
 }
 
 
-void boxyseq_ui_place_user_block(   const boxyseq* bs,
+void boxyseq_ui_place_static_block( const boxyseq* bs,
                                     int x,      int y,
                                     int width,  int height)
 {
@@ -180,7 +180,7 @@ void boxyseq_ui_place_user_block(   const boxyseq* bs,
     ev.box.w = width;
     ev.box.h = height;
 
-    EVENT_SET_TYPE_BLOCK( &ev );
+    EVENT_SET_TYPE( &ev, EV_TYPE_STATIC );
     EVENT_SET_STATUS_ON( &ev );
 
     if (!evbuf_write(bs->ui_input_buf, &ev))
@@ -207,7 +207,7 @@ void boxyseq_rt_play(boxyseq* bs,
 
     while(evbuf_read(bs->ui_input_buf, &ev))
     {
-        switch(EVENT_TYPE( &ev ))
+        switch(EVENT_GET_TYPE( &ev ))
         {
         case EV_TYPE_SHUTDOWN:
             DMESSAGE("RT shutdown...\n");
@@ -215,7 +215,7 @@ void boxyseq_rt_play(boxyseq* bs,
             boxyseq_rt_clear(bs, 0, 0, nframes);
             return;
 
-        case EV_TYPE_BLOCK:
+        case EV_TYPE_STATIC:
 /*            MESSAGE("user-block placement not implemented :-(\n");*/
             if (!grid_rt_add_block_area(bs->gr, ev.box.x, ev.box.y,
                                                 ev.box.w, ev.box.h))
@@ -240,6 +240,7 @@ void boxyseq_rt_play(boxyseq* bs,
     moport_manager_rt_pull_ending(bs->moports, ph, nph, intersort);
 
     evport_manager_rt_clear_all(bs->ports_pattern);
+
     pattern_manager_rt_play(bs->patterns, repositioned, ph, nph);
 
     grbound_manager_rt_pull_starting(bs->grbounds, intersort);
@@ -247,61 +248,19 @@ void boxyseq_rt_play(boxyseq* bs,
     grid_rt_process_blocks(bs->gr, ph, nph);
 
     grid_rt_process_intersort(bs->gr, ph, nph, nframes,
-                            jackdata_rt_transport_frames_per_tick(bs->jd));
-
-/*
-    moport_manager_rt_play_old(bs->moports, ph, nph, bs->gr);
-
-    grid_rt_process_unplacement(bs->gr, ph, nph);
-
-    evport_manager_rt_clear_all(bs->ports_pattern);
-    pattern_manager_rt_play(bs->patterns, repositioned, ph, nph);
-
-    grid_port = grid_global_input_port(bs->gr);
-
-    grbound_manager_rt_sort(bs->grbounds, grid_port);
-
-    grid_rt_process_placement(bs->gr, ph, nph);
-
-    if (moport_manager_rt_play_new_and_output(  bs->moports,
-                                            ph,
-                                            nph,
-                                            nframes,
-                            #ifdef NO_REAL_TIME
-                            0
-                            #else
-                            jackdata_rt_transport_frames_per_tick(bs->jd)
-                            #endif
-                                                                ))
-    {
-        moport_manager_rt_play_old(bs->moports, ph, nph, bs->gr);
-        grid_rt_process_unplacement(bs->gr, ph, nph);
-    }
-
-    grid_rt_process_blocks(bs->gr, ph, nph);
-*/
+                        jackdata_rt_transport_frames_per_tick(bs->jd));
 }
 
 
 void boxyseq_rt_clear(boxyseq* bs, bbt_t ph, bbt_t nph,
                                     jack_nframes_t nframes)
 {
-/*
-    moport_manager_rt_empty(bs->moports, bs->gr, nframes);
-    grid_remove_events(bs->gr);
-*/
-
-    DMESSAGE("-------------- CLEAR -------------\n");
-
     evport* intersort = grid_get_intersort(bs->gr);
-
-    moport_manager_rt_pull_playing_and_empty(bs->moports, 0, 0, intersort);
+    evport_manager_rt_clear_all(bs->ports_pattern);
+    moport_manager_rt_pull_playing_and_empty(bs->moports, 0, 4, intersort);
     grbound_manager_rt_empty_incoming(bs->grbounds);
-    grbound_manager_rt_pull_starting(bs->grbounds, intersort);
-
-    grid_rt_pull_blocks_to_intersort(bs->gr, 0, 0);
-
-    grid_rt_process_intersort(bs->gr, 0, 4, nframes,
+    grid_rt_flush_blocks_to_intersort(bs->gr);
+    grid_rt_flush_intersort(bs->gr, 0, 4, nframes,
                             jackdata_rt_transport_frames_per_tick(bs->jd));
 }
 
@@ -311,7 +270,7 @@ void boxyseq_shutdown(boxyseq* bs)
     struct timespec ts;
     event ev;
 
-    EVENT_SET_TYPE_SHUTDOWN( &ev );
+    EVENT_SET_TYPE( &ev, EV_TYPE_SHUTDOWN );
 
     if (!evbuf_write(bs->ui_input_buf, &ev))
         WARNING("failed to queue shutdown event\n");
@@ -334,7 +293,7 @@ int boxyseq_ui_collect_events(boxyseq* bs)
     {
         lnode* ln = evlist_head(bs->ui_eventlist);
 
-        if (EVENT_IS_TYPE_CLEAR( &evin ))
+        if (EVENT_IS_TYPE( &evin, EV_TYPE_CLEAR ))
         {
             evlist_select_all(bs->ui_eventlist, 1);
             evlist_delete(bs->ui_eventlist, 1);

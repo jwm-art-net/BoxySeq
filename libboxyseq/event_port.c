@@ -189,6 +189,40 @@ int evport_count(evport* port)
 }
 
 
+
+void evport_pre_flush_check(evport* port)
+{
+    event* ev;
+
+    DMESSAGE("pre-flush check..\n");
+    rt_evlist_read_reset(port->data);
+
+    rt_evlist_integrity_dump(port->data, __FUNCTION__);
+
+    rt_evlist_read_reset(port->data);
+
+    while((ev = rt_evlist_read_event(port->data)))
+    {
+        if (EVENT_IS_STATUS_ON( ev ))
+        {
+            DWARNING("pre-flushing \07\n");
+            event_dump(ev);
+            rt_evlist_and_remove_event(port->data);
+        }
+        else
+        {
+            ev->pos = 0;
+            ev->note_dur = 1;
+            ev->box_release = 2;
+        }
+    }
+
+    rt_evlist_integrity_dump(port->data, __FUNCTION__);
+
+    DMESSAGE("pre-flush complete...\n");
+}
+
+
 #ifdef EVPORT_DEBUG
 void evport_dump(evport* port)
 {

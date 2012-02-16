@@ -59,6 +59,8 @@ void    moport_manager_rt_pull_playing_and_empty(   moport_manager*,
                                                     evport* grid_intersort);
 
 
+void    moport_manager_dump_events(moport_manager*);
+
 #ifdef __cplusplus
 } /* closing brace for extern "C" */
 #endif

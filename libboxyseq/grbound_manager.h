@@ -30,9 +30,14 @@ void    grbound_manager_update_rt_data(const grbound_manager*);
 
 void    grbound_manager_rt_pull_starting(grbound_manager*,
                                             evport* grid_intersort);
+#ifndef NDEBUG
+void    grbound_manager_rt_check_incoming(grbound_manager*, bbt_t ph,
+                                                            bbt_t nph);
+#endif
 
 void    grbound_manager_rt_empty_incoming(grbound_manager*);
 
+void    grbound_manager_dump_events(grbound_manager*);
 
 #ifdef __cplusplus
 } /* closing brace for extern "C" */

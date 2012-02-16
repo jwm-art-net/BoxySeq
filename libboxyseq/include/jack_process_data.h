@@ -17,6 +17,15 @@ struct jack_process_data
 
     boxyseq*        bs;
 
+    #ifndef NDEBUG
+    /*  ordinarily these are passed as arguments but for debugging
+        purposes they're stored here for when they are otherwise
+        unavailable.
+    */
+    bbt_t   ph;
+    bbt_t   nph;
+    #endif
+
     bbt_t   oph;
     bbt_t   onph;
 

@@ -368,7 +368,7 @@ static rt_pattern* rt_pattern_new(void)
     if (!rtpat)
         goto fail0;
 
-    rtpat->rnd = g_rand_new();
+    rtpat->rnd = g_rand_new_with_seed((guint32)time(NULL));
 
     if (!rtpat->rnd)
         goto fail1;

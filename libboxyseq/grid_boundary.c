@@ -231,8 +231,9 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
                 }
 
                 EVENT_SET_STATUS_ON( &ev );
-                EVENT_SET_TYPE_NOTE( &ev );
-                EVENT_SET_CHANNEL( &ev, rtgrb->channel );
+
+                if (grb->flags & GRBOUND_OVERRIDE_NOTE_CH)
+                    EVENT_SET_CHANNEL( &ev, rtgrb->channel );
 
                 if (!evport_write_event(grid_intersort, &ev))
                     WARNING("failed to write to grid intersort\n");
@@ -252,8 +253,7 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
                 }
 
                 EVENT_SET_STATUS_ON( &ev );
-                EVENT_SET_TYPE_BLOCK( &ev );
-                EVENT_SET_CHANNEL( &ev, rtgrb->channel );
+                EVENT_SET_TYPE( &ev, EV_TYPE_BLOCK );
 
                 if (!evport_write_event(grid_intersort, &ev))
                     WARNING("failed to write to grid intersort\n");
@@ -265,6 +265,13 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
         while(evport_read_event(rtgrb->evinput, &ev))
             /* do nothing */;
     }
+
+    while(evport_read_event(rtgrb->evinput, &ev))
+    {
+        DWARNING("incoming not emptied!\n");
+        event_dump(&ev);
+    }
+
 }
 
 
@@ -290,13 +297,40 @@ void grbound_rt_empty_incoming(grbound* grb)
 
     evport_read_reset(rtgrb->evinput);
 
-    while(evport_read_event(rtgrb->evinput, &ev))
+    DMESSAGE("emptying incoming...\n");
+
+    while(evport_read_and_remove_event(rtgrb->evinput, &ev))
+    {
+        event_dump(&ev);
         count++;
+    }
+
 
     DMESSAGE("emptied %d events from incoming\n", count);
 }
 
+#ifndef NDEBUG
+void grbound_rt_check_incoming(grbound*grb, bbt_t ph, bbt_t nph)
+{
+    event ev;
+    grbound* rtgrb;
 
+    DMESSAGE("checking incoming...\n");
+
+    rtgrb = rtdata_data(grb->rt);
+
+    evport_read_reset(rtgrb->evinput);
+
+    while(evport_read_event(rtgrb->evinput, &ev))
+    {
+        if (ev.pos < ph || ev.pos > nph)
+        {
+            DWARNING("out of place event! now ph:%d nph:%d\n", ph, nph);
+            event_dump(&ev);
+        }
+    }
+}
+#endif
 
 /*  STATIC/PRIVATE implementation:
 */
@@ -385,5 +419,13 @@ static void* grbound_rtdata_get_cb(const void* grb)
 static void grbound_rtdata_free_cb(void* grb)
 {
     grbound_free(grb);
+}
+
+
+void grbound_dump_events(grbound* grb)
+{
+    DMESSAGE("grbound:%p dump\n", grb);
+    DMESSAGE("incoming\n");
+    evport_dump(grb->evinput);
 }
 

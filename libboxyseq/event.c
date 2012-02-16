@@ -69,14 +69,18 @@ void event_copy(event* dest, const event* src)
 
 void event_dump(const event* ev)
 {
-    MESSAGE("event: %p  |  flags %d  |  "
-            "pos:%6d  |  dur:%6d  |  rel:%6d  |  "
-            "pitch:%3d  |  vel:%3d  |  "
-            "x:%3d  |  y:%3d  |  "
-            "w:%3d  |  h:%3d  |  "
-            "grb:%p \n",
+    char tmp[20];
 
-            ev,             ev->flags,
+    event_flags_to_str(ev->flags, tmp);
+
+    MESSAGE("event: %p  [%s] "
+            "pos:%d dur:%d rel:%d"
+            "\tpitch:%d vel:%d "
+            "\tx:%d y:%d "
+            "\tw:%d h:%d "
+            "\tgrb:%p \n",
+
+            ev,             tmp,
             ev->pos,   ev->note_dur,   ev->box_release,
             ev->note_pitch, ev->note_velocity,
             ev->box.x,      ev->box.y,
@@ -85,27 +89,62 @@ void event_dump(const event* ev)
 }
 
 
-void event_flags_to_str(int flags, char buf[40])
+void event_flags_to_str(int flags, char buf[20])
 {
     const char* type = 0;
     const char* status = 0;
     int r;
 
-    switch(flags & EV_TYPEMASK)
+    switch(flags & EV_TYPE_MASK)
     {
     case EV_TYPE_NOTE:      type = "note";  break;
     case EV_TYPE_BLOCK:     type = "block"; break;
-    case EV_TYPE_CLEAR:     type = "RT>GUI:CLEAR";      break;
-    case EV_TYPE_SHUTDOWN:  type = "RT<GUI:SHUTDOW";    break;
+    case EV_TYPE_CLEAR:     type = "reset"; break;
+    case EV_TYPE_SHUTDOWN:  type = "quit";  break;
     default:
-        type = "UNKNOWN";
+        type = "*ERR*";
         break;
     }
 
     status = (flags & EV_STATUS_ON) ? "ON" : "OFF";
 
-    snprintf(buf, 40, "type [%15s] status [%3s]", type, status);
+    snprintf(buf, 20, "%5s | %3s", type, status);
 }
+
+
+#ifndef NDEBUG
+/*      DEBUGGING ONLY: checks event against status and type
+                        represented by flags. displays event on
+                        mismatch/error.
+ */
+bool event_is(const event* ev, int flags,
+              const char *file, const char *function, size_t line)
+{
+    int status = flags & EV_STATUS_ON;
+    int type = flags & EV_TYPE_MASK;
+    bool ret = true;
+
+    if (!EVENT_IS_STATUS( ev, status ))
+    {
+        event_dump(ev);
+        warnf(W_WARNING, file, function, line,
+                "^^^ event has invalid status    ^^^\n");
+        ret = false;
+    }
+
+    if (!EVENT_IS_TYPE( ev, type ))
+    {
+        if (ret == true)
+            event_dump(ev);
+
+        warnf(W_WARNING, file, function, line,
+                "^^^ invalid event type ^^^\n");
+        ret = false;
+    }
+
+    return ret;
+}
+#endif
 
 
 static int event_pri_cmp_time_cb(const void* d1,
@@ -198,6 +237,7 @@ static void event_pri_mod_coord_cb(void* data, void* init)
 static char* event_pri_str_cb(const void* data, int level)
 {
     char buf[DATACB_STR_SIZE];
+    char tmp[20];
     const event* ev = data;
     int count;
 

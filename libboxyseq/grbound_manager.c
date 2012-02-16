@@ -153,7 +153,7 @@ void grbound_manager_update_rt_data(const grbound_manager* grbman)
 }
 
 
-void    grbound_manager_rt_pull_starting(grbound_manager* grbman,
+void grbound_manager_rt_pull_starting(grbound_manager* grbman,
                                             evport* grid_intersort)
 {
     grbound** grb = rtdata_data(grbman->rt);
@@ -165,8 +165,21 @@ void    grbound_manager_rt_pull_starting(grbound_manager* grbman,
         grbound_rt_pull_starting(*grb++, grid_intersort);
 }
 
+#ifndef NDEBUG
+void    grbound_manager_rt_check_incoming(grbound_manager* grbman,
+                                                bbt_t ph, bbt_t nph)
+{
+    grbound** grb = rtdata_data(grbman->rt);
 
-void    grbound_manager_rt_empty_incoming(grbound_manager* grbman)
+    if (!grb)
+        return;
+
+    while(*grb)
+        grbound_rt_check_incoming(*grb++, ph, nph);
+}
+#endif
+
+void grbound_manager_rt_empty_incoming(grbound_manager* grbman)
 {
     grbound** grb = rtdata_data(grbman->rt);
 
@@ -176,6 +189,28 @@ void    grbound_manager_rt_empty_incoming(grbound_manager* grbman)
     while(*grb)
         grbound_rt_empty_incoming(*grb++);
 }
+
+
+void grbound_manager_dump_events(grbound_manager* grbman)
+{
+    grbound* grb = grbound_manager_grbound_first(grbman);
+
+    DMESSAGE("grbound manager:%p\n", grbman);
+    DMESSAGE("ports:\n");
+
+    if (!grb)
+    {
+        DMESSAGE("none\n");
+        return;
+    }
+
+    do
+    {
+        grbound_dump_events(grb);
+        grb = grbound_manager_grbound_next(grbman);
+    } while(grb);
+}
+
 
 /*
 void grbound_manager_rt_sort(grbound_manager* grbman, evport* grid_port)

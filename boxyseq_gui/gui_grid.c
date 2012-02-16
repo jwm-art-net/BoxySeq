@@ -125,7 +125,7 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         b = ev->box.b / 255.0f;
 
         if (EVENT_IS_STATUS_OFF( ev )
-         || EVENT_IS_TYPE_BLOCK( ev ))
+         || EVENT_IS_TYPE( ev, EV_TYPE_BLOCK ))
         {
             r *= 0.5;
             g *= 0.5;
@@ -133,7 +133,8 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         }
 
         cairo_set_source_rgb(cr, r, g, b);
-        cairo_rectangle(cr, ev->box.x, ev->box.y, ev->box.w, ev->box.h);
+        cairo_rectangle(cr, ev->box.x+0.1, ev->box.y+0.1, 
+                            ev->box.w-0.1, ev->box.h-0.1);
         cairo_fill(cr);
 
         ln = lnode_next(ln);

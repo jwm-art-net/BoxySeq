@@ -133,7 +133,9 @@ moport* moport_manager_moport_next(moport_manager* mopman)
     if (!mopman->cur)
         return 0;
 
-    return lnode_data(mopman->cur = lnode_next(mopman->cur));
+    mopman->cur = lnode_next(mopman->cur);
+
+    return mopman->cur ? lnode_data(mopman->cur) : 0;
 }
 
 
@@ -213,7 +215,7 @@ void moport_manager_rt_process_new(moport_manager* mopman,
 }
 
 
-void    moport_manager_rt_pull_playing_and_empty(moport_manager* mopman,
+void moport_manager_rt_pull_playing_and_empty(moport_manager* mopman,
                                                     bbt_t ph, bbt_t nph,
                                                     evport* grid_intersort)
 {
@@ -226,3 +228,23 @@ void    moport_manager_rt_pull_playing_and_empty(moport_manager* mopman,
         moport_rt_pull_playing_and_empty(*mops++, ph, nph, grid_intersort);
 }
 
+
+void moport_manager_dump_events(moport_manager* mopman)
+{
+    moport* mo = moport_manager_moport_first(mopman);
+
+    DMESSAGE("moport manager:%p\n", mopman);
+    DMESSAGE("ports:\n");
+
+    if (!mo)
+    {
+        DMESSAGE("none\n");
+        return;
+    }
+
+    do
+    {
+        moport_event_dump(mo);
+        mo = moport_manager_moport_next(mopman);
+    } while(mo);
+}

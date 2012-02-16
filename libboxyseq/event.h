@@ -20,6 +20,7 @@ typedef enum EVENT_FLAGS
 {
     EV_TYPE_NOTE =          0x0001,
     EV_TYPE_BLOCK =         0x0002,
+    EV_TYPE_STATIC =        0x0003, /* static block */
 
 /*
     EV_TYPE_BLOCKED_NOTE =  0x0003,
@@ -28,17 +29,19 @@ typedef enum EVENT_FLAGS
     EV_TYPE_CLEAR =         0x000d, /* from RT thread to clear GUI */
     EV_TYPE_SHUTDOWN =      0x000e, /* from GUI thread to clear RT */
 
-    EV_TYPEMASK =           0x000f,
+    EV_TYPE_MASK =          0x000f,
 
-    EV_STATUS_ON =      0x0010, /* or off */
+    EV_STATUS_ON =          0x0010, /* or off */
 
-    EV_CHANNEL_MASK =   0xf000,
+    EV_CHANNEL_MASK =       0xf000,
 
 #ifdef EVPOOL_DEBUG
-    EV_IS_FREE_ERROR =  0xffff
+    EV_IS_FREE_ERROR =      0xffff
 #endif
 
 } evflags;
+
+#define EV_STATUS_OFF (!EV_STATUS_ON)
 
 /**
  * a single data structure for event
@@ -68,67 +71,49 @@ event*  event_dup(const event*);
 void    event_dump(const event*);
 void    event_copy(event* dest, const event* src);
 
-void    event_flags_to_str(int flags, char buf[40]);
+void    event_flags_to_str(int flags, char buf[20]);
 
+#ifndef NDEBUG
+/*      DEBUGGING ONLY: checks event against status and type
+                        represented by flags. displays event on
+                        mismatch/error.
+ */
+bool    event_is(const event*, int flags,
+                 const char *file, const char *function, size_t line);
+#define EVENT_IS( event, flags ) \
+    event_is( event, flags, __FILE__, __FUNCTION__, __LINE__)
+#endif
 
-#define EVENT_IS_STATUS_ON( ev ) \
+#define EVENT_IS_STATUS( ev, evstatus ) \
+    ((( ev )->flags & EV_STATUS_ON ) == evstatus)
+
+#define EVENT_IS_STATUS_ON( ev )    \
     ((( ev )->flags & EV_STATUS_ON ) == EV_STATUS_ON)
 
-#define EVENT_IS_STATUS_OFF( ev ) \
+#define EVENT_IS_STATUS_OFF( ev )   \
     ((( ev )->flags & EV_STATUS_ON ) != EV_STATUS_ON)
 
-#define EVENT_TYPE( ev ) \
-    (( ev )-> flags & EV_TYPEMASK)
-
-#define EVENT_IS_TYPE_NOTE( ev ) \
-    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_NOTE)
-
-#define EVENT_IS_TYPE_BLOCK( ev ) \
-    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_BLOCK)
-
-/*
-#define EVENT_IS_TYPE_BLOCKED_NOTE( ev ) \
-    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_BLOCKED_NOTE)
-*/
-
-#define EVENT_IS_TYPE_CLEAR( ev ) \
-    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_CLEAR)
-
-#define EVENT_IS_TYPE_SHUTDOWN( ev ) \
-    ((( ev )->flags & EV_TYPEMASK ) == EV_TYPE_SHUTDOWN)
-
-/*
-#define EVENT_IS_BLOCK( ev ) \
-    (EVENT_IS_TYPE_BLOCK( ev ) || EVENT_IS_TYPE_BLOCKED_NOTE( ev ))
-*/
-
-#define EVENT_SET_STATUS_ON( ev ) \
+#define EVENT_SET_STATUS_ON( ev )   \
     ( ev )->flags |= EV_STATUS_ON
 
-#define EVENT_SET_STATUS_OFF( ev ) \
+#define EVENT_SET_STATUS_OFF( ev )  \
     ( ev )->flags &= ~EV_STATUS_ON
 
-#define EVENT_SET_TYPE_NOTE( ev ) \
-    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_NOTE
+#define EVENT_SET_TYPE( ev, evtype )                    \
+    ( ev )->flags = ((~EV_TYPE_MASK) & ( ev ) ->flags)  \
+                    | (EV_TYPE_MASK & evtype)
 
-#define EVENT_SET_TYPE_BLOCK( ev ) \
-    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_BLOCK
+#define EVENT_GET_TYPE( ev )        \
+    (( ev )-> flags & EV_TYPE_MASK)
 
-#define EVENT_SET_TYPE_BLOCKED_NOTE( ev ) \
-    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_BLOCKED_NOTE
+#define EVENT_IS_TYPE( ev, evtype ) \
+    ((( ev )->flags & EV_TYPE_MASK ) == evtype)
 
-#define EVENT_SET_TYPE_CLEAR( ev ) \
-    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_CLEAR
-
-#define EVENT_SET_TYPE_SHUTDOWN( ev ) \
-    ( ev )->flags = ((~EV_TYPEMASK) & ( ev )->flags) | EV_TYPE_SHUTDOWN
-
-#define EVENT_CHANNEL( ev ) \
+#define EVENT_GET_CHANNEL( ev )     \
     ((0xf000 & ( ev )->flags) >> 12)
 
 #define EVENT_SET_CHANNEL( ev, ch ) \
     ( ev )->flags = (0xf000 & (( ch ) << 12)) + (0x0fff & ( ev )->flags);
-
 
 
 /* list manipulation callbacks */

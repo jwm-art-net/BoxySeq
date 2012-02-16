@@ -44,6 +44,11 @@ jackdata* jackdata_new(void)
 
     jd->bs = 0;
 
+    #ifndef NDEBUG
+    jd->ph = -1;
+    jd->nph = 0;
+    #endif
+
     jd->oph = -1;
     jd->onph = 0;
 
@@ -415,10 +420,16 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
     ph =  (bbt_t)(0 + jd->ticks);
     nph = (bbt_t)(0 + trunc(ph + jd->ticks_per_period));
 
+    #ifndef NDEBUG
+    jd->ph = ph;
+    jd->nph = nph;
+    #endif
+
     if (!jd->is_rolling)
     {
         if (!jd->stopped)
         {
+            DMESSAGE("now stopped\n");
             jd->stopped = 1;
             jd->was_stopped = 1;
             boxyseq_rt_clear(jd->bs, ph, nph, nframes);
@@ -446,9 +457,13 @@ static int jack_process_callback(jack_nframes_t nframes, void* arg)
             WARNING("duplicated %lu ticks\n",
                     (long unsigned int)(jd->onph - ph));
         else if (jd->onph == ph - 1)    /*  FIXME: for when ardour is */
+        {
             ph--;                       /*  transport master...       */
+        }
         else if (jd->onph == ph - 2)    /* NOTE: I'm not convinced this */
+        {
             ph -= 2;                    /* problem is currently fixable */
+        }
         else                            /* (certainly not by my stds). */
             WARNING("dropped %lu ticks\n",
                     (long unsigned int)(ph - jd->onph));
@@ -472,4 +487,12 @@ static void jackdata_jack_shutdown( void *arg )
     WARNING("jack_shutdown callback called\n");
     exit(1);
 }
+
+#ifndef NDEBUG
+void jackdata_rt_get_playhead(jackdata* jd, bbt_t* ph, bbt_t* nph)
+{
+    *ph = jd->ph;
+    *nph = jd->nph;
+}
+#endif
 
