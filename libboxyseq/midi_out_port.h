@@ -70,8 +70,6 @@ void        moport_rt_init_jack_cycle(  moport*,  jack_nframes_t nframes);
 void        moport_rt_pull_ending(      moport*, bbt_t ph, bbt_t nph,
                                                 evport* grid_intersort);
 
-void        moport_rt_process_new(      moport*, bbt_t ph, bbt_t nph);
-
 void        moport_rt_output_jack_midi_event(moport*, event*,
                                                 bbt_t ph,
                                                 jack_nframes_t nframes,
@@ -81,15 +79,7 @@ void        moport_rt_pull_playing_and_empty(   moport*,
                                                 bbt_t ph, bbt_t nph,
                                                 evport* grid_intersort);
 
-void        moport_rt_empty(moport*, grid*, jack_nframes_t nframes);
-
-
 void        moport_event_dump(moport*);
-
-#ifdef GRID_DEBUG
-#include <stdbool.h>
-bool       moport_event_in_start(moport*, event*);
-#endif
 
 
 #ifdef __cplusplus

@@ -170,20 +170,6 @@ void moport_manager_rt_init_jack_cycle( moport_manager* mopman,
         moport_rt_init_jack_cycle(*mops++, nframes);
 }
 
-/*
-void moport_manager_rt_play_old( moport_manager* mopman,
-                                 bbt_t ph,  bbt_t nph,
-                                 grid* gr)
-{
-    moport** mops = rtdata_data(mopman->rt);
-
-    if (!mops)
-        return;
-
-    while(*mops)
-        moport_rt_play_old(*mops++, ph, nph, gr);
-}
-*/
 
 void moport_manager_rt_pull_ending(moport_manager* mopman,
                                     bbt_t ph, bbt_t nph,
@@ -196,22 +182,6 @@ void moport_manager_rt_pull_ending(moport_manager* mopman,
 
     while(*mops)
         moport_rt_pull_ending(*mops++, ph, nph, grid_intersort);
-}
-
-
-void moport_manager_rt_process_new(moport_manager* mopman,
-                                    bbt_t ph, bbt_t nph)
-{
-    moport** mops = rtdata_data(mopman->rt);
-
-    if (!mops)
-        return;
-
-    while(*mops)
-    {
-        moport_rt_process_new(*mops, ph, nph);
-        ++mops;
-    }
 }
 
 

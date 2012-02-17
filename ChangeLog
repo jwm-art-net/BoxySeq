@@ -1,3 +1,7 @@
+2012-02-17  James Morris  <james@jwm-art.net>
+
+    * libboxyseq/midi_out_port.[ch]: removed 'start' array.
+
 2012-02-16  James Morris  <james@jwm-art.net>
 
     * since the reordering work, a bug became apparent when transport

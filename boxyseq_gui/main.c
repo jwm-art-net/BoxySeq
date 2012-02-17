@@ -127,19 +127,18 @@ int main(int argc, char** argv)
     patport1 = evport_manager_evport_new(patportman, "patport1",
                                                     RT_EVLIST_SORT_POS);
 
-    pat0 = new_pat(patman, EV_TYPE_NOTE, 2, 4, 4, 0.0,
-                                        1, 4.25, 2.05, 4,5,4,5);
+    pat0 = new_pat(patman, EV_TYPE_NOTE, 2, 2, 2, 0.0,
+                                        1, 1.25, 2.05, 4,5,4,5);
     pattern_set_output_port(pat0, patport1);
     pattern_update_rt_data(pat0);
 
-
-    pat1 = new_pat(patman, EV_TYPE_NOTE, 1, 64, 64, 0.1,
-                                        1, 0.5, 42.25, 2,3,2,3);
+    pat1 = new_pat(patman, EV_TYPE_NOTE, 1, 16, 16, 0.1,
+                                        1, 0.5, 31.4, 2,3,2,3);
     pattern_set_output_port(pat1, patport1);
     pattern_update_rt_data(pat1);
 
-    pat2 = new_pat(patman, EV_TYPE_NOTE, 0, 16, 16, 0.0,
-                                        1, 0.75, 3.85, 7,8,7,8);
+    pat2 = new_pat(patman, EV_TYPE_NOTE, 0, 8, 8, 0.0,
+                                        1, 1.75, 3.85, 8,9,8,9);
     pattern_set_output_port(pat2, patport1);
     pattern_update_rt_data(pat2);
 

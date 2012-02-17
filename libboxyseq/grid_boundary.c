@@ -223,7 +223,8 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
             {
                 ev.grb = grb;
 
-                if (!ev.box.r && !ev.box.g && !ev.box.b)
+                if (!ev.box.r && !ev.box.g && !ev.box.b
+                 || (grb->flags & GRBOUND_OVERRIDE_NOTE_CH))
                 {
                     ev.box.r = grb->box.r;
                     ev.box.g = grb->box.g;
@@ -245,7 +246,8 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
             {
                 ev.grb = grb;
 
-                if (!ev.box.r && !ev.box.g && !ev.box.b)
+                if (!ev.box.r && !ev.box.g && !ev.box.b
+                 || (grb->flags & GRBOUND_OVERRIDE_NOTE_CH))
                 {
                     ev.box.r = grb->box.r;
                     ev.box.g = grb->box.g;

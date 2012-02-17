@@ -12,7 +12,6 @@
 
 struct midi_out_port
 {
-    event start[16][128];
     event  play[16][128];
 
     char* name;

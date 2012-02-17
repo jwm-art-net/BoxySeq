@@ -236,7 +236,6 @@ void boxyseq_rt_play(boxyseq* bs,
 
     intersort = grid_get_intersort(bs->gr);
 
-    moport_manager_rt_process_new(bs->moports, ph, nph);
     moport_manager_rt_pull_ending(bs->moports, ph, nph, intersort);
 
     evport_manager_rt_clear_all(bs->ports_pattern);

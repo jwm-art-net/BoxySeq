@@ -50,7 +50,6 @@ moport* moport_new(jack_client_t* client,   int port_id,
     for (c = 0; c < 16; ++c)
     {
         for (p = 0; p < 128; ++p)
-            mo->start[c][p].flags =
              mo->play[c][p].flags = 0;
     }
 
@@ -86,7 +85,6 @@ int moport_rt_push_event_pitch(moport* midiport,
     EVENT_IS(ev, EV_STATUS_ON | EV_TYPE_NOTE);
     #endif
 
-    event* start = midiport->start[EVENT_GET_CHANNEL(ev)];
     event*  play =  midiport->play[EVENT_GET_CHANNEL(ev)];
 
     int pitch = ev->box.x;
@@ -96,7 +94,7 @@ int moport_rt_push_event_pitch(moport* midiport,
         if (!scale_note_is_valid(scale_bin, scale_key, pitch))
             return -1;
 
-        if (start[pitch].flags || play[pitch].flags)
+        if (play[pitch].flags)
             return -1;
     }
     else
@@ -117,7 +115,7 @@ int moport_rt_push_event_pitch(moport* midiport,
         while(pitch != endpitch)
         {
             if (scale_note_is_valid(scale_bin, scale_key, pitch)
-             && !start[pitch].flags && !play[pitch].flags)
+             && !play[pitch].flags)
             {
                 goto output;
             }
@@ -129,9 +127,10 @@ int moport_rt_push_event_pitch(moport* midiport,
     }
 
 output:
-    event_copy(&start[pitch], ev);
-    start[pitch].note_pitch = pitch;
-    EVENT_SET_STATUS_ON( &start[pitch] );
+
+    event_copy(&play[pitch], ev);
+    play[pitch].note_pitch = pitch;
+    EVENT_SET_STATUS_ON( &play[pitch] );
 
     return pitch;
 }
@@ -167,33 +166,6 @@ void moport_rt_pull_ending(moport* midiport, bbt_t ph, bbt_t nph,
 
                 play[pitch].flags = 0;
             }
-        }
-    }
-}
-
-
-void moport_rt_process_new(moport* midiport, bbt_t ph, bbt_t nph)
-{
-    int channel, pitch;
-    event* start;
-    event* play;
-
-    for (channel = 0; channel < 16; ++channel)
-    {
-        start = midiport->start[channel];
-        play = midiport->play[channel];
-
-        for (pitch = 0; pitch < 128; ++pitch)
-        {
-            if (!start[pitch].flags)
-                continue;
-
-            #ifndef NDEBUG
-            EVENT_IS(&start[pitch], EV_STATUS_ON | EV_TYPE_NOTE);
-            #endif
-
-            event_copy(&play[pitch], &start[pitch]);
-            start[pitch].flags = 0;
         }
     }
 }
@@ -253,33 +225,13 @@ void moport_rt_pull_playing_and_empty(  moport* midiport,
                                         evport* grid_intersort)
 {
     int channel, pitch;
-    event* start;
-    event* play;
 
     for (channel = 0; channel < 16; ++channel)
     {
-        start = midiport->start[channel];
-        play = midiport->play[channel];
+        event* play = midiport->play[channel];
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
-            if (start[pitch].flags)
-            {
-                start[pitch].pos = 0;
-                start[pitch].note_dur = 1;
-                start[pitch].box_release = 2;/*ph;*/
-
-                EVENT_SET_STATUS_OFF( &start[pitch] );
-
-                if (!evport_write_event(grid_intersort, &start[pitch]))
-                {
-                    WARNING("failed to write start-event "
-                            "to grid intersort\n");
-                }
-
-                start[pitch].flags = 0;
-            }
-
             if (play[pitch].flags)
             {
                 play[pitch].pos = 0;
@@ -304,33 +256,13 @@ void moport_rt_pull_playing_and_empty(  moport* midiport,
 void moport_event_dump(moport* midiport)
 {
     int channel, pitch;
-    event* start;
-    event* play;
     DMESSAGE("midiport:%p\n",midiport);
     DMESSAGE("moport dump: \"%s\"\n", midiport->name);
-
-    DMESSAGE("starting:\n");
-    for (channel = 0; channel < 16; ++channel)
-    {
-        start = midiport->start[channel];
-
-        for (pitch = 0; pitch < 128; ++pitch)
-        {
-            if (start[pitch].flags)
-            {
-                event_dump(&start[pitch]);
-
-                #ifndef NDEBUG
-                EVENT_IS(&start[pitch], EV_STATUS_ON | EV_TYPE_NOTE);
-                #endif
-            }
-        }
-    }
-
     DMESSAGE("playing:\n");
+
     for (channel = 0; channel < 16; ++channel)
     {
-        play = midiport->play[channel];
+        event* play = midiport->play[channel];
 
         for (pitch = 0; pitch < 128; ++pitch)
         {
@@ -346,32 +278,3 @@ void moport_event_dump(moport* midiport)
     }
 }
 
-
-#ifdef GRID_DEBUG
-bool moport_event_in_start(moport* mo, event* ev)
-{
-    int c, p;
-    event* start;
-    for (c = 0; c < 16; ++c)
-    {
-        start = mo->start[c];
-        for (p = 0; p < 128; ++p)
-        {
-            if (start[p].flags)
-            {
-                if (start[p].pos ==             ev->pos
-                 && start[p].note_dur ==        ev->note_dur
-                 && start[p].note_pitch ==      ev->note_pitch
-                 && start[p].note_velocity ==   ev->note_velocity
-                 && start[p].box.x ==           ev->box.x
-                 && start[p].box.y ==           ev->box.y
-                 && start[p].box_release ==     ev->box_release)
-                {
-                    return 1;
-                }
-            }
-        }
-    }
-    return 0;
-}
-#endif
