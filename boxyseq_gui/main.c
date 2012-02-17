@@ -1,6 +1,5 @@
 #include "boxy_sequencer.h"
 #include "debug.h"
-#include "event_buffer.h"
 #include "gui_main.h"
 #include "jack_process.h"
 #include "musical_scale.h"
@@ -10,7 +9,6 @@
 #include <unistd.h>
 
 pattern*    new_pat(pattern_manager* patman,
-                    int evtype,
                     int ch,
                     int steps,
                     int count,
@@ -52,7 +50,7 @@ pattern*    new_pat(pattern_manager* patman,
         for (j = 0; j < simul; ++j)
         {
             event* ev = lnode_data(evlist_add_event_new(el, t));
-            EVENT_SET_TYPE( ev, evtype );
+            EVENT_SET_TYPE( ev, EV_TYPE_NOTE );
             EVENT_SET_CHANNEL( ev, ch );
             ev->note_dur = dur;
             ev->box_release = rel;
@@ -127,18 +125,15 @@ int main(int argc, char** argv)
     patport1 = evport_manager_evport_new(patportman, "patport1",
                                                     RT_EVLIST_SORT_POS);
 
-    pat0 = new_pat(patman, EV_TYPE_NOTE, 2, 2, 2, 0.0,
-                                        1, 1.25, 2.05, 4,5,4,5);
+    pat0 = new_pat(patman, 2, 6, 6, 0.0,    1, 1.25, 12.05, 4,5,4,5);
     pattern_set_output_port(pat0, patport1);
     pattern_update_rt_data(pat0);
 
-    pat1 = new_pat(patman, EV_TYPE_NOTE, 1, 16, 16, 0.1,
-                                        1, 0.5, 31.4, 2,3,2,3);
+    pat1 = new_pat(patman, 1, 12, 12, 0.1,  1, 0.5, 11.4, 5,6,5,6);
     pattern_set_output_port(pat1, patport1);
     pattern_update_rt_data(pat1);
 
-    pat2 = new_pat(patman, EV_TYPE_NOTE, 0, 8, 8, 0.0,
-                                        1, 1.75, 3.85, 8,9,8,9);
+    pat2 = new_pat(patman, 0, 18, 18, 0.0,  1, 2.75, 10.85, 6,7,6,7);
     pattern_set_output_port(pat2, patport1);
     pattern_update_rt_data(pat2);
 

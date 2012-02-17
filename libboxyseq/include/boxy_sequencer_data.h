@@ -19,15 +19,13 @@ struct boxy_sequencer
     moport_manager*     moports;
 
     evport_manager* ports_pattern;
-    evport_manager* ports_midi_out;
 
     grid*       gr;
 
-    evbuf*      ui_note_on_buf;
-    evbuf*      ui_note_off_buf;
-    evbuf*      ui_unplace_buf;
-
-    evbuf*      ui_input_buf;
+    jack_ringbuffer_t*  ui_note_on_buf;
+    jack_ringbuffer_t*  ui_note_off_buf;
+    jack_ringbuffer_t*  ui_unplace_buf;
+    jack_ringbuffer_t*  ui_input_buf;
 
     evlist*     ui_eventlist; /* stores collect events from buffers */
 

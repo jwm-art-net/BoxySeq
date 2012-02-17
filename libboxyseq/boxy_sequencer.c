@@ -41,22 +41,35 @@ boxyseq* boxyseq_new(int argc, char** argv)
     if (!(bs->gr = grid_new()))
         goto fail6;
 
-    if (!(bs->ui_note_on_buf =  evbuf_new(DEFAULT_EVBUF_SIZE,
-                                            "ui_note_on_buf")))
+    bs->ui_note_on_buf = jack_ringbuffer_create(DEFAULT_EVBUF_SIZE
+                                                        * sizeof(event));
+    if (!bs->ui_note_on_buf)
         goto fail7;
 
-    if (!(bs->ui_note_off_buf = evbuf_new(DEFAULT_EVBUF_SIZE,
-                                            "ui_note_off_buf")))
+    bs->ui_note_off_buf = jack_ringbuffer_create(DEFAULT_EVBUF_SIZE
+                                                        * sizeof(event));
+    if (!bs->ui_note_off_buf)
         goto fail8;
 
-    if (!(bs->ui_unplace_buf =  evbuf_new(DEFAULT_EVBUF_SIZE,
-                                            "ui_unplace_buf")))
+    bs->ui_unplace_buf = jack_ringbuffer_create(DEFAULT_EVBUF_SIZE
+                                                        * sizeof(event));
+    if (!bs->ui_unplace_buf)
         goto fail9;
 
-    if (!(bs->ui_input_buf =    evbuf_new(DEFAULT_EVBUF_SIZE,
-                                            "ui_input_buf")))
+    bs->ui_input_buf = jack_ringbuffer_create(DEFAULT_EVBUF_SIZE
+                                                        * sizeof(event));
+    if (!bs->ui_input_buf)
         goto fail10;
 
+    /*
+    if (!jack_ringbuffer_mlock(bs->ui_note_on_buf)
+     || !jack_ringbuffer_mlock(bs->ui_note_off_buf)
+     || !jack_ringbuffer_mlock(bs->ui_unplace_buf)
+     || !jack_ringbuffer_mlock(bs->ui_input_buf))
+    {
+        goto fail11;
+    }
+    */
     if (!(bs->ui_eventlist = evlist_new()))
         goto fail11;
 
@@ -68,10 +81,10 @@ boxyseq* boxyseq_new(int argc, char** argv)
 
     return bs;
 
-fail11: evbuf_free(bs->ui_input_buf);
-fail10: evbuf_free(bs->ui_unplace_buf);
-fail9:  evbuf_free(bs->ui_note_off_buf);
-fail8:  evbuf_free(bs->ui_note_on_buf);
+fail11: jack_ringbuffer_free(bs->ui_input_buf);
+fail10: jack_ringbuffer_free(bs->ui_unplace_buf);
+fail9:  jack_ringbuffer_free(bs->ui_note_off_buf);
+fail8:  jack_ringbuffer_free(bs->ui_note_on_buf);
 fail7:  grid_free(bs->gr);
 fail6:  evport_manager_free(bs->ports_pattern);
 fail5:  moport_manager_free(bs->moports);
@@ -91,10 +104,10 @@ void boxyseq_free(boxyseq* bs)
 
     evlist_free(bs->ui_eventlist);
 
-    evbuf_free(bs->ui_input_buf);
-    evbuf_free(bs->ui_unplace_buf);
-    evbuf_free(bs->ui_note_off_buf);
-    evbuf_free(bs->ui_note_on_buf);
+    jack_ringbuffer_free(bs->ui_input_buf);
+    jack_ringbuffer_free(bs->ui_unplace_buf);
+    jack_ringbuffer_free(bs->ui_note_off_buf);
+    jack_ringbuffer_free(bs->ui_note_on_buf);
 
     grid_free(bs->gr);
 
@@ -151,17 +164,17 @@ moport_manager* boxyseq_moport_manager(boxyseq*bs)
 }
 
 
-evbuf* boxyseq_ui_note_on_buf(const boxyseq* bs)
+jack_ringbuffer_t* boxyseq_ui_note_on_buf(const boxyseq* bs)
 {
     return bs->ui_note_on_buf;
 }
 
-evbuf* boxyseq_ui_note_off_buf(const boxyseq* bs)
+jack_ringbuffer_t* boxyseq_ui_note_off_buf(const boxyseq* bs)
 {
     return bs->ui_note_off_buf;
 }
 
-evbuf* boxyseq_ui_unplace_buf(const boxyseq* bs)
+jack_ringbuffer_t* boxyseq_ui_unplace_buf(const boxyseq* bs)
 {
     return bs->ui_unplace_buf;
 }
@@ -183,7 +196,7 @@ void boxyseq_ui_place_static_block( const boxyseq* bs,
     EVENT_SET_TYPE( &ev, EV_TYPE_STATIC );
     EVENT_SET_STATUS_ON( &ev );
 
-    if (!evbuf_write(bs->ui_input_buf, &ev))
+/*    if (!evbuf_write(bs->ui_input_buf, &ev))*/
         WARNING("unable to create user block\n");
 }
 
@@ -199,14 +212,17 @@ void boxyseq_rt_play(boxyseq* bs,
                      bool repositioned,
                      bbt_t ph, bbt_t nph)
 {
-    event ev;
     evport* intersort;
 
     if (bs->rt_quitting)
         return;
 
-    while(evbuf_read(bs->ui_input_buf, &ev))
+    while (jack_ringbuffer_read_space(bs->ui_input_buf) >= sizeof(event))
     {
+        event ev;
+
+        jack_ringbuffer_read(bs->ui_input_buf, (char*)&ev, sizeof(ev));
+
         switch(EVENT_GET_TYPE( &ev ))
         {
         case EV_TYPE_SHUTDOWN:
@@ -216,7 +232,6 @@ void boxyseq_rt_play(boxyseq* bs,
             return;
 
         case EV_TYPE_STATIC:
-/*            MESSAGE("user-block placement not implemented :-(\n");*/
             if (!grid_rt_add_block_area(bs->gr, ev.box.x, ev.box.y,
                                                 ev.box.w, ev.box.h))
             {
@@ -235,17 +250,11 @@ void boxyseq_rt_play(boxyseq* bs,
     }
 
     intersort = grid_get_intersort(bs->gr);
-
     moport_manager_rt_pull_ending(bs->moports, ph, nph, intersort);
-
     evport_manager_rt_clear_all(bs->ports_pattern);
-
     pattern_manager_rt_play(bs->patterns, repositioned, ph, nph);
-
     grbound_manager_rt_pull_starting(bs->grbounds, intersort);
-
     grid_rt_process_blocks(bs->gr, ph, nph);
-
     grid_rt_process_intersort(bs->gr, ph, nph, nframes,
                         jackdata_rt_transport_frames_per_tick(bs->jd));
 }
@@ -254,6 +263,9 @@ void boxyseq_rt_play(boxyseq* bs,
 void boxyseq_rt_clear(boxyseq* bs, bbt_t ph, bbt_t nph,
                                     jack_nframes_t nframes)
 {
+    event ev;
+    size_t sz;
+
     evport* intersort = grid_get_intersort(bs->gr);
     evport_manager_rt_clear_all(bs->ports_pattern);
     moport_manager_rt_pull_playing_and_empty(bs->moports, 0, 4, intersort);
@@ -261,6 +273,14 @@ void boxyseq_rt_clear(boxyseq* bs, bbt_t ph, bbt_t nph,
     grid_rt_flush_blocks_to_intersort(bs->gr);
     grid_rt_flush_intersort(bs->gr, 0, 4, nframes,
                             jackdata_rt_transport_frames_per_tick(bs->jd));
+
+    EVENT_SET_TYPE(&ev, EV_TYPE_CLEAR);
+    sz = jack_ringbuffer_write(bs->ui_unplace_buf, (char*)&ev, sizeof(ev));
+
+    if (sz != sizeof(ev))
+    {
+        DWARNING("failed to queue clear-event\n");
+    }
 }
 
 
@@ -268,11 +288,15 @@ void boxyseq_shutdown(boxyseq* bs)
 {
     struct timespec ts;
     event ev;
+    size_t sz;
 
     EVENT_SET_TYPE( &ev, EV_TYPE_SHUTDOWN );
+    sz = jack_ringbuffer_write(bs->ui_input_buf, (char*)&ev, sizeof(ev));
 
-    if (!evbuf_write(bs->ui_input_buf, &ev))
-        WARNING("failed to queue shutdown event\n");
+    if (sz != sizeof(ev))
+    {
+        WARNING("failed to queue shutdown-event\n");
+    }
 
     /*  wait for RT thread to discover what we've done...
         ...by waiting for a tenth of a second.
@@ -286,18 +310,21 @@ void boxyseq_shutdown(boxyseq* bs)
 int boxyseq_ui_collect_events(boxyseq* bs)
 {
     int ret = 0;
-    event evin;
 
-    while(evbuf_read(bs->ui_unplace_buf, &evin))
+    while (jack_ringbuffer_read_space(bs->ui_unplace_buf) >= sizeof(event))
     {
-        lnode* ln = evlist_head(bs->ui_eventlist);
+        lnode* ln;
+        event evin;
+
+        jack_ringbuffer_read(bs->ui_unplace_buf, (char*)&evin,
+                                                  sizeof(evin));
 
         if (EVENT_IS_TYPE( &evin, EV_TYPE_CLEAR ))
         {
-            evlist_select_all(bs->ui_eventlist, 1);
-            evlist_delete(bs->ui_eventlist, 1);
-            ln = 0;
+            DWARNING("\nui eventlist delete events..\n\n");
         }
+
+        ln = evlist_head(bs->ui_eventlist);
 
         while (ln)
         {
@@ -318,9 +345,14 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         ret = 1;
     }
 
-    while(evbuf_read(bs->ui_note_off_buf, &evin))
+    while (jack_ringbuffer_read_space(bs->ui_note_off_buf) >= sizeof(event))
     {
-        lnode* ln = evlist_head(bs->ui_eventlist);
+        lnode* ln;
+        event evin;
+
+        jack_ringbuffer_read(bs->ui_note_off_buf, (char*)&evin,
+                                                   sizeof(evin));
+        ln = evlist_head(bs->ui_eventlist);
 
         while (ln)
         {
@@ -339,8 +371,12 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         ret = 1;
     }
 
-    while(evbuf_read(bs->ui_note_on_buf, &evin))
+    while (jack_ringbuffer_read_space(bs->ui_note_on_buf) >= sizeof(event))
     {
+        event evin;
+
+        jack_ringbuffer_read(bs->ui_note_on_buf, (char*)&evin,
+                                                  sizeof(evin));
         evlist_add_event_copy(bs->ui_eventlist, &evin);
         ret = 1;
     }

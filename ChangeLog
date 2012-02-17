@@ -2,6 +2,9 @@
 
     * libboxyseq/midi_out_port.[ch]: removed 'start' array.
 
+    * libboxyseq/event_buffer.[ch]: deleted and replaced by usage of
+      the JACK ringbuffer.
+
 2012-02-16  James Morris  <james@jwm-art.net>
 
     * since the reordering work, a bug became apparent when transport

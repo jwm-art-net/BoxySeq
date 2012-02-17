@@ -12,7 +12,6 @@
 
 #include <jack/midiport.h>
 
-
 #include "include/jack_process_data.h"
 
 

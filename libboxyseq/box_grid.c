@@ -28,9 +28,9 @@ struct box_grid
                             */
     evport* block_port;
 
-    evbuf*     ui_note_on_buf;
-    evbuf*     ui_note_off_buf;
-    evbuf*     ui_unplace_buf;
+    jack_ringbuffer_t*  ui_note_on_buf;
+    jack_ringbuffer_t*  ui_note_off_buf;
+    jack_ringbuffer_t*  ui_unplace_buf;
 
     freespace*  fs;
 };
@@ -109,19 +109,19 @@ freespace*  grid_get_freespace(grid* gr)
 }
 
 
-void grid_set_ui_note_on_buf(grid* gr, evbuf* evb)
+void grid_set_ui_note_on_buf(grid* gr, jack_ringbuffer_t* rb)
 {
-    gr->ui_note_on_buf = evb;
+    gr->ui_note_on_buf = rb;
 }
 
-void grid_set_ui_note_off_buf(grid* gr, evbuf* evb)
+void grid_set_ui_note_off_buf(grid* gr, jack_ringbuffer_t* rb)
 {
-    gr->ui_note_off_buf = evb;
+    gr->ui_note_off_buf = rb;
 }
 
-void grid_set_ui_unplace_buf(grid* gr, evbuf* evb)
+void grid_set_ui_unplace_buf(grid* gr, jack_ringbuffer_t* rb)
 {
-    gr->ui_unplace_buf = evb;
+    gr->ui_unplace_buf = rb;
 }
 
 
@@ -156,6 +156,10 @@ void grid_rt_flush_intersort(grid* gr, bbt_t ph, bbt_t nph,
 
         if (EVENT_IS_TYPE( &ev, EV_TYPE_NOTE ))
         {
+            #ifndef NDEBUG
+            size_t sz;
+            #endif
+
             EVENT_SET_TYPE( &ev, EV_TYPE_BLOCK );
             EVENT_SET_STATUS_OFF( &ev );
 
@@ -173,14 +177,33 @@ void grid_rt_flush_intersort(grid* gr, bbt_t ph, bbt_t nph,
             else
                 evport_write_event(gr->block_port, &ev);
 
-            evbuf_write(gr->ui_note_off_buf, &ev);
+            #ifndef NDEBUG
+            sz =
+            #endif
+            jack_ringbuffer_write(gr->ui_note_off_buf, (char*)&ev,
+                                                             sizeof(ev));
+            #ifndef NDEBUG
+            if (sz != sizeof(ev))
+                DWARNING("failed to queue note off event to ui\n");
+            #endif
         }
         else
         {
+            #ifndef NDEBUG
+            size_t sz;
+            #endif
+
             freespace_add(gr->fs,   ev.box.x,   ev.box.y,
                                     ev.box.w,   ev.box.h );
-
-            evbuf_write(gr->ui_unplace_buf, &ev);
+            #ifndef NDEBUG
+            sz =
+            #endif
+            jack_ringbuffer_write(gr->ui_unplace_buf, (char*)&ev,
+                                                             sizeof(ev));
+            #ifndef NDEBUG
+            if (sz != sizeof(ev))
+                DWARNING("failed to queue unplace event to ui\n");
+            #endif
         }
     }
 }
@@ -201,6 +224,10 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
 
     while(evport_read_and_remove_event(gr->intersort, &ev))
     {
+        #ifndef NDEBUG
+        size_t sz;
+        #endif
+
         grbound* rtgrb = rtdata_data(ev.grb->rt);
 
         #ifndef NDEBUG
@@ -270,7 +297,16 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
 
                 freespace_remove(gr->fs,    ev.box.x, ev.box.y,
                                             ev.box.w, ev.box.h );
-                evbuf_write(gr->ui_note_on_buf, &ev);
+
+                #ifndef NDEBUG
+                sz =
+                #endif
+                jack_ringbuffer_write(gr->ui_note_on_buf, (char*)&ev,
+                                                             sizeof(ev));
+                #ifndef NDEBUG
+                if (sz != sizeof(ev))
+                    DWARNING("failed to queue note on event to ui\n");
+                #endif
 
                 /* check for events which end aswell as begin this cycle */
                 if (EVENT_IS_TYPE( &ev, EV_TYPE_NOTE ))
@@ -316,14 +352,29 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
                 else
                     evport_write_event(gr->block_port, &ev);
 
-                evbuf_write(gr->ui_note_off_buf, &ev);
+                #ifndef NDEBUG
+                sz =
+                #endif
+                jack_ringbuffer_write(gr->ui_note_off_buf, (char*)&ev,
+                                                             sizeof(ev));
+                #ifndef NDEBUG
+                if (sz != sizeof(ev))
+                    DWARNING("failed to queue unplace event to ui\n");
+                #endif
             }
             else
             {
                 freespace_add(gr->fs,   ev.box.x,   ev.box.y,
                                         ev.box.w,   ev.box.h );
-
-                evbuf_write(gr->ui_unplace_buf, &ev);
+                #ifndef NDEBUG
+                sz =
+                #endif
+                jack_ringbuffer_write(gr->ui_unplace_buf, (char*)&ev,
+                                                             sizeof(ev));
+                #ifndef NDEBUG
+                if (sz != sizeof(ev))
+                    DWARNING("failed to queue unplace event to ui\n");
+                #endif
             }
         }
     }

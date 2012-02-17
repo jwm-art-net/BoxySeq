@@ -9,7 +9,6 @@ extern "C" {
 
 #include "boxyseq_types.h"
 #include "common.h"
-#include "event_buffer.h"
 #include "event_port_manager.h"
 #include "freespace_state.h"
 #include "grbound_manager.h"
@@ -21,6 +20,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <jack/jack.h>
+#include <jack/ringbuffer.h>
 
 
 #include "include/boxy_sequencer_data.h"
@@ -40,13 +40,13 @@ jackdata*   boxyseq_jackdata(boxyseq*);
 
 pattern_manager*    boxyseq_pattern_manager(boxyseq*);
 grbound_manager*    boxyseq_grbound_manager(boxyseq*);
-moport_manager*     boxyseq_moport_manager(boxyseq*);
+moport_manager*     boxyseq_moport_manager( boxyseq*);
 evport_manager*     boxyseq_pattern_port_manager(boxyseq*);
 
 
-evbuf*          boxyseq_ui_note_on_buf(const boxyseq*);
-evbuf*          boxyseq_ui_note_off_buf(const boxyseq*);
-evbuf*          boxyseq_ui_unplace_buf(const boxyseq*);
+jack_ringbuffer_t*  boxyseq_ui_note_on_buf( const boxyseq*);
+jack_ringbuffer_t*  boxyseq_ui_note_off_buf(const boxyseq*);
+jack_ringbuffer_t*  boxyseq_ui_unplace_buf( const boxyseq*);
 
 void            boxyseq_ui_place_static_block(  const boxyseq*,
                                                 int x,      int y,

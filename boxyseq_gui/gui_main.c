@@ -2,7 +2,6 @@
 
 #include "boxy_sequencer.h"
 #include "debug.h"
-#include "event_buffer.h"
 #include "gui_grid.h"
 #include "grid_boundary.h"
 

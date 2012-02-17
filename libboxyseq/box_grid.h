@@ -8,10 +8,10 @@ extern "C" {
 
 #include <stdbool.h>
 #include <jack/jack.h>
+#include <jack/ringbuffer.h>
 
 #include "boxyseq_types.h"
 #include "common.h"
-#include "event_buffer.h"
 #include "event_port.h"
 #include "freespace_state.h"
 
@@ -25,9 +25,9 @@ evport*     grid_get_intersort(grid*);
 freespace*  grid_get_freespace(grid*);
 
 /*  buffers read by user-interface for representation of events */
-void        grid_set_ui_note_on_buf(grid*, evbuf*);
-void        grid_set_ui_note_off_buf(grid*, evbuf*);
-void        grid_set_ui_unplace_buf(grid*, evbuf*);
+void        grid_set_ui_note_on_buf(    grid*, jack_ringbuffer_t*);
+void        grid_set_ui_note_off_buf(   grid*, jack_ringbuffer_t*);
+void        grid_set_ui_unplace_buf(    grid*, jack_ringbuffer_t*);
 
 /*void        grid_rt_process_intersort(grid*, bbt_t ph, bbt_t nph);*/
 

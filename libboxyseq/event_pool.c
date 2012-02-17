@@ -2,7 +2,6 @@
 
 
 #include "debug.h"
-#include "event_buffer.h"
 
 #include <stdlib.h>
 #include <string.h>
