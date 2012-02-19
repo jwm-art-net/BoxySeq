@@ -266,6 +266,8 @@ void boxyseq_rt_clear(boxyseq* bs, bbt_t ph, bbt_t nph,
     event ev;
     size_t sz;
 
+    DMESSAGE("clearing... ph:%d nph:%d\n", ph, nph);
+
     evport* intersort = grid_get_intersort(bs->gr);
     evport_manager_rt_clear_all(bs->ports_pattern);
     moport_manager_rt_pull_playing_and_empty(bs->moports, 0, 4, intersort);
@@ -310,6 +312,7 @@ void boxyseq_shutdown(boxyseq* bs)
 int boxyseq_ui_collect_events(boxyseq* bs)
 {
     int ret = 0;
+    int dump = 0;
 
     while (jack_ringbuffer_read_space(bs->ui_unplace_buf) >= sizeof(event))
     {
@@ -322,7 +325,12 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         if (EVENT_IS_TYPE( &evin, EV_TYPE_CLEAR ))
         {
             DWARNING("\nui eventlist delete events..\n\n");
+            dump = 1;
+            continue;
         }
+
+  //      if (dump)
+            event_dump(&evin);
 
         ln = evlist_head(bs->ui_eventlist);
 
@@ -345,6 +353,9 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         ret = 1;
     }
 
+    if (dump)
+        DMESSAGE("------ read ui note off buf\n");
+
     while (jack_ringbuffer_read_space(bs->ui_note_off_buf) >= sizeof(event))
     {
         lnode* ln;
@@ -353,6 +364,9 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         jack_ringbuffer_read(bs->ui_note_off_buf, (char*)&evin,
                                                    sizeof(evin));
         ln = evlist_head(bs->ui_eventlist);
+
+//        if (dump)
+            event_dump(&evin);
 
         while (ln)
         {
@@ -371,12 +385,19 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         ret = 1;
     }
 
+    if (dump)
+        DMESSAGE("------ read ui note on buf\n");
+
     while (jack_ringbuffer_read_space(bs->ui_note_on_buf) >= sizeof(event))
     {
         event evin;
 
         jack_ringbuffer_read(bs->ui_note_on_buf, (char*)&evin,
                                                   sizeof(evin));
+
+//        if (dump)
+            event_dump(&evin);
+
         evlist_add_event_copy(bs->ui_eventlist, &evin);
         ret = 1;
     }

@@ -51,6 +51,13 @@ else (JACK_FOUND)
   message(FATAL_ERROR "Jack >= 0.118.0 not found.")
 endif (JACK_FOUND)
 
+pkg_check_modules(GLIB2 REQUIRED glib-2.0)
+if (GLIB2_FOUND)
+  message(STATUS "Found glib2 ${GLIB2_VERSION}")
+else (GLIB2_FOUND)
+  message(FATAL_ERROR "glib2 not found.")
+endif (GLIB2_FOUND)
+
 
 ADD_SUBDIRECTORY( libboxyseq )
 ADD_SUBDIRECTORY( boxyseq_gui )
