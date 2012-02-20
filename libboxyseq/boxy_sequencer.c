@@ -314,6 +314,20 @@ int boxyseq_ui_collect_events(boxyseq* bs)
     int ret = 0;
     int dump = 0;
 
+    while (jack_ringbuffer_read_space(bs->ui_note_on_buf) >= sizeof(event))
+    {
+        event evin;
+
+        jack_ringbuffer_read(bs->ui_note_on_buf, (char*)&evin,
+                                                  sizeof(evin));
+
+        if (dump)
+            event_dump(&evin);
+
+        evlist_add_event_copy(bs->ui_eventlist, &evin);
+        ret = 1;
+    }
+
     while (jack_ringbuffer_read_space(bs->ui_unplace_buf) >= sizeof(event))
     {
         lnode* ln;
@@ -324,12 +338,12 @@ int boxyseq_ui_collect_events(boxyseq* bs)
 
         if (EVENT_IS_TYPE( &evin, EV_TYPE_CLEAR ))
         {
-            DWARNING("\nui eventlist delete events..\n\n");
+            DMESSAGE("\nui eventlist delete events..\n\n");
             dump = 1;
             continue;
         }
 
-  //      if (dump)
+        if (dump)
             event_dump(&evin);
 
         ln = evlist_head(bs->ui_eventlist);
@@ -365,7 +379,7 @@ int boxyseq_ui_collect_events(boxyseq* bs)
                                                    sizeof(evin));
         ln = evlist_head(bs->ui_eventlist);
 
-//        if (dump)
+       if (dump)
             event_dump(&evin);
 
         while (ln)
@@ -387,20 +401,6 @@ int boxyseq_ui_collect_events(boxyseq* bs)
 
     if (dump)
         DMESSAGE("------ read ui note on buf\n");
-
-    while (jack_ringbuffer_read_space(bs->ui_note_on_buf) >= sizeof(event))
-    {
-        event evin;
-
-        jack_ringbuffer_read(bs->ui_note_on_buf, (char*)&evin,
-                                                  sizeof(evin));
-
-//        if (dump)
-            event_dump(&evin);
-
-        evlist_add_event_copy(bs->ui_eventlist, &evin);
-        ret = 1;
-    }
 
     return ret;
 }

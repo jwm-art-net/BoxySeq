@@ -120,9 +120,16 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
 
         ev = (event*)lnode_data(ln);
 
-        r = ev->box.r / 255.0f;
-        g = ev->box.g / 255.0f;
-        b = ev->box.b / 255.0f;
+        if (ggr->action_grb && ggr->action_grb == ev->grb)
+        {
+            grbound_rgb_float_get(ggr->action_grb, &r, &g, &b);
+        }
+        else
+        {
+            r = ev->box.r / 255.0f;
+            g = ev->box.g / 255.0f;
+            b = ev->box.b / 255.0f;
+        }
 
         if (EVENT_IS_STATUS_OFF( ev )
          || EVENT_IS_TYPE( ev, EV_TYPE_BLOCK ))

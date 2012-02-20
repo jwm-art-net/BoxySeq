@@ -81,6 +81,7 @@ int main(int argc, char** argv)
     pattern*    pat0 = 0;
     pattern*    pat1 = 0;
     pattern*    pat2 = 0;
+    pattern*    pat3 = 0;
     grbound*    grb;
     moport*     mop1;
     evport*     patport1;
@@ -110,7 +111,6 @@ int main(int argc, char** argv)
 
 
 /*
-                    int evtype,
                     int ch,
                     int steps,
                     int count,
@@ -125,17 +125,24 @@ int main(int argc, char** argv)
     patport1 = evport_manager_evport_new(patportman, "patport1",
                                                     RT_EVLIST_SORT_POS);
 
-    pat0 = new_pat(patman, 2, 6, 6, 0.0,    1, 1.25, 12.05, 4,5,4,5);
+    patport2 = evport_manager_evport_new(patportman, "patport2",
+                                                    RT_EVLIST_SORT_POS);
+
+    pat0 = new_pat(patman, 0,   16, 8, 0.0,     2, 1.25, 8.75,  8,9,2,3);
     pattern_set_output_port(pat0, patport1);
     pattern_update_rt_data(pat0);
 
-    pat1 = new_pat(patman, 1, 12, 12, 0.1,  1, 0.5, 11.4, 5,6,5,6);
-    pattern_set_output_port(pat1, patport1);
+    pat1 = new_pat(patman, 0,   16, 8, 8.0,     2, 1.25, 8.75,  2,3,8,9);
+    pattern_set_output_port(pat1, patport2);
     pattern_update_rt_data(pat1);
 
-    pat2 = new_pat(patman, 0, 18, 18, 0.0,  1, 2.75, 10.85, 6,7,6,7);
+    pat2 = new_pat(patman, 1,   8, 4, 0.0,      2, 3.5, 5.5,    4,5,12,13);
     pattern_set_output_port(pat2, patport1);
     pattern_update_rt_data(pat2);
+
+    pat3 = new_pat(patman, 1,   8, 4, 4.0,      2, 3.5, 5.5,    12,13,4,5);
+    pattern_set_output_port(pat3, patport2);
+    pattern_update_rt_data(pat3);
 
     mop1 = moport_manager_moport_new(mopman);
 
@@ -151,7 +158,7 @@ int main(int argc, char** argv)
 
     srand(time(0));
 
-    for (i = 0; i < 1; ++i)
+    for (i = 0; i < 2; ++i)
     {
         int x, y, w, h;
 
@@ -168,7 +175,7 @@ int main(int argc, char** argv)
 
         grb = grbound_manager_grbound_new(grbman);
         grbound_fsbound_set(grb, x, y, w, h);
-        grbound_set_input_port(grb, patport1);
+        grbound_set_input_port(grb, i == 0 ? patport1 : patport2);
 
         grbound_midi_out_port_set(grb, mop1);
 

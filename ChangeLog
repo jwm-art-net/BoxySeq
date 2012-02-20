@@ -1,3 +1,11 @@
+2012-02-20  James Morris  <james@jwm-art.net>
+
+    * libboxyseq/boxysequencer.c boxyseq_ui_collect_events: fix bug
+      where events were not removed from ui_eventlist and consequently
+      hung around in the display after transport stop. noticed since 
+      event re-ordering changes, fixed by moving detection of events in 
+      ui_note_on_buf forward before processing of ui_unplace_buf.
+
 2012-02-17  James Morris  <james@jwm-art.net>
 
     * libboxyseq/midi_out_port.[ch]: removed 'start' array.
