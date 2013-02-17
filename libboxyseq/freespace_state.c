@@ -555,7 +555,8 @@ retry:
 }
 
 
-bool freespace_find( freespace* fs,  basebox* boundary,
+bool freespace_find( freespace* fs,
+                        int bx, int by, int bw, int bh,
                         int flags,
                         int width,      int height,
                         int* resultx,   int* resulty    )
@@ -567,11 +568,11 @@ bool freespace_find( freespace* fs,  basebox* boundary,
     DMESSAGE("\n---------------------------\n"
              "flags:%s\tarea w:%d, h:%d\n"
              "boundary x:%d,y:%d, w:%d, h:%d\n", pstr, width, height,
-             boundary->x, boundary->y, boundary->w, boundary->h);
+             bx, by, bw, bh);
     #endif
 
-    if (width  < 1 || width  > boundary->w
-     || height < 1 || height > boundary->h)
+    if (width  < 1 || width  > bw
+     || height < 1 || height > bh)
     {
         #ifdef FSDEBUG
         DWARNING("\ninvalid area or area does not fit in boundary\n");
@@ -584,16 +585,14 @@ bool freespace_find( freespace* fs,  basebox* boundary,
         if (flags & FSPLACE_LEFT_TO_RIGHT)
         {
             return row_smart_l2r(fs->row_buf,
-                                    boundary->x, boundary->y,
-                                    boundary->w, boundary->h,
+                                    bx, by, bw, bh,
                                     flags,
                                     width, height, resultx, resulty);
         }
         else
         {
             return row_smart_r2l(fs->row_buf,
-                                    boundary->x, boundary->y,
-                                    boundary->w, boundary->h,
+                                    bx, by, bw, bh,
                                     flags,
                                     width, height, resultx, resulty);
         }
@@ -605,8 +604,8 @@ bool freespace_find( freespace* fs,  basebox* boundary,
         */
         bool ret;
 
-        int rx = FSWIDTH - boundary->y - boundary->h;
-        int ry = boundary->x;
+        int rx = FSWIDTH - by - bh;
+        int ry = bx;
 
         int rflags = (flags & FSPLACE_LEFT_TO_RIGHT)
                             ? FSPLACE_TOP_TO_BOTTOM
@@ -621,23 +620,21 @@ bool freespace_find( freespace* fs,  basebox* boundary,
         DMESSAGE("\n---------------------------\n"
              "rflags:%s\tarea w:%d, h:%d\n"
              "boundary rx:%d, ry:%d, w:%d, h:%d\n", pstr, width, height,
-             rx, ry, boundary->w, boundary->h);
+             rx, ry, bw, bh);
         #endif
 
 
         if (rflags & FSPLACE_LEFT_TO_RIGHT)
         {
             ret = row_smart_l2r(fs->col_buf,
-                                    rx,     ry,
-                                    boundary->h, boundary->w,
+                                    rx, ry, bh, bw,
                                     rflags,
                                     height, width, resultx, resulty);
         }
         else
         {
             ret = row_smart_r2l(fs->col_buf,
-                                    rx,     ry,
-                                    boundary->h, boundary->w,
+                                    rx, ry, bh, bw,
                                     rflags,
                                     height, width, resultx, resulty);
         }

@@ -120,15 +120,15 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
 
         ev = (event*)lnode_data(ln);
 
-        if (ggr->action_grb && ggr->action_grb == ev->grb)
+        if (ggr->action_grb && ggr->action_grb == ev->data)
         {
             grbound_rgb_float_get(ggr->action_grb, &r, &g, &b);
         }
         else
         {
-            r = ev->box.r / 255.0f;
-            g = ev->box.g / 255.0f;
-            b = ev->box.b / 255.0f;
+            r = ev->r / 255.0f;
+            g = ev->g / 255.0f;
+            b = ev->b / 255.0f;
         }
 
         if (EVENT_IS_STATUS_OFF( ev )
@@ -140,8 +140,7 @@ static gboolean gui_grid_expose_event(  GtkWidget *widget,
         }
 
         cairo_set_source_rgb(cr, r, g, b);
-        cairo_rectangle(cr, ev->box.x+0.1, ev->box.y+0.1, 
-                            ev->box.w-0.1, ev->box.h-0.1);
+        cairo_rectangle(cr, ev->x+0.1, ev->y+0.1, ev->w-0.1, ev->h-0.1);
         cairo_fill(cr);
 
         ln = lnode_next(ln);

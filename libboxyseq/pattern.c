@@ -261,6 +261,10 @@ void pattern_rt_play(pattern* pat,  bool repositioned,
                                     bbt_t ph,
                                     bbt_t nph)
 {
+    #ifndef NDEBUG
+    bool evdumped = false;
+    #endif
+
     rt_pattern* rtpat;
     event*      events;
 
@@ -318,28 +322,41 @@ void pattern_rt_play(pattern* pat,  bool repositioned,
         if (play_event) /* store/restore to not modify pattern */
         {
             bbt_t opos = ev->pos;
-            bbt_t odur = ev->note_dur;
-            bbt_t orel = ev->box_release;
+            bbt_t odur = ev->dur;
+            bbt_t orel = ev->rel;
 
             /* FIXME:   weren't we going to have events where the
                         dimensions were specified rather than random?
             */
-            if (!ev->box.w)
-                ev->box.w = g_rand_int_range(rtpat->rnd, rtpat->width_min,
-                                                         rtpat->width_max);
-            if (!ev->box.h)
-                ev->box.h = g_rand_int_range(rtpat->rnd, rtpat->height_min,
-                                                         rtpat->height_max);
+            if (!ev->w)
+                ev->w = g_rand_int_range(rtpat->rnd, rtpat->width_min,
+                                                     rtpat->width_max);
+            if (!ev->h)
+                ev->h = g_rand_int_range(rtpat->rnd, rtpat->height_min,
+                                                     rtpat->height_max);
             ev->pos = evpos;
-            ev->note_dur += evpos;
-            ev->box_release += ev->note_dur;
+            ev->dur += evpos;
+            ev->rel += ev->dur;
 
-            if (!evport_write_event(rtpat->evout, ev))
-                WARNING("dropped event\n");
+            if (rtpat->evout)
+            {
+                if (!evport_write_event(rtpat->evout, ev))
+                    WARNING("dropped event\n");
+            }
+
+            #ifndef NDEBUG
+            if (!evdumped)
+            {
+                MESSAGE("ph:%d nph:%d\n", ph, nph);
+                evdumped = true;
+            }
+            #endif
+
+           /* EVENT_DUMP(ev); */
 
             ev->pos = opos;
-            ev->note_dur = odur;
-            ev->box_release = orel;
+            ev->dur = odur;
+            ev->rel = orel;
             evlast = ev;
         }
         ++ev;
@@ -487,7 +504,7 @@ void pattern_event_bbt( const pattern* pat,
 
     if (dur)
     {
-        tick =      ev->note_dur;
+        tick =      ev->dur;
         dur->bar =  tick / ticks_per_bar;
         tick -=     dur->bar * ticks_per_bar;
         dur->beat = tick / ticks_per_beat;

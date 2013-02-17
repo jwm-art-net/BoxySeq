@@ -12,9 +12,8 @@
 
 struct grid_boundary
 {
-    basebox     box;
+    event       ev;
     int         flags;
-    int         channel;
     int         scale_bin;
     int         scale_key;
 

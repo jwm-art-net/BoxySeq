@@ -77,8 +77,7 @@
 #include "include/event_port_data.h"
 
 
-evport* evport_new( evpool* pool,   const char* name,
-                    int id,         int rt_evlist_sort_flags  )
+evport* evport_new( evpool* pool,   const char* name, int id)
 {
     char tmp[80];
     evport* port = malloc(sizeof(*port));
@@ -93,7 +92,7 @@ evport* evport_new( evpool* pool,   const char* name,
 
     DMESSAGE("new event port \"%s\"\n",port->name);
 
-    port->data = rt_evlist_new(pool, rt_evlist_sort_flags, port->name);
+    port->data = rt_evlist_new(pool, port->name);
 
     if (!port->data)
         goto fail2;
@@ -206,14 +205,14 @@ void evport_pre_flush_check(evport* port)
         if (EVENT_IS_STATUS_ON( ev ))
         {
             DWARNING("pre-flushing \07\n");
-            event_dump(ev);
+            EVENT_DUMP(ev);
             rt_evlist_and_remove_event(port->data);
         }
         else
         {
             ev->pos = 0;
-            ev->note_dur = 1;
-            ev->box_release = 2;
+            ev->dur = 1;
+            ev->rel = 2;
         }
     }
 
@@ -238,7 +237,7 @@ void evport_dump(evport* port)
         rt_evlist_read_reset(port->data);
 
         while((ev = rt_evlist_read_event(port->data)))
-            event_dump(ev);
+            EVENT_DUMP(ev);
     }
 }
 #endif

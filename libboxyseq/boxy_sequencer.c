@@ -188,10 +188,10 @@ void boxyseq_ui_place_static_block( const boxyseq* bs,
 
     event_init(&ev);
 
-    ev.box.x = x;
-    ev.box.y = y;
-    ev.box.w = width;
-    ev.box.h = height;
+    ev.x = x;
+    ev.y = y;
+    ev.w = width;
+    ev.h = height;
 
     EVENT_SET_TYPE( &ev, EV_TYPE_STATIC );
     EVENT_SET_STATUS_ON( &ev );
@@ -232,15 +232,14 @@ void boxyseq_rt_play(boxyseq* bs,
             return;
 
         case EV_TYPE_STATIC:
-            if (!grid_rt_add_block_area(bs->gr, ev.box.x, ev.box.y,
-                                                ev.box.w, ev.box.h))
+            if (!grid_rt_add_block_area(bs->gr, ev.x, ev.y, ev.w, ev.h))
             {
                 WARNING("failed to add block-area\n");
             }
             else
             {
                 MESSAGE("placed block-area:x:%d, y:%d, w:%d, h:%d\n", 
-                        ev.box.x, ev.box.y, ev.box.w, ev.box.h);
+                        ev.x, ev.y, ev.w, ev.h);
             }
             break;
 
@@ -312,7 +311,6 @@ void boxyseq_shutdown(boxyseq* bs)
 int boxyseq_ui_collect_events(boxyseq* bs)
 {
     int ret = 0;
-    int dump = 0;
 
     while (jack_ringbuffer_read_space(bs->ui_note_on_buf) >= sizeof(event))
     {
@@ -320,9 +318,6 @@ int boxyseq_ui_collect_events(boxyseq* bs)
 
         jack_ringbuffer_read(bs->ui_note_on_buf, (char*)&evin,
                                                   sizeof(evin));
-
-        if (dump)
-            event_dump(&evin);
 
         evlist_add_event_copy(bs->ui_eventlist, &evin);
         ret = 1;
@@ -339,12 +334,8 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         if (EVENT_IS_TYPE( &evin, EV_TYPE_CLEAR ))
         {
             DMESSAGE("\nui eventlist delete events..\n\n");
-            dump = 1;
             continue;
         }
-
-        if (dump)
-            event_dump(&evin);
 
         ln = evlist_head(bs->ui_eventlist);
 
@@ -353,10 +344,8 @@ int boxyseq_ui_collect_events(boxyseq* bs)
             event* ev = lnode_data(ln);
             lnode* nln = lnode_next(ln);
 
-            if (ev->box.x == evin.box.x
-             && ev->box.y == evin.box.y
-             && ev->box.w == evin.box.w
-             && ev->box.h == evin.box.h)
+            if (ev->x == evin.x && ev->y == evin.y
+             && ev->w == evin.w && ev->h == evin.h)
             {
                 evlist_unlink_free(bs->ui_eventlist, ln);
                 nln = 0;
@@ -367,9 +356,6 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         ret = 1;
     }
 
-    if (dump)
-        DMESSAGE("------ read ui note off buf\n");
-
     while (jack_ringbuffer_read_space(bs->ui_note_off_buf) >= sizeof(event))
     {
         lnode* ln;
@@ -379,17 +365,12 @@ int boxyseq_ui_collect_events(boxyseq* bs)
                                                    sizeof(evin));
         ln = evlist_head(bs->ui_eventlist);
 
-       if (dump)
-            event_dump(&evin);
-
         while (ln)
         {
             event* ev = lnode_data(ln);
 
-            if (ev->box.x == evin.box.x
-             && ev->box.y == evin.box.y
-             && ev->box.w == evin.box.w
-             && ev->box.h == evin.box.h)
+            if (ev->x == evin.x && ev->y == evin.y
+             && ev->w == evin.w && ev->h == evin.h)
             {
                 EVENT_SET_STATUS_OFF( ev );
             }
@@ -398,9 +379,6 @@ int boxyseq_ui_collect_events(boxyseq* bs)
         }
         ret = 1;
     }
-
-    if (dump)
-        DMESSAGE("------ read ui note on buf\n");
 
     return ret;
 }

@@ -137,17 +137,17 @@ int grbound_scale_binary(grbound* grb)
 
 void grbound_rgb_float_get(grbound* grb, float* r, float* g, float* b)
 {
-    *r = grb->box.r / 255.0f;
-    *g = grb->box.g / 255.0f;
-    *b = grb->box.b / 255.0f;
+    *r = grb->ev.r / 255.0f;
+    *g = grb->ev.g / 255.0f;
+    *b = grb->ev.b / 255.0f;
 }
 
 
 void grbound_rgb_float_set(grbound* grb, float r, float g, float b)
 {
-    grb->box.r = (int)(r * 255);
-    grb->box.g = (int)(g * 255);
-    grb->box.b = (int)(b * 255);
+    grb->ev.r = (int)(r * 255);
+    grb->ev.g = (int)(g * 255);
+    grb->ev.b = (int)(b * 255);
 }
 
 
@@ -165,28 +165,28 @@ void grbound_midi_out_port_set(grbound* grb, moport* mo)
 
 int grbound_channel(grbound* grb)
 {
-    return grb->channel;
+    return EVENT_GET_CHANNEL( &grb->ev );
 }
 
 
 void grbound_channel_set(grbound* grb, int ch)
 {
-    grb->channel = ch;
+    EVENT_SET_CHANNEL( &grb->ev, ch );
 }
 
 
 bool grbound_fsbound_set(grbound* grb, int x, int y, int w, int h)
 {
-    return box_set_coords(&grb->box, x, y, w, h);
+    return event_set_coords(&grb->ev, x, y, w, h);
 }
 
 
 void grbound_fsbound_get(grbound* grb, int* x, int* y, int* w, int* h)
 {
-    if (x) *x = grb->box.x;
-    if (y) *y = grb->box.y;
-    if (w) *w = grb->box.w;
-    if (h) *h = grb->box.h;
+    if (x) *x = grb->ev.x;
+    if (y) *y = grb->ev.y;
+    if (w) *w = grb->ev.w;
+    if (h) *h = grb->ev.h;
 }
 
 
@@ -213,6 +213,9 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
         return;
     }
 
+    if (!rtgrb->evinput)
+        return;
+
     evport_read_reset(rtgrb->evinput);
 
     if (grb->flags & GRBOUND_EVENT_PROCESS)
@@ -221,37 +224,40 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
         {
             while (evport_read_event(rtgrb->evinput, &ev))
             {
-                ev.grb = grb;
+                ev.data = grb;
 
-                if ((!ev.box.r && !ev.box.g && !ev.box.b)
+                if ((!ev.r && !ev.g && !ev.b)
                  || (grb->flags & GRBOUND_OVERRIDE_NOTE_CH))
                 {
-                    ev.box.r = grb->box.r;
-                    ev.box.g = grb->box.g;
-                    ev.box.b = grb->box.b;
+                    ev.r = grb->ev.r;
+                    ev.g = grb->ev.g;
+                    ev.b = grb->ev.b;
                 }
 
                 EVENT_SET_STATUS_ON( &ev );
 
                 if (grb->flags & GRBOUND_OVERRIDE_NOTE_CH)
-                    EVENT_SET_CHANNEL( &ev, rtgrb->channel );
+                    EVENT_SET_CHANNEL( &ev, rtgrb->ev.flags );
 
                 if (!evport_write_event(grid_intersort, &ev))
                     WARNING("failed to write to grid intersort\n");
+
+                EVENT_DUMP( &ev );
+
             }
         }
         else
         {
             while (evport_read_event(rtgrb->evinput, &ev))
             {
-                ev.grb = grb;
+                ev.data = grb;
 
-                if ((!ev.box.r && !ev.box.g && !ev.box.b)
+                if ((!ev.r && !ev.g && !ev.b)
                  || (grb->flags & GRBOUND_OVERRIDE_NOTE_CH))
                 {
-                    ev.box.r = grb->box.r;
-                    ev.box.g = grb->box.g;
-                    ev.box.b = grb->box.b;
+                    ev.r = grb->ev.r;
+                    ev.g = grb->ev.g;
+                    ev.b = grb->ev.b;
                 }
 
                 EVENT_SET_STATUS_ON( &ev );
@@ -271,7 +277,7 @@ void grbound_rt_pull_starting(grbound* grb, evport* grid_intersort)
     while(evport_read_event(rtgrb->evinput, &ev))
     {
         DWARNING("incoming not emptied!\n");
-        event_dump(&ev);
+        EVENT_DUMP( &ev );
     }
 
 }
@@ -297,16 +303,18 @@ void grbound_rt_empty_incoming(grbound* grb)
         return;
     }
 
+    if (!rtgrb->evinput)
+        return;
+
     evport_read_reset(rtgrb->evinput);
 
     DMESSAGE("emptying incoming...\n");
 
     while(evport_read_and_remove_event(rtgrb->evinput, &ev))
     {
-        event_dump(&ev);
+        EVENT_DUMP(&ev);
         count++;
     }
-
 
     DMESSAGE("emptied %d events from incoming\n", count);
 }
@@ -321,6 +329,9 @@ void grbound_rt_check_incoming(grbound*grb, bbt_t ph, bbt_t nph)
 
     rtgrb = rtdata_data(grb->rt);
 
+    if (!rtgrb->evinput)
+        return;
+
     evport_read_reset(rtgrb->evinput);
 
     while(evport_read_event(rtgrb->evinput, &ev))
@@ -328,7 +339,7 @@ void grbound_rt_check_incoming(grbound*grb, bbt_t ph, bbt_t nph)
         if (ev.pos < ph || ev.pos > nph)
         {
             DWARNING("out of place event! now ph:%d nph:%d\n", ph, nph);
-            event_dump(&ev);
+            EVENT_DUMP(&ev);
         }
     }
 }
@@ -354,7 +365,9 @@ static grbound* grbound_private_new(bool with_rtdata)
     else
         grb->rt = 0;
 
-    box_init_max_dim(&grb->box);
+    event_init(&grb->ev);
+    grb->ev.w = FSWIDTH;
+    grb->ev.h = FSHEIGHT;
 
     grb->flags =  GRBOUND_BLOCK_ON_NOTE_FAIL
                 | GRBOUND_EVENT_PROCESS
@@ -369,11 +382,10 @@ static grbound* grbound_private_new(bool with_rtdata)
     if (rand() % 2)
         grb->flags |= FSPLACE_TOP_TO_BOTTOM;
 
-    grb->channel = 0;
     grb->scale_bin = binary_string_to_int("111111111111");
     grb->scale_key = 0;
 
-    random_rgb(&grb->box.r, &grb->box.g, &grb->box.b);
+    random_rgb(&grb->ev.r, &grb->ev.g, &grb->ev.b);
 
     grb->evinput = 0;
     grb->midiout = 0;
@@ -398,12 +410,11 @@ static grbound* grbound_private_dup(const void* data, bool with_rtdata)
     if (!dest)
         return 0;
 
+    event_copy(&dest->ev, &grb->ev);
+
     dest->flags =       grb->flags;
-    dest->channel =     grb->channel;
     dest->scale_bin =   grb->scale_bin;
     dest->scale_key =   grb->scale_key;
-
-    box_copy(&dest->box, &grb->box);
 
     dest->evinput =     grb->evinput;
     dest->midiout =     grb->midiout;

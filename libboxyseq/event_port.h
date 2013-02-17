@@ -51,9 +51,7 @@ typedef struct event_port evport;
     positive id: ("port %d", id);
 */
 
-evport*     evport_new( evpool* pool,   const char* name,
-                                        int id,
-                                        int rt_evlist_sort_flags);
+evport*     evport_new( evpool* pool,   const char* name, int id);
 
 void        evport_free(evport* port);
 

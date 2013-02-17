@@ -2,6 +2,7 @@
 
 
 #include "debug.h"
+#include "freespace_state.h"
 
 
 #include <math.h>
@@ -28,64 +29,135 @@ event* event_new(void)
 
 void event_init(event* ev)
 {
-    ev->box.x = -1;
-    ev->box.y = -1;
-    ev->box.w = -1;
-    ev->box.h = -1;
-    ev->box.r = 0;
-    ev->box.g = 0;
-    ev->box.b = 0;
+    ev->flags = 0;
 
-    ev->flags =         0;
-    ev->pos =           -1;
-    ev->frame =         0;
-    ev->note_dur =      -1;
-    ev->note_pitch =    -1;
-    ev->note_velocity = -1;
-    ev->box_release =   -1;
-    ev->grb =            0;
+    ev->x =     -1;
+    ev->y =     -1;
+    ev->w =     -1;
+    ev->h =     -1;
+
+    ev->r =     0;
+    ev->g =     0;
+    ev->b =     0;
+
+    ev->pos =   -1;
+    ev->dur =   -1;
+    ev->rel =   -1;
+
+    ev->frame = 0;
+
+    ev->pitch = -1;
+    ev->vel =   -1;
+
+    ev->data =  0;
 }
 
 
 void event_copy(event* dest, const event* src)
 {
-    dest->box.x = src->box.x;
-    dest->box.y = src->box.y;
-    dest->box.w = src->box.w;
-    dest->box.h = src->box.h;
-    dest->box.r = src->box.r;
-    dest->box.g = src->box.g;
-    dest->box.b = src->box.b;
+    dest->flags =   src->flags;
 
-    dest->flags =           src->flags;
-    dest->pos =             src->pos;
-    dest->note_dur =        src->note_dur;
-    dest->note_pitch =      src->note_pitch;
-    dest->note_velocity =   src->note_velocity;
-    dest->box_release =     src->box_release;
-    dest->grb =             src->grb;
+    dest->x = src->x;
+    dest->y = src->y;
+    dest->w = src->w;
+    dest->h = src->h;
+
+    dest->r = src->r;
+    dest->g = src->g;
+    dest->b = src->b;
+
+    dest->pos = src->pos;
+    dest->dur = src->dur;
+    dest->rel = src->rel;
+
+    dest->pitch =   src->pitch;
+    dest->vel =     src->vel;
+
+    dest->data =    src->data;
 }
 
 
-void event_dump(const event* ev)
+bool event_set_coords(event* ev, int x, int y, int w, int h)
+{
+    if (x == -1)
+        x = ev->x;
+
+    if (y == -1)
+        y = ev->y;
+
+    if (w == -1)
+        w = ev->w;
+
+    if (h == -1)
+        h = ev->h;
+
+    if (x < 0 || w < 1 || x > FSWIDTH)
+        return false;
+
+    if (y < 0 || h < 1 || y > FSHEIGHT)
+        return false;
+
+    if (x + w > FSWIDTH || y + h > FSHEIGHT)
+        return false;
+
+    ev->x = x;
+    ev->y = y;
+    ev->w = w;
+    ev->h = h;
+
+    return true;
+}
+
+
+bool event_set_colour(event* ev, int r, int g, int b)
+{
+    if (r == -1)
+        r = ev->r;
+
+    if (g == -1)
+        g = ev->g;
+
+    if (b == -1)
+        b = ev->b;
+
+    if (r < 0 || r > 255)
+        return false;
+
+    if (g < 0 || g > 255)
+        return false;
+
+    if (b < 0 || b > 255)
+        return false;
+
+    ev->r = r;
+    ev->g = g;
+    ev->b = b;
+
+    return true;
+}
+
+void event_dump(const char *file,
+                const char *function,
+                size_t line,
+                const event* ev)
 {
     char tmp[20];
 
     event_flags_to_str(ev->flags, tmp);
 
-    MESSAGE("event: %p  [%s] "
-            "pos:%d dur:%d rel:%d"
-            "\tpitch:%d vel:%d "
-            "\tx:%d y:%d "
-            "\tw:%d h:%d "
-            "\tgrb:%p \n",
-
-            ev,             tmp,
-            ev->pos,   ev->note_dur,   ev->box_release,
-            ev->note_pitch, ev->note_velocity,
-            ev->box.x,      ev->box.y,
-            ev->box.w,      ev->box.h,
-            ev->grb );
+    warnf( W_MESSAGE, file, function, line,
+            "event: %015p  [%s] "
+            "pos:%5d dur:%5d rel:%5d"
+            "\tpitch:%3d vel:%3d "
+            "\tx:%3d y:%3d "
+            "\tw:%3d h:%3d "
+            "\tdata:%p \n",
+            ev,         tmp,
+            ev->pos,    ev->dur,   ev->rel,
+            ev->pitch,  ev->vel,
+            ev->x,      ev->y,
+            ev->w,      ev->h,
+            ev->data );
 }
 
 
@@ -93,22 +165,32 @@ void event_flags_to_str(int flags, char buf[20])
 {
     const char* type = 0;
     const char* status = 0;
+    unsigned int ch = flags & EV_CHANNEL_MASK;
     int r;
 
     switch(flags & EV_TYPE_MASK)
     {
     case EV_TYPE_NOTE:      type = "note";  break;
     case EV_TYPE_BLOCK:     type = "block"; break;
+    case EV_TYPE_STATIC:    type = "static";break;
     case EV_TYPE_CLEAR:     type = "reset"; break;
     case EV_TYPE_SHUTDOWN:  type = "quit";  break;
+    case EV_TYPE_BOUNDARY:  type = "bound"; break;
+    
     default:
         type = "*ERR*";
         break;
     }
 
-    status = (flags & EV_STATUS_ON) ? "ON" : "OFF";
+    switch(flags & EV_STATUS_MASK)
+    {
+    case EV_STATUS_ON:      status = "ON";  break;
+    case EV_STATUS_CREATE:  status = "NEW"; break;
+    case EV_STATUS_DESTROY: status = "DEL"; break;
+    default:                status = "OFF"; break;
+    }
 
-    snprintf(buf, 20, "%5s | %3s", type, status);
+    snprintf(buf, 20, "ch:%1x %5s | %3s", ch, type, status);
 }
 
 
@@ -120,25 +202,25 @@ void event_flags_to_str(int flags, char buf[20])
 bool event_is(const event* ev, int flags,
               const char *file, const char *function, size_t line)
 {
-    int status = flags & EV_STATUS_ON;
-    int type = flags & EV_TYPE_MASK;
+    int status = flags & EV_STATUS_MASK;
+    int type =   flags & EV_TYPE_MASK;
     bool ret = true;
 
     if (!EVENT_IS_STATUS( ev, status ))
     {
-        event_dump(ev);
+        event_dump(file, function, line, ev);
         warnf(W_WARNING, file, function, line,
-                "^^^ event has invalid status    ^^^\n");
+                "         ^^^ event has invalid status ^^^\n");
         ret = false;
     }
 
     if (!EVENT_IS_TYPE( ev, type ))
     {
         if (ret == true)
-            event_dump(ev);
+            EVENT_DUMP(ev);
 
         warnf(W_WARNING, file, function, line,
-                "^^^ invalid event type ^^^\n");
+                "        ^^^ invalid event type ^^^\n");
         ret = false;
     }
 
@@ -201,8 +283,8 @@ static bool event_pri_sel_coord_cb(const void* data, const void* crit)
 {
     const event* ev = data;
     const ev_sel_coord* sel = crit;
-    return ((ev->box.x >= sel->tlx &&  ev->box.x <= sel->brx)
-         && (ev->box.y >= sel->tly &&  ev->box.y <= sel->bry));
+    return ((ev->x >= sel->tlx &&  ev->x <= sel->brx)
+         && (ev->y >= sel->tly &&  ev->y <= sel->bry));
 }
 
 
@@ -225,12 +307,12 @@ static void event_pri_mod_coord_cb(void* data, void* init)
 
     if (offset->x == -1)
     {
-        offset->x = ev->box.x;
-        offset->y = ev->box.y;
+        offset->x = ev->x;
+        offset->y = ev->y;
     }
 
-    ev->box.x -= offset->x;
-    ev->box.y -= offset->y;
+    ev->x -= offset->x;
+    ev->y -= offset->y;
 }
 
 
@@ -255,16 +337,13 @@ static char* event_pri_str_cb(const void* data, int level)
         case 2:
             count = snprintf(buf, DATACB_STR_SIZE,
                              "event:%p pos:%d dur:%d",
-                             ev, ev->pos, ev->note_dur);
+                             ev, ev->pos, ev->dur);
             break;
 
         default:
             count = snprintf(buf, DATACB_STR_SIZE,
                              "event:%p pos:%d dur:%d rel:%d w:%d h:%d",
-                             ev, ev->pos, ev->note_dur,
-                             ev->box_release,
-                             ev->box.w,
-                             ev->box.h);
+                             ev, ev->pos, ev->dur, ev->rel, ev->w, ev->h);
     }
 
     if (count >= DATACB_STR_SIZE)
@@ -285,14 +364,14 @@ static void event_pri_dur_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = roundf(*(const float*)val);
-    ev->note_dur = (bbt_t)n;
+    ev->dur = (bbt_t)n;
 }
 
 static void event_pri_rel_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = roundf(*(const float*)val);
-    ev->box_release = (bbt_t)n;
+    ev->rel = (bbt_t)n;
 }
 
 static void event_pri_pos_add_cb(void* data, const void* val)
@@ -306,14 +385,14 @@ static void event_pri_dur_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = roundf(*(const float*)val);
-    ev->note_dur = (bbt_t)((float)ev->note_dur + n);
+    ev->dur = (bbt_t)((float)ev->dur + n);
 }
 
 static void event_pri_rel_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = roundf(*(const float*)val);
-    ev->box_release = (bbt_t)((float)ev->box_release + n);
+    ev->rel = (bbt_t)((float)ev->rel + n);
 }
 
 static void event_pri_pos_mul_cb(void* data, const void* val)
@@ -326,15 +405,15 @@ static void event_pri_pos_mul_cb(void* data, const void* val)
 static void event_pri_dur_mul_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
-    float n = roundf((float)ev->note_dur * (*(const float*)val));
-    ev->note_dur = (bbt_t)n;
+    float n = roundf((float)ev->dur * (*(const float*)val));
+    ev->dur = (bbt_t)n;
 }
 
 static void event_pri_rel_mul_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
-    float n = roundf((float)ev->box_release * (*(const float*)val));
-    ev->box_release = (bbt_t)n;
+    float n = roundf((float)ev->rel * (*(const float*)val));
+    ev->rel = (bbt_t)n;
 }
 
 static void event_pri_pos_quant_cb(void* data, const void* val)
@@ -349,51 +428,51 @@ static void event_pri_dur_quant_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    float nn = roundf((float)ev->note_dur + n / 2);
-    ev->note_dur = (bbt_t)(nn - fmod(nn, n));
+    float nn = roundf((float)ev->dur + n / 2);
+    ev->dur = (bbt_t)(nn - fmod(nn, n));
 }
 
 static void event_pri_rel_quant_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    float nn = roundf((float)ev->box_release + n / 2);
-    ev->box_release = (bbt_t)(nn - fmod(nn, n));
+    float nn = roundf((float)ev->rel + n / 2);
+    ev->rel = (bbt_t)(nn - fmod(nn, n));
 }
 
 static void event_pri_x_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.x = (int)n;
+    ev->x = (int)n;
 }
 
 static void event_pri_y_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.y = (int)n;
+    ev->y = (int)n;
 }
 
 static void event_pri_w_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.w = (int)n;
+    ev->w = (int)n;
 }
 
 static void event_pri_h_set_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.h = (int)n;
+    ev->h = (int)n;
 }
 
 static void event_pri_x_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.x = (int)((float)ev->box.x + n);
+    ev->x = (int)((float)ev->x + n);
 }
 
 
@@ -401,21 +480,21 @@ static void event_pri_y_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.y = (int)((float)ev->box.y + n);
+    ev->y = (int)((float)ev->y + n);
 }
 
 static void event_pri_w_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.w = (int)((float)ev->box.w + n);
+    ev->w = (int)((float)ev->w + n);
 }
 
 static void event_pri_h_add_cb(void* data, const void* val)
 {
     event* ev = (event*)data;
     float n = *(const float*)val;
-    ev->box.h = (int)((float)ev->box.h + n);
+    ev->h = (int)((float)ev->h + n);
 }
 
 datacb_cmp event_get_cmp_cb(ev_type type)

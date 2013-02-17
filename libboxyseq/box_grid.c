@@ -55,15 +55,11 @@ grid* grid_new(void)
     if (!(gr->portman = evport_manager_new("grid")))
         goto fail1;
 
-    gr->intersort = evport_manager_evport_new(  gr->portman,
-                                                "intersort",
-                                                RT_EVLIST_SORT_POS);
+    gr->intersort = evport_manager_evport_new(  gr->portman, "intersort");
     if (!gr->intersort)
         goto fail2;
 
-    gr->block_port = evport_manager_evport_new( gr->portman,
-                                                "block",
-                                                RT_EVLIST_SORT_POS);
+    gr->block_port = evport_manager_evport_new( gr->portman, "block");
     if (!gr->block_port)
         goto fail2;
 
@@ -140,7 +136,7 @@ void grid_rt_flush_intersort(grid* gr, bbt_t ph, bbt_t nph,
 
     while(evport_read_and_remove_event(gr->intersort, &ev))
     {
-        grbound* rtgrb = rtdata_data(ev.grb->rt);
+        grbound* rtgrb = rtdata_data(((grbound*)ev.data)->rt);
 
         #ifndef NDEBUG
         if (ev.pos < ph || ev.pos > nph)
@@ -166,13 +162,13 @@ void grid_rt_flush_intersort(grid* gr, bbt_t ph, bbt_t nph,
             moport_rt_output_jack_midi_event(rtgrb->midiout, &ev,
                                              ph, nframes,
                                              frames_per_tick);
-            ev.pos = ev.box_release;
+            ev.pos = ev.rel;
 
-            if (ev.box_release < nph)
+            if (ev.rel < nph)
             {
                 evport_write_event(gr->intersort, &ev);
                 DMESSAGE("block ends this cycle!\n");
-                event_dump(&ev);
+                EVENT_DUMP(&ev);
             }
             else
                 evport_write_event(gr->block_port, &ev);
@@ -193,8 +189,8 @@ void grid_rt_flush_intersort(grid* gr, bbt_t ph, bbt_t nph,
             size_t sz;
             #endif
 
-            freespace_add(gr->fs,   ev.box.x,   ev.box.y,
-                                    ev.box.w,   ev.box.h );
+            freespace_add(gr->fs, ev.x, ev.y, ev.w, ev.h );
+
             #ifndef NDEBUG
             sz =
             #endif
@@ -218,6 +214,10 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
         note_dur or box_release).
     */
 
+    #ifndef NDEBUG
+    bool evdumped = false;
+    #endif
+
     event ev;
 
     evport_read_reset(gr->intersort);
@@ -228,16 +228,19 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
         size_t sz;
         #endif
 
-        grbound* rtgrb = rtdata_data(ev.grb->rt);
+        grbound* rtgrb = rtdata_data(((grbound*)ev.data)->rt);
 
         #ifndef NDEBUG
+        if (!evdumped)
+        {
+            MESSAGE("ph:%d nph:%d\n", ph, nph);
+            evdumped = true;
+        }
+
         if (ev.pos < ph || ev.pos > nph)
             DWARNING("invalid event position\n");
-/*
-        event_flags_to_str(ev.flags, buf);
-        DMESSAGE("ph~nph: %6d ~ %6d\t[%s] pos: %d dur:%d rel:%d\n",
-                    ph, nph, buf, ev.pos, ev.note_dur, ev.box_release);
-*/
+
+        EVENT_DUMP( &ev );
         #endif
 
         if (EVENT_IS_STATUS_ON( &ev ))
@@ -251,30 +254,29 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
             #endif
 
             if (freespace_find( gr->fs,
-                                &rtgrb->box,
+                                rtgrb->ev.x, rtgrb->ev.y,
+                                rtgrb->ev.w, rtgrb->ev.h,
                                 rtgrb->flags,
-                                ev.box.w,   ev.box.h,
-                                &ev.box.x,  &ev.box.y ))
+                                ev.w, ev.h, &ev.x, &ev.y ))
             {
                 if (EVENT_IS_TYPE( &ev, EV_TYPE_NOTE ))
                 {
                     /* must set velocity before "pushing for pitch" */
                     if (rtgrb->flags & FSPLACE_TOP_TO_BOTTOM)
-                        ev.note_velocity = ev.box.y;
+                        ev.vel = ev.y;
                     else
-                        ev.note_velocity = ev.box.y + ev.box.h;
+                        ev.vel = ev.y + ev.h;
 
-                    ev.note_pitch =
-                            moport_rt_push_event_pitch(rtgrb->midiout,
+                    ev.pitch = moport_rt_push_event_pitch(rtgrb->midiout,
                                                         &ev,
                                                         rtgrb->flags,
                                                         rtgrb->scale_bin,
                                                         rtgrb->scale_key );
-                    if (ev.note_pitch == -1)
+                    if (ev.pitch == -1)
                     {
                         if ((rtgrb->flags & GRBOUND_BLOCK_ON_NOTE_FAIL))
                         {
-                            ev.pos = ev.box_release;
+                            ev.pos = ev.rel;
                             EVENT_SET_TYPE( &ev, EV_TYPE_BLOCK );
                             /*  send to block port to maintain event until
                                 it expires */
@@ -291,12 +293,11 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
                 }
                 else
                 {
-                    ev.pos = ev.box_release;
+                    ev.pos = ev.rel;
                     evport_write_event(gr->block_port, &ev);
                 }
 
-                freespace_remove(gr->fs,    ev.box.x, ev.box.y,
-                                            ev.box.w, ev.box.h );
+                freespace_remove(gr->fs, ev.x, ev.y, ev.w, ev.h);
 
                 #ifndef NDEBUG
                 sz =
@@ -311,9 +312,9 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
                 /* check for events which end aswell as begin this cycle */
                 if (EVENT_IS_TYPE( &ev, EV_TYPE_NOTE ))
                 {
-                    if (ev.note_dur < nph)
+                    if (ev.dur < nph)
                     {
-                        ev.pos = ev.note_dur;
+                        ev.pos = ev.dur;
                         EVENT_SET_STATUS_OFF( &ev );
                         evport_write_event(gr->intersort, &ev);
                         DMESSAGE("note ends this cycle!\n");
@@ -321,9 +322,9 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
                 }
                 else
                 {
-                    if (ev.box_release < nph)
+                    if (ev.rel < nph)
                     {
-                        ev.pos = ev.box_release;
+                        ev.pos = ev.rel;
                         EVENT_SET_STATUS_OFF( &ev );
                         evport_write_event(gr->intersort, &ev);
                         DMESSAGE("block ends this cycle!\n");
@@ -341,13 +342,13 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
                 moport_rt_output_jack_midi_event(rtgrb->midiout, &ev,
                                                  ph, nframes,
                                                  frames_per_tick);
-                ev.pos = ev.box_release;
+                ev.pos = ev.rel;
 
-                if (ev.box_release < nph)
+                if (ev.rel < nph)
                 {
                     evport_write_event(gr->intersort, &ev);
-                    DMESSAGE("block ends this cycle!\n");
-                    event_dump(&ev);
+                    /*DMESSAGE("block ends this cycle!\n");
+                    event_dump(&ev);*/
                 }
                 else
                     evport_write_event(gr->block_port, &ev);
@@ -358,14 +359,13 @@ void grid_rt_process_intersort(grid* gr, bbt_t ph, bbt_t nph,
                 jack_ringbuffer_write(gr->ui_note_off_buf, (char*)&ev,
                                                              sizeof(ev));
                 #ifndef NDEBUG
-                if (sz != sizeof(ev))
-                    DWARNING("failed to queue unplace event to ui\n");
+                /*if (sz != sizeof(ev))
+                    DWARNING("failed to queue unplace event to ui\n");*/
                 #endif
             }
             else
             {
-                freespace_add(gr->fs,   ev.box.x,   ev.box.y,
-                                        ev.box.w,   ev.box.h );
+                freespace_add(gr->fs, ev.x, ev.y, ev.w, ev.h);
                 #ifndef NDEBUG
                 sz =
                 #endif
@@ -398,19 +398,26 @@ void grid_rt_process_blocks(grid* gr, bbt_t ph, bbt_t nph)
         the events it contains stay in the port for the
         duration of the note (hmmm yeah, ummm...)
 */
+    #ifndef NDEBUG
+    bool evdumped = false;
+    #endif
     event ev;
 
     evport_read_reset(gr->block_port);
 
     while(evport_read_event(gr->block_port, &ev))
     {
-        /*#ifndef NDEBUG
-        EVENT_IS(&ev, EV_STATUS_OFF | EV_TYPE_BLOCK);
-        #endif*/
-
         if (ev.pos >= ph && ev.pos < nph)
         {
+            #ifndef NDEBUG
+            if (!evdumped)
+            {
+                MESSAGE("ph:%d nph:%d\n",ph,nph);
+                evdumped = true;
+            }
+            #endif
             EVENT_SET_STATUS_OFF( &ev );
+            EVENT_DUMP( &ev );
             evport_write_event(gr->intersort, &ev);
             evport_and_remove_event(gr->block_port);
         }
@@ -430,8 +437,8 @@ void grid_rt_flush_blocks_to_intersort(grid* gr)
     while(evport_read_and_remove_event(gr->block_port, &ev))
     {
         ev.pos = 0;
-        ev.note_dur = 1;
-        ev.box_release = 2;
+        ev.dur = 1;
+        ev.rel = 2;
         EVENT_SET_STATUS_OFF( &ev );
         evport_write_event(gr->intersort, &ev);
         count++;
@@ -450,14 +457,16 @@ bool grid_rt_add_block_area(grid* gr, int x, int y, int w, int h)
 
     if (ret)
     {
-        DWARNING("BROKEN HERE!!!\n");
         event ev;
+
+        DWARNING("BROKEN HERE!!!\n");
+
         EVENT_SET_STATUS_ON( &ev );
         EVENT_SET_TYPE( &ev, EV_TYPE_BLOCK );
-        ev.box.x = x;
-        ev.box.y = y;
-        ev.box.w = w;
-        ev.box.h = h;
+        ev.x = x;
+        ev.y = y;
+        ev.w = w;
+        ev.h = h;
         evport_write_event(gr->block_port, &ev);
     }
 
@@ -481,6 +490,6 @@ void grid_dump_block_events(grid* gr)
 
     while(evport_read_event(gr->block_port, &ev))
     {
-        event_dump(&ev);
+        EVENT_DUMP(&ev);
     }
 }

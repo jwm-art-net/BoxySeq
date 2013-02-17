@@ -116,23 +116,14 @@ lnode* evlist_add_event_new(evlist* el, bbt_t start_tick)
     if (!ev)
         return 0;
 
-/*    this doesn't seem right here:
-    EVENT_SET_TYPE_NOTE( ev );
- */
-
     ev->pos =  start_tick;
-    ev->note_dur =  evlist_default_duration;
-
-    ev->box_release = 0;
-    ev->box.w = evlist_default_width;
-    ev->box.h = evlist_default_height;
+    ev->dur =  evlist_default_duration;
+    ev->rel = 0;
+    ev->w = evlist_default_width;
+    ev->h = evlist_default_height;
 
     #ifdef EVLIST_DEBUG
-    MESSAGE("pos:%d dur:%d w:%d h:%d\n",ev->pos,
-                                        ev->note_dur,
-                                        ev->box.w,
-                                        ev->box.h  );
-                                        
+    MESSAGE("pos:%d dur:%d w:%d h:%d\n",ev->pos, ev->dur, ev->w, ev->h);
     #endif
 
     lnode* ln = evlist_add_event(el, ev);
@@ -389,6 +380,6 @@ void evlist_set_default_height(signed char h)
 
 static void evlist_pri_dump_cb(const void* data)
 {
-    event_dump(data);
+    EVENT_DUMP(data);
 }
 

@@ -98,8 +98,7 @@ void evport_manager_free(evport_manager* portman)
 
 
 evport* evport_manager_evport_new(  evport_manager* portman,
-                                    const char* name,
-                                    int rt_evlist_sort_flags )
+                                    const char* name )
 {
     char tmp[80];
     snprintf(tmp, 79, "%s-%s", portman->groupname, name);
@@ -107,8 +106,7 @@ evport* evport_manager_evport_new(  evport_manager* portman,
 
     evport* port = evport_new(  portman->event_pool,
                                 tmp,
-                                portman->next_port_id++,
-                                rt_evlist_sort_flags    );
+                                portman->next_port_id++ );
 
     if (!port)
         return 0;

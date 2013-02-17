@@ -78,8 +78,10 @@ int moport_rt_push_event_pitch(moport* midiport,
                                     int scale_bin,
                                     int scale_key )
 {
-    if (ev->note_dur == ev->pos)
+    if (ev->dur == ev->pos)
         return -1;
+
+    int pitch = ev->x;
 
     #ifndef NDEBUG
     EVENT_IS(ev, EV_STATUS_ON | EV_TYPE_NOTE);
@@ -87,7 +89,8 @@ int moport_rt_push_event_pitch(moport* midiport,
 
     event*  play =  midiport->play[EVENT_GET_CHANNEL(ev)];
 
-    int pitch = ev->box.x;
+    if (!(grb_flags & FSPLACE_LEFT_TO_RIGHT))
+        pitch += ev->w;
 
     if (grb_flags & GRBOUND_PITCH_STRICT_POS)
     {
@@ -99,16 +102,17 @@ int moport_rt_push_event_pitch(moport* midiport,
     }
     else
     {
-        int startpitch, endpitch;
-        int pitchdir = 1;
-
-        startpitch = endpitch = pitch;
+        int endpitch;
+        int pitchdir;
 
         if (grb_flags & FSPLACE_LEFT_TO_RIGHT)
-            endpitch += ev->box.w;
+        {
+            endpitch = pitch + ev->w;
+            pitchdir = 1;
+        }
         else
         {
-            pitch = startpitch += ev->box.w;
+            endpitch = ev->x;
             pitchdir = -1;
         }
 
@@ -127,10 +131,11 @@ int moport_rt_push_event_pitch(moport* midiport,
     }
 
 output:
-
     event_copy(&play[pitch], ev);
-    play[pitch].note_pitch = pitch;
+    play[pitch].pitch = pitch;
     EVENT_SET_STATUS_ON( &play[pitch] );
+
+    EVENT_DUMP( &play[pitch] );
 
     return pitch;
 }
@@ -151,17 +156,20 @@ void moport_rt_pull_ending(moport* midiport, bbt_t ph, bbt_t nph,
             if (!play[pitch].flags)
                 continue;
 
-            if (play[pitch].note_dur < nph)
+            if (play[pitch].dur < nph)
             {
-                if (play[pitch].note_dur >= ph)
+                if (play[pitch].dur >= ph)
                 {
-                    play[pitch].pos = play[pitch].note_dur;
+                    play[pitch].pos = play[pitch].dur;
                     EVENT_SET_STATUS_OFF( &play[pitch] );
 
                     if (!evport_write_event(grid_intersort, &play[pitch]))
                     {
                         WARNING("failed to write to grid intersort\n");
                     }
+
+                    EVENT_DUMP( &play[pitch] );
+
                 }
 
                 play[pitch].flags = 0;
@@ -196,12 +204,14 @@ void moport_rt_output_jack_midi_event(  moport* midiport,
         if (buf)
         {
             buf[0] = (unsigned char)(0x90 | EVENT_GET_CHANNEL( ev ));
-            buf[1] = (unsigned char)ev->note_pitch;
-            buf[2] = (unsigned char)ev->note_velocity;
+            buf[1] = (unsigned char)ev->pitch;
+            buf[2] = (unsigned char)ev->vel;
         }
         else
+        {/*
             WARNING("ph:%d note-ON event pos: %d "
-                    "was not reserved by JACK\n", ph, ev->pos);
+                    "was not reserved by JACK\n", ph, ev->pos);*/
+        }
     }
     else if(EVENT_IS_STATUS_OFF( ev ))
     {
@@ -210,12 +220,14 @@ void moport_rt_output_jack_midi_event(  moport* midiport,
         if (buf)
         {
                 buf[0] = (unsigned char)(0x80 | EVENT_GET_CHANNEL( ev ));
-                buf[1] = (unsigned char)ev->note_pitch;
-                buf[2] = (unsigned char)ev->note_velocity;
+                buf[1] = (unsigned char)ev->pitch;
+                buf[2] = (unsigned char)ev->vel;
         }
         else
+        {/*
             WARNING("ph:%d note-OFF event pos: %d "
-                    "was not reserved by JACK\n", ph, ev->pos);
+                    "was not reserved by JACK\n", ph, ev->pos);*/
+        }
     }
 }
 
@@ -235,8 +247,8 @@ void moport_rt_pull_playing_and_empty(  moport* midiport,
             if (play[pitch].flags)
             {
                 play[pitch].pos = 0;
-                play[pitch].note_dur = 1;
-                play[pitch].box_release = 2;/*ph;*/
+                play[pitch].dur = 1;
+                play[pitch].rel = 2;
 
                 EVENT_SET_STATUS_OFF( &play[pitch] );
 
@@ -268,7 +280,7 @@ void moport_event_dump(moport* midiport)
         {
             if (play[pitch].flags)
             {
-                event_dump(&play[pitch]);
+                EVENT_DUMP( &play[pitch] );
                 #ifndef NDEBUG
                 EVENT_IS(&play[pitch], EV_STATUS_ON | EV_TYPE_NOTE);
                 #endif

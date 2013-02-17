@@ -25,19 +25,12 @@ void        evpool_event_free(evpool*, event*);
 /*  rt_event_list uses the event pool for memory management
 */
 
-enum RT_EVLIST_SORT_FLAGS
-{
-    RT_EVLIST_SORT_POS = 0x0001,
-    RT_EVLIST_SORT_DUR,
-    RT_EVLIST_SORT_REL,
-};
-
 
 typedef struct rt_event_list rt_evlist;
 typedef void (*rt_evlist_cb)(event* ev);
 
 
-rt_evlist*  rt_evlist_new(evpool*, int flags, const char* name);
+rt_evlist*  rt_evlist_new(evpool*, const char* name);
 void        rt_evlist_free(rt_evlist*);
 int         rt_evlist_count(rt_evlist*);
 

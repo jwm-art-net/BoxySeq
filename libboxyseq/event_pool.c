@@ -165,14 +165,13 @@ struct rt_event_list
 
     rt_evlink* cur;
 
-    int flags;
-
     evpool* pool;
     bool pool_managed;
 
     char* name;
 
     int count;
+    int readers;
 };
 
 
@@ -191,8 +190,14 @@ void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
     rt_evlink* fwd = rtevl->head;
     rt_evlink* rev = rtevl->tail;
 
-    if (!fwd && !rev && !rtevl->cur)
-        return;
+    if (!fwd && !rev)
+    {
+        if (!rtevl->cur)
+            return;
+
+        WARNING("head and tail null but cur set\n");
+        goto fail;
+    }
 
     if (!rtevl->head)
     {
@@ -308,9 +313,9 @@ void rt_evlist_integrity_dump(rt_evlist* rtevl, const char* from)
     return;
 
 fail:
-    WARNING("***** integrity checks  for [%s] failed *****\n",
-                                            rtevl->name);
-
+    WARNING("***** integrity checks  for [%s] failed %d events *****\n",
+                                            rtevl->name, rtevl->count);
+*((int*)0)=0;
     fwd = rtevl->head;
     fwd_count = 0;
 
@@ -334,7 +339,7 @@ fail:
 #endif
 
 
-rt_evlist*  rt_evlist_new(evpool* pool, int flags, const char* name)
+rt_evlist*  rt_evlist_new(evpool* pool, const char* name)
 {
     rt_evlist* rtevl = malloc(sizeof(*rtevl));
 
@@ -359,8 +364,8 @@ rt_evlist*  rt_evlist_new(evpool* pool, int flags, const char* name)
     rtevl->head = 0;
     rtevl->tail = 0;
     rtevl->cur = 0;
-    rtevl->flags = flags;
     rtevl->count = 0;
+    rtevl->readers = 0;
 
     rtevl->name = strdup(name);
 
@@ -380,6 +385,12 @@ void rt_evlist_free(rt_evlist* rtevl)
     #ifdef EVPOOL_DEBUG999
     rt_evlist_integrity_dump(rtevl, __FUNCTION__);
     #endif
+
+    if (rtevl->readers)
+    {
+        WARNING("rt_evlist %s may still have %d readers\n",
+                        rtevl->name, rtevl->readers);
+    }
 
     rt_evlist_clear_events(rtevl);
 
@@ -403,7 +414,6 @@ int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
     rt_evlist_integrity_dump(rtevl, __FUNCTION__);
     #endif
 
-    bbt_t newval, curval;
     rt_evlink* newlnk = evpool_private_event_alloc(rtevl->pool);
     rt_evlink* cur = rtevl->head;
 
@@ -427,7 +437,7 @@ int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
     {
         rtevl->head = rtevl->tail = newlnk;
         rtevl->head->next = 0;
-        rtevl->head->prev = 0;
+        rtevl->tail->prev = 0;
         rtevl->cur = rtevl->head;
         ++rtevl->count;
 
@@ -435,39 +445,9 @@ int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
         /* ---------------------------------- */
     }
 
-    switch (rtevl->flags)
-    {
-    case RT_EVLIST_SORT_POS:    newval = ev->pos;
-        break;
-
-    case RT_EVLIST_SORT_DUR:
-
-        if ((newval = ev->note_dur) == -1)
-            goto add_at_tail;
-
-        break;
-
-    case RT_EVLIST_SORT_REL:    newval = ev->box_release;
-        break;
-    default:                    WARNING("ERROR: insane flags\n");
-        return 0;
-    }
-
     while(cur)
     {
-        switch (rtevl->flags)
-        {
-        case RT_EVLIST_SORT_POS:    curval = ((event*)cur)->pos;
-            break;
-        case RT_EVLIST_SORT_DUR:    curval = ((event*)cur)->note_dur;
-            break;
-        case RT_EVLIST_SORT_REL:    curval = ((event*)cur)->box_release;
-            break;
-        default:                    WARNING("ERROR: insane flags\n");
-            return 0;
-        }
-
-        if (newval < curval)
+        if (ev->pos < ((event*)cur)->pos)
         {
             newlnk->prev = cur->prev;
 
@@ -488,8 +468,7 @@ int rt_evlist_event_add(rt_evlist* rtevl, const event* ev)
         cur = cur->next;
     }
 
-add_at_tail:
-
+    /* add at tail */
     rtevl->tail->next = newlnk;
     newlnk->prev = rtevl->tail;
     newlnk->next = 0;
@@ -509,7 +488,7 @@ void rt_evlist_clear_events(rt_evlist* rtevl)
 
     rt_evlink* evlnk = rtevl->head;
 
-    rtevl->head = rtevl->tail = 0;
+    rtevl->head = rtevl->tail = rtevl->cur = 0;
     rtevl->count = 0;
 
     while(evlnk)
@@ -647,7 +626,7 @@ void rt_evlist_and_remove_event(rt_evlist* rtevl)
     {
         DMESSAGE("%s removing tail:%p current not set\n",
                                 rtevl->name, rtevl->tail);
-        event_dump(&rtevl->tail->ev);
+        EVENT_DUMP(&rtevl->tail->ev);
 
         rem = rtevl->tail;
 

@@ -6,61 +6,60 @@
 extern "C" {
 #endif
 
-#include "basebox.h"
 #include "boxyseq_types.h"
 #include "common.h"
 #include "datacb.h"
 
 
-/**
- * Flags pertaining to event type.
- */
- 
 typedef enum EVENT_FLAGS
 {
-    EV_TYPE_NOTE =          0x0001,
-    EV_TYPE_BLOCK =         0x0002,
-    EV_TYPE_STATIC =        0x0003, /* static block */
+    EV_STATUS_OFF =         0x0000,
 
-/*
-    EV_TYPE_BLOCKED_NOTE =  0x0003,
-*/
+    EV_CHANNEL_MASK =       0x000f,
 
-    EV_TYPE_CLEAR =         0x000d, /* from RT thread to clear GUI */
-    EV_TYPE_SHUTDOWN =      0x000e, /* from GUI thread to clear RT */
+    EV_TYPE_NOTE =          0x0010,
+    EV_TYPE_BLOCK =         0x0020,
+    EV_TYPE_STATIC =        0x0030,
+    EV_TYPE_CLEAR =         0x0040,
+    EV_TYPE_SHUTDOWN =      0x0050,
+    EV_TYPE_BOUNDARY =      0x0060,
+    EV_TYPE_MASK =          0x0ff0,
 
-    EV_TYPE_MASK =          0x000f,
-
-    EV_STATUS_ON =          0x0010, /* or off */
-
-    EV_CHANNEL_MASK =       0xf000,
+    EV_STATUS_ON =          0x1000,
+    EV_STATUS_CREATE =      0x2000,
+    EV_STATUS_DESTROY =     0x3000,
+    EV_STATUS_MASK =        0xf000,
 
 #ifdef EVPOOL_DEBUG
     EV_IS_FREE_ERROR =      0xffff
 #endif
-
 } evflags;
 
-#define EV_STATUS_OFF (!EV_STATUS_ON)
 
-/**
- * a single data structure for event
- */
+
+
+
 typedef struct event_
 {
-    basebox box;
     int     flags;
+
+    int     x;
+    int     y;
+    int     w;
+    int     h;
+
+    unsigned char r, g, b;
+
     bbt_t   pos;
+    bbt_t   dur;
+    bbt_t   rel;
 
     uint32_t frame;
 
-    bbt_t   note_dur;
-    int     note_pitch;
-    int     note_velocity;
+    int     pitch;
+    int     vel;
 
-    bbt_t   box_release;    /* duration of box after note off (ticks) */
-
-    grbound* grb;
+    void*   data;
 
 } event;
 
@@ -68,10 +67,21 @@ typedef struct event_
 event*  event_new(void);
 void    event_init(event*);
 event*  event_dup(const event*);
-void    event_dump(const event*);
 void    event_copy(event* dest, const event* src);
 
+bool    event_set_coords(event*, int x, int y, int w, int h);
+bool    event_set_colour(event*, int r, int g, int b);
+
 void    event_flags_to_str(int flags, char buf[20]);
+
+
+
+void    event_dump(const char *file, const char *function, size_t line,
+                   const event*);
+#define EVENT_DUMP( ev ) \
+    event_dump(__FILE__, __FUNCTION__, __LINE__, ev )
+
+
 
 #ifndef NDEBUG
 /*      DEBUGGING ONLY: checks event against status and type
@@ -85,22 +95,23 @@ bool    event_is(const event*, int flags,
 #endif
 
 #define EVENT_IS_STATUS( ev, evstatus ) \
-    ((( ev )->flags & EV_STATUS_ON ) == evstatus)
+    ((( ev )->flags & EV_STATUS_MASK ) == evstatus)
 
 #define EVENT_IS_STATUS_ON( ev )    \
     ((( ev )->flags & EV_STATUS_ON ) == EV_STATUS_ON)
 
 #define EVENT_IS_STATUS_OFF( ev )   \
-    ((( ev )->flags & EV_STATUS_ON ) != EV_STATUS_ON)
+    (!(( ev )->flags & EV_STATUS_MASK))
 
 #define EVENT_SET_STATUS_ON( ev )   \
-    ( ev )->flags |= EV_STATUS_ON
+    ( ev )->flags = ((~EV_STATUS_MASK) & ( ev )->flags) \
+                    | EV_STATUS_ON
 
 #define EVENT_SET_STATUS_OFF( ev )  \
-    ( ev )->flags &= ~EV_STATUS_ON
+    ( ev )->flags &= ~EV_STATUS_MASK
 
 #define EVENT_SET_TYPE( ev, evtype )                    \
-    ( ev )->flags = ((~EV_TYPE_MASK) & ( ev ) ->flags)  \
+    ( ev )->flags = ((~EV_TYPE_MASK) & ( ev )->flags)  \
                     | (EV_TYPE_MASK & evtype)
 
 #define EVENT_GET_TYPE( ev )        \
@@ -109,11 +120,12 @@ bool    event_is(const event*, int flags,
 #define EVENT_IS_TYPE( ev, evtype ) \
     ((( ev )->flags & EV_TYPE_MASK ) == evtype)
 
-#define EVENT_GET_CHANNEL( ev )     \
-    ((0xf000 & ( ev )->flags) >> 12)
+#define EVENT_GET_CHANNEL( ev ) \
+    (EV_CHANNEL_MASK & ( ev )->flags)
 
-#define EVENT_SET_CHANNEL( ev, ch ) \
-    ( ev )->flags = (0xf000 & (( ch ) << 12)) + (0x0fff & ( ev )->flags);
+#define EVENT_SET_CHANNEL( ev, ch )                         \
+    ( ev )->flags = ((~EV_CHANNEL_MASK) & ( ev )->flags)    \
+                    | (EV_CHANNEL_MASK & ch)
 
 
 /* list manipulation callbacks */

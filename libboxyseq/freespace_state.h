@@ -7,9 +7,6 @@ extern "C" {
 #endif
 
 
-#include "basebox.h"
-
-
 #include <stdbool.h>
 
 
@@ -84,8 +81,12 @@ void        freespace_clear(freespace*);
                         both to -1 each.
 */
 bool        freespace_find(     freespace*,
-                                basebox* boundary,
+                                /* boundary: */
+                                int bx,         int by,
+                                int bw,         int bh,
+
                                 int placement_flags,
+                                /* request: */
                                 int width,      int height,
                                 int* resultx,   int* resulty    );
 

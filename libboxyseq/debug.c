@@ -13,6 +13,8 @@
 #include <stdarg.h>
 
 static size_t src_dir_len = 0;
+static int max_msgs = -1;
+
 
 void
 warnf(  warning_t level,
@@ -25,7 +27,21 @@ warnf(  warning_t level,
         "warning", "\07\033[1;33m",
     };
 
-    FILE *fp = W_MESSAGE == level ? stdout : stderr;
+    FILE *fp = (level == W_MESSAGE) ? stdout : stderr;
+
+    if (max_msgs < -1)
+        return;
+
+    if (max_msgs > 0)
+        --max_msgs;
+    else if (!max_msgs)
+    {
+        file = __FILE__;
+        function = __FUNCTION__;
+        line = 0;
+        fmt = "message cutoff reached\n";
+        max_msgs = -2;
+    }
 
     #ifndef NDEBUG
 

@@ -52,16 +52,47 @@ pattern*    new_pat(pattern_manager* patman,
             event* ev = lnode_data(evlist_add_event_new(el, t));
             EVENT_SET_TYPE( ev, EV_TYPE_NOTE );
             EVENT_SET_CHANNEL( ev, ch );
-            ev->note_dur = dur;
-            ev->box_release = rel;
-            ev->box.r = r;
-            ev->box.g = g;
-            ev->box.b = b;
-            event_dump( ev );
+            ev->dur = dur;
+            ev->rel = rel;
+            ev->r = r;
+            ev->g = g;
+            ev->b = b;
+            EVENT_DUMP(ev);
         }
     }
 
     return p;
+}
+
+
+grbound* new_bound(grbound_manager* grbman, evport* inp, moport* outp,
+                                                        int scale, int key)
+{
+    grbound* grb;
+    int x, y, w, h;
+
+    x = rand() % 70 + 50;
+    y = rand() % 70 + 50;
+    w = rand() % 10 + 35;
+    h = rand() % 10 + 35;
+
+    if (x + w > 127)
+        w = 127 - x;
+
+    if (y + h > 127)
+        h = 127 - y;
+
+    if (!(grb = grbound_manager_grbound_new(grbman)))
+        return 0;
+
+    grbound_fsbound_set(grb, x, y, w, h);
+    grbound_set_input_port(grb, inp);
+    grbound_midi_out_port_set(grb, outp);
+    grbound_scale_binary_set(grb, scale);
+    grbound_scale_key_set(grb, key);
+    grbound_update_rt_data(grb);
+
+    return grb;
 }
 
 
@@ -84,8 +115,10 @@ int main(int argc, char** argv)
     pattern*    pat3 = 0;
     grbound*    grb;
     moport*     mop1;
+    moport*     mop2;
     evport*     patport1;
     evport*     patport2;
+    evport*     patport3;
 
     int i;
 
@@ -122,32 +155,41 @@ int main(int argc, char** argv)
 */
 
 
-    patport1 = evport_manager_evport_new(patportman, "patport1",
-                                                    RT_EVLIST_SORT_POS);
+    patport1 = evport_manager_evport_new(patportman, "patport1");
+    patport2 = evport_manager_evport_new(patportman, "patport2");
+    patport3 = evport_manager_evport_new(patportman, "patport3");
 
-    patport2 = evport_manager_evport_new(patportman, "patport2",
-                                                    RT_EVLIST_SORT_POS);
-
-    pat0 = new_pat(patman, 0,   16, 8, 0.0,     2, 1.25, 8.75,  8,9,2,3);
+/*
+    pat0 = new_pat(patman, 0,   16, 16, 0.0,     1, 0.75, 6.75,  4,5,4,5);
     pattern_set_output_port(pat0, patport1);
     pattern_update_rt_data(pat0);
 
+    pat0 = new_pat(patman, 0,   16, 8, 0.0,     1, 1.25, 8.75,  8,9,2,3);
+    pattern_set_output_port(pat0, patport1);
+    pattern_update_rt_data(pat0);
+*/
+/*
     pat1 = new_pat(patman, 0,   16, 8, 8.0,     2, 1.25, 8.75,  2,3,8,9);
-    pattern_set_output_port(pat1, patport2);
+    pattern_set_output_port(pat1, patport1);
+    pattern_update_rt_data(pat1);
+*/
+    pat1 = new_pat(patman, 0,   16, 16, 0.01,     2, 1.05, 5.05,  2,3,8,9);
+    pattern_set_output_port(pat1, patport1);
     pattern_update_rt_data(pat1);
 
-    pat2 = new_pat(patman, 1,   8, 4, 0.0,      2, 3.5, 5.5,    4,5,12,13);
-    pattern_set_output_port(pat2, patport1);
+    pat2 = new_pat(patman, 1,   8, 8, 0.0,      2, 1.05, 9.05,    4,5,8,9);
+    pattern_set_output_port(pat2, patport2);
     pattern_update_rt_data(pat2);
 
+/*
     pat3 = new_pat(patman, 1,   8, 4, 4.0,      2, 3.5, 5.5,    12,13,4,5);
     pattern_set_output_port(pat3, patport2);
     pattern_update_rt_data(pat3);
-
+*/
     mop1 = moport_manager_moport_new(mopman);
+    mop2 = moport_manager_moport_new(mopman);
 
     scales = sclist_new();
-
     sclist_add_default_scales(scales);
 
     sc = sclist_scale_by_name(scales, "Major");
@@ -158,33 +200,13 @@ int main(int argc, char** argv)
 
     srand(time(0));
 
-    for (i = 0; i < 2; ++i)
-    {
-        int x, y, w, h;
+    grb = new_bound(grbman, patport1, mop1, scint, keyint);
+    grb = new_bound(grbman, patport1, mop2, scint, keyint);
 
-        x = rand() % 70 + 50;
-        y = rand() % 70 + 50;
-        w = rand() % 10 + 35;
-        h = rand() % 10 + 35;
+    grbound_channel_set(grb, 1);
+    grbound_flags_set(grb, GRBOUND_OVERRIDE_NOTE_CH);
 
-        if (x + w > 127)
-            w = 127 - x;
-
-        if (y + h > 127)
-            h = 127 - y;
-
-        grb = grbound_manager_grbound_new(grbman);
-        grbound_fsbound_set(grb, x, y, w, h);
-        grbound_set_input_port(grb, i == 0 ? patport1 : patport2);
-
-        grbound_midi_out_port_set(grb, mop1);
-
-        grbound_scale_binary_set(grb, scint);
-        grbound_scale_key_set(grb, keyint);
-
-        grbound_update_rt_data(grb);
-    }
-
+    grb = new_bound(grbman, patport3, mop1, scint, keyint);
 
 
     grbound_manager_update_rt_data(grbman);
