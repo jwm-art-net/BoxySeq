@@ -92,7 +92,8 @@ bool    event_is(const event*, int flags,
                  const char *file, const char *function, size_t line);
 #define EVENT_IS( event, flags ) \
     event_is( event, flags, __FILE__, __FUNCTION__, __LINE__)
-#endif
+#endif /* ifndef NDEBUG */
+
 
 #define EVENT_IS_STATUS( ev, evstatus ) \
     ((( ev )->flags & EV_STATUS_MASK ) == evstatus)

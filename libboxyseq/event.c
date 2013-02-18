@@ -211,6 +211,10 @@ bool event_is(const event* ev, int flags,
         event_dump(file, function, line, ev);
         warnf(W_WARNING, file, function, line,
                 "         ^^^ event has invalid status ^^^\n");
+
+        printf("0x%x & EV_STATUS_MASK (0x%x) == 0x%x \n",
+                                flags, EV_STATUS_MASK,status);
+
         ret = false;
     }
 
@@ -226,7 +230,7 @@ bool event_is(const event* ev, int flags,
 
     return ret;
 }
-#endif
+#endif /* ifndef NDEBUG */
 
 
 static int event_pri_cmp_time_cb(const void* d1,

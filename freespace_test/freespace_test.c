@@ -20,6 +20,7 @@ int test_box_placement_limited_boundary(freespace* fs, int flags);
 
 
 long total_searches = 0;
+long total_placements = 0;
 long total_removals = 0;
 
 
@@ -28,206 +29,16 @@ long total_removals = 0;
 
 int main(int argc, char** argv)
 {
-
-    event ev;
-
-    event_init(&ev);
-
-    EVENT_SET_STATUS_ON( &ev );
-    EVENT_SET_TYPE( &ev, EV_TYPE_BLOCK );
-    EVENT_DUMP( &ev );
-    EVENT_IS(&ev, EV_STATUS_OFF | EV_TYPE_NOTE);
-
-exit(0);
-
-
     int bs;
     int placement = 0;
-    int lastplacementtype = FSPLACE_ROW_SMART
-                          | FSPLACE_LEFT_TO_RIGHT
-                          | FSPLACE_TOP_TO_BOTTOM;
 
     freespace* fs = freespace_new();
 
 
-    goto test_boundary_placement_equal_size;
-/*
     int i;
     int resx = 0;
     int resy = 0;
 
-
-    char* pstr = freespace_placement_to_str(placement);
-
-    MESSAGE("using %s placement...\n", pstr);
-    free(pstr);
-
-    placement = 0
-                | FSPLACE_ROW_SMART
-                | FSPLACE_TOP_TO_BOTTOM
-                | FSPLACE_LEFT_TO_RIGHT
-                ;
-
-
-    int w = 27;
-    int h = 27;
-
-    if (freespace_find(fs, 0, 0, 128, 128, placement, w, h, &resx, &resy))
-    {
-        MESSAGE("success result x:%d, y:%d\n", resx, resy);
-        freespace_remove(fs, resx, resy, w, h);
-    }
-    else
-    {
-        WARNING("guess what? it fail\n");
-    }
-
-    freespace_dump(fs,0);
-
-    freespace_block_remove(fs, 15, 15, w, h);
-
-    freespace_dump(fs,0);
-
-    freespace_block_remove(fs, 25, 25, w, h);
-
-    freespace_dump(fs,0);
-
-    freespace_block_add(fs, 15, 15, w, h);
-
-    freespace_dump(fs,0);
-*/
-
-/*
-    freespace_add(fs, 0, 0, w, h);
-
-    freespace_dump(fs,0);
-
-    freespace_remove(fs, resx, resy, w, h);
-
-    freespace_dump(fs,0);
-
-    freespace_block_add(fs, 25, 25, w, h);
-
-    freespace_dump(fs,0);
-
-    goto end;
-*/
-
-
-    /*---------------------------------------------------*/
-
-/*
-    int i;
-    int resx = 0;
-    int resy = 0;
-
-
-    char* pstr = freespace_placement_to_str(placement);
-
-    MESSAGE("using %s placement...\n", pstr);
-    free(pstr);
-    boxound* box = boxound_new();
-
-    placement = 0
-                | FSPLACE_ROW_SMART
-                | FSPLACE_TOP_TO_BOTTOM
-                | FSPLACE_LEFT_TO_RIGHT
-                ;
-
-
-    int w = 2;
-    int h = 2;
-
-    box_set_coords(box, 0, 0, 128, 128);
-
-    if (freespace_find(fs, box, placement, w, h, &resx, &resy))
-    {
-        MESSAGE("success result x:%d, y:%d\n", resx, resy);
-        freespace_remove(fs, resx, resy, w, h);
-    }
-    else
-    {
-        WARNING("guess what? it fail\n");
-    }
-
-    freespace_dump(fs);
-
-    w = 32;
-    h = 32;
-
-    if (freespace_find(fs, box, placement, w, h , &resx, &resy))
-    {
-        MESSAGE("success result x:%d, y:%d\n", resx, resy);
-        freespace_remove(fs, resx, resy, w, h);
-    }
-    else
-    {
-        WARNING("guess what? it fail\n");
-    }
-
-    freespace_dump(fs);
-
-    goto end;
-
-*/
-
-/*
-    for (i = 0; i < 2; ++i)
-    {
-        if (freespace_find(fs, box, placement, 1, 1, &resx, &resy))
-        {
-            MESSAGE("success result x:%d, y:%d\n", resx, resy);
-            freespace_remove(fs, resx, resy, 1, 1 );
-        }
-        else
-        {
-            WARNING("guess what? it fail\n");
-        }
-    }
-    
-    freespace_dump(fs);
-
-    goto end;
-*/
-/*
-    for (placement = 0; placement <= lastplacementtype; ++placement)
-    {
-        if (!(placement & FSPLACE_ROW_SMART))
-            continue;
-
-        char* pstr = freespace_placement_to_str(placement);
-        MESSAGE("using %s placement...\n", pstr);
-        free(pstr);
-
-        freespace_clear(fs);
-
-        for (bs = 1; bs < 34; bs++)
-        {
-            if (!freespace_find(fs, box, placement, bs, bs, &resx, &resy))
-            {
-                WARNING("fail on:size %d\n",bs);
-                break;
-            }
-
-            freespace_remove(fs, resx, resy, bs, bs);
-        }
-
-        for (bs = 1; bs < 17; bs++)
-        {
-            if (!freespace_find(fs, box, placement, bs, bs, &resx, &resy))
-            {
-                WARNING("fail2 on:size %d\n",bs);
-                break;
-            }
-
-            freespace_remove(fs, resx, resy, bs, bs);
-        }
-
-        freespace_dump(fs);
-
-    }
-*/
-    /*---------------------------------------------------*/
 
 test_boundary_placement_equal_size:
 
@@ -235,7 +46,7 @@ test_boundary_placement_equal_size:
             "testing box placement within boundary of same size\n"
             "==================================================\n");
 
-    for (placement = 0; placement <= lastplacementtype; ++placement)
+    for (placement = 0; placement <= FSPLACE_LAST; ++placement)
     {
         char* pstr = freespace_placement_to_str(placement);
         MESSAGE("using %s placement...\n", pstr);
@@ -257,7 +68,7 @@ test_multiples:
             "testing multiples of equal-sized box placement \n"
             "==============================================\n");
 
-    for (placement = 0; placement <= lastplacementtype; ++placement)
+    for (placement = 0; placement <= FSPLACE_LAST; ++placement)
     {
         int maxbs = 64;
         char* pstr = freespace_placement_to_str(placement);
@@ -265,7 +76,6 @@ test_multiples:
         free(pstr);
 
         bs = 1;
-
 
         for (bs = 1; bs < maxbs; ++bs)
         {
@@ -284,7 +94,7 @@ test_placement_and_removal:
             "testing placement and removal and replacement\n"
             "=============================================\n");
 
-    for (placement = 0; placement <= lastplacementtype; ++placement)
+    for (placement = 0; placement <= FSPLACE_LAST; ++placement)
     {
         char* pstr = freespace_placement_to_str(placement);
         MESSAGE("using %s placement...\n", pstr);
@@ -302,7 +112,7 @@ test_limited_boundary:
             "testing box placement within limited boundary\n"
             "=============================================\n");
 
-    for (placement = 0; placement <= lastplacementtype; ++placement)
+    for (placement = 0; placement <= FSPLACE_LAST; ++placement)
     {
         char* pstr = freespace_placement_to_str(placement);
         MESSAGE("using %s placement...\n", pstr);
@@ -319,8 +129,9 @@ test_limited_boundary:
     /*---------------------------------------------------*/
 end:
 
-    MESSAGE("total freespace searches:%ld\n", total_searches);
-    MESSAGE("total freespace removals:%ld\n", total_removals);
+    MESSAGE("total freespace searches:   %ld\n", total_searches);
+    MESSAGE("total freespace placements: %ld\n", total_placements);
+    MESSAGE("total freespace removals:   %ld\n", total_removals);
 
     freespace_free(fs);
 
@@ -364,6 +175,8 @@ int test_box_within_same_sized_boundary(freespace* fs, int flags, int size)
                             size, size, x, y);
                 return -1;
             }
+
+            total_placements++;
 
             if (resx != x || resy != y)
             {
@@ -430,7 +243,7 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
                 return -1;
             }
 
-            total_removals++;
+            total_placements++;
 
             freespace_remove(fs, resx, resy, size, size);
 
@@ -443,6 +256,8 @@ int test_box_multiple_placement(freespace* fs, int flags, int size)
                             size, count, x, y);
                 return -1;
             }
+
+            total_removals++;
 
         }
     }
@@ -485,7 +300,11 @@ int test_box_placement_and_removal(freespace* fs, int flags)
             return -1;
         }
 
+        total_placements++;
+
         freespace_remove(fs, x[i], y[i], w[i], h[i]);
+
+        total_removals++;
     }
 
     for (i = 0; i < maxboxes; ++i)
@@ -502,6 +321,8 @@ int test_box_placement_and_removal(freespace* fs, int flags)
                             i, w[i], h[i]);
             return -1;
         }
+
+        total_placements++;
 
         if (tx != x[i] || ty != y[i])
         {
@@ -557,9 +378,11 @@ int test_box_placement_limited_boundary(freespace* fs, int flags)
                 if (freespace_find(fs, offset, offset, fsbs, fsbs, flags,
                                                      bs, bs, &resx, &resy))
                 {
-                    total_removals++;
+                    total_placements++;
 
                     freespace_remove(fs, resx, resy, bs, bs);
+
+                    total_removals++;
 
                     if (resx + bs > offset + fsbs)
                     {

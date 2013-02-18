@@ -21,6 +21,10 @@ enum FREESPACE_PLACEMENT_FLAGS
     FSPLACE_ROW_SMART =         0x0001,     /* else COL_SMART       */
     FSPLACE_LEFT_TO_RIGHT =     0x0002,     /* else RIGHT_TO_LEFT   */
     FSPLACE_TOP_TO_BOTTOM =     0x0004,     /* else BOTTOM_TO_TOP   */
+    /* --- */
+    FSPLACE_LAST = FSPLACE_ROW_SMART
+                 | FSPLACE_LEFT_TO_RIGHT
+                 | FSPLACE_TOP_TO_BOTTOM
 };
 
 

@@ -71,6 +71,7 @@
 #endif
 
 
+
 static const fsbuf_type fsbuf_max =   ~(fsbuf_type)0;
 static const fsbuf_type fsbuf_high =  (fsbuf_type)1 << (FSBUFBITS - 1);
 
@@ -127,6 +128,13 @@ struct freespace_state
         int x, y, w, h;
         struct blk* n;
     } blklist[MAX_BLOCK_AREAS];
+
+
+    #ifndef NDEBUG
+    long total_searches = 0;
+    long total_placements = 0;
+    long total_removals = 0;
+    #endif /* ifndef NDEBUG */
 };
 
 
@@ -147,6 +155,12 @@ freespace* freespace_new(void)
     freespace_block_clear(fs);
 
     DMESSAGE("sizeof(freespace_state):%d\n", sizeof(*fs));
+
+    #ifndef NDEBUG
+    fs->total_searches = 0;
+    fs->total_placements = 0;
+    fs->total_removals = 0;
+    #endif /* ifndef NDEBUG */
 
     return fs;
 }
@@ -562,6 +576,10 @@ bool freespace_find( freespace* fs,
                         int* resultx,   int* resulty    )
 {
     *resultx = *resulty = -1;
+
+    #ifndef NDEBUG
+    fs->total_searches++;
+    #endif /* ifndef NDEBUG */
 
     #ifdef FSDEBUG
     char* pstr = freespace_placement_to_str(flags);
